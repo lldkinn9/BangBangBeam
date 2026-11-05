@@ -1,15 +1,47 @@
 import SwiftUI
 
-/// BPM速度やルールを確認・変更できる設定シート
+/// BGM ON/OFF・BPM速度・製品版ルールを確認できる設定シート（最下部にバナー広告常設）
 struct SettingSheetView: View {
     @Bindable var engine: GameEngine
+    @Bindable private var soundManager = SoundManager.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // MARK: 1. BPM テンポ設定
+                VStack(spacing: 18) {
+                    // MARK: 1. サウンド & 触覚設定
+                    settingCard(title: "AUDIO & HAPTICS", icon: "speaker.wave.2.fill") {
+                        VStack(spacing: 14) {
+                            Toggle(isOn: $soundManager.isBGMEnabled) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("BGM サウンド再生")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                    Text("タイトル (Neon Overdrive) / バトルランダムBGM")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.white.opacity(0.6))
+                                }
+                            }
+                            .tint(Color.cyberCyan)
+
+                            Divider().background(Color.white.opacity(0.15))
+
+                            Toggle(isOn: $engine.isHapticsEnabled) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("触覚フィードバック (Haptics)")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                    Text("拍のリズムや激突時の振動演出")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.white.opacity(0.6))
+                                }
+                            }
+                            .tint(Color.cyberEmerald)
+                        }
+                    }
+
+                    // MARK: 2. BPM テンポ設定
                     settingCard(title: "TEMPO / BPM", icon: "metronome.fill") {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -41,50 +73,33 @@ struct SettingSheetView: View {
                         }
                     }
 
-                    // MARK: 2. マッチルール & 触覚設定
-                    settingCard(title: "BATTLE RULES", icon: "shield.lefthalf.filled") {
-                        VStack(spacing: 16) {
-                            HStack {
-                                Text("勝利条件（先取本数）")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                Spacer()
-                                Picker("先取本数", selection: $engine.targetWins) {
-                                    Text("1本勝負").tag(1)
-                                    Text("2本先取").tag(2)
-                                    Text("3本先取").tag(3)
-                                }
-                                .pickerStyle(.segmented)
-                                .frame(width: 210)
-                            }
-
-                            Divider().background(Color.white.opacity(0.15))
-
-                            Toggle(isOn: $engine.isHapticsEnabled) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("触覚フィードバック (Haptics)")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                    Text("拍のリズムや激突時の振動演出")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(Color.white.opacity(0.6))
-                                }
-                            }
-                            .tint(Color.cyberEmerald)
-                        }
-                    }
-
-                    // MARK: 3. コマンド＆ルールガイド
-                    settingCard(title: "COMMAND GUIDE", icon: "bolt.horizontal.circle.fill") {
+                    // MARK: 3. 製品版コマンド＆ルールガイド
+                    settingCard(title: "BATTLE RULES", icon: "bolt.horizontal.circle.fill") {
                         VStack(alignment: .leading, spacing: 10) {
-                            ruleRow(title: "⚡️ チャージ (消費0 / +1)", desc: "気力を1溜める。攻撃に対しては無防備。")
-                            ruleRow(title: "💥 ビーム (消費1)", desc: "チャージ中の相手を撃破！バリアには防がれ、ビーム同士は相殺。")
-                            ruleRow(title: "🛡️ バリア (消費0)", desc: "通常ビームをノーダメージで完全防御。")
-                            ruleRow(title: "🌟 メガビーム (消費2)", desc: "通常バリアや通常ビームを貫通して撃破する超必殺技！")
+                            ruleRow(
+                                title: "❤️ 3ライフ体力制 ＆ チャージ削り",
+                                desc: "通常ビームを3回食らうと敗退！ビームを被弾すると溜めたチャージも -1 削られます。"
+                            )
+                            ruleRow(
+                                title: "⚡️ チャージ (消費0 / +1)",
+                                desc: "気力を1溜める。攻撃に対しては無防備。"
+                            )
+                            ruleRow(
+                                title: "💥 ビーム (消費1)",
+                                desc: "無防備な相手に HP -1 ＆ チャージ -1 ダメージ！バリアには防がれ、ビーム同士は相殺。"
+                            )
+                            ruleRow(
+                                title: "🛡️ バリア (消費0)",
+                                desc: "相手の通常ビームをノーダメージで完全防御。"
+                            )
+                            ruleRow(
+                                title: "🌟 必殺ビーム (4チャージ / 一撃必殺)",
+                                desc: "4回チャージで解放！カットイン＆必殺アニメと共にバリアも残りHPも貫通して一撃必殺！"
+                            )
                             Divider().background(Color.white.opacity(0.15))
                             ruleRow(
-                                title: "⚠️ お手つき自滅ルール",
-                                desc: "気力不足の状態でビーム／メガビームを選択して3拍目を迎えると即敗北！",
+                                title: "💦 お手つき（気力不足ミス）",
+                                desc: "気力が足りない状態でビーム／必殺ビームを選んで3拍目を迎えると、不発となり【無防備状態】になります（相手がビームなら被弾ダメージ）。",
                                 titleColor: .cyberDanger
                             )
                         }
@@ -93,6 +108,9 @@ struct SettingSheetView: View {
                 .padding(18)
             }
             .background(Color.cyberBlack.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                AdBannerFooterView()
+            }
             .navigationTitle("SETTING")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

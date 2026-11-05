@@ -1,112 +1,64 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-05 15:07 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.3`
+最終更新日時: 2026-11-05 16:55 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.4`（製品版コアシステム・全素材・演出・ランキング・広告枠 統合完了）
 
 ---
 
-## 1. プロジェクト概要・仕様サマリ
+## 1. プロジェクト概要・製品版実装済み仕様
 
 - **アプリ名称:** BangBangBeam（バンバンビーム）
-- **対象OS / 技術スタック:** **iOS 17.0+** (`IPHONEOS_DEPLOYMENT_TARGET = 17.0`) / SwiftUI / Swift Observation (`@Observable`)
+- **対象OS / 技術スタック:** **iOS 17.0+** (`IPHONEOS_DEPLOYMENT_TARGET = 17.0`) / SwiftUI / Swift Observation (`@Observable`) / AVFoundation / GameKit / AppTrackingTransparency
 - **Bundle Identifier:** `com.lldkinn9.BangBangBeam`
 - **GitHub リポジトリ:** `https://github.com/lldkinn9/BangBangBeam.git`
-- **世界観・カラー:** サイバーパンク（ネオ東京 2099）
-  - ネオンシアン (`#06B6D4`) / エメラルドグリーン (`#10B981`) / サイバーブラック (`#05080F`)
-- **主要機能:**
-  1. **タイトル画面 (`TitleView`)**
-     - `Assets.xcassets` の `"Title"` (`Title.imageset/Title.jpg`) を全画面表示、上下端のみ薄いグラデーション配置でキャラクター非干渉を実現。
-     - 夜空エリアにネオンシアン発光ロゴ「BANG BANG BEAM」表示（余計なサブテキスト排除）。
-     - 中央道路上に幅 `220px` の斜めポリゴンカット（`CyberShape`）STARTボタン＋パルス発光アニメーション。
-     - STARTタップ時に黒スモーク（`Color.black.opacity(0.72)`）がフェードインし、`KUMITE` / `PRACTICE` / `SETTING` / `✕ BACK` が縦並び展開。
-     - ヘッダー右上に小型バージョン表示（`v1.0.3`）。
-  2. **バトル画面 (`BattleView`) & ゲームエンジン (`GameEngine`)**
-     - 3拍子リズムループ（0拍目「せっせっせーの...」→ 1拍目「💥 バン！」→ 2拍目「💥 バン！」→ 3拍目「⚡️ ビーム！」）、デフォルト 88 BPM（約0.68秒/拍）。
-     - 触覚フィードバック対応（1・2拍目: Light、コマンド選択: Medium、3拍目激突: Heavy、お手つき自滅: Rigid）。
-     - 気力ストック（0〜5個）のオーブ可視化（`EnergyOrbView`）。
-     - 4コマンド判定（チャージ・ビーム・バリア・メガビーム）および気力不足で3拍目を迎えた際の「お手つき自滅！YOU LOSE」即敗北ロジック。
-     - 確率ベースCPU思考ロジック（気力0: チャージ70%/バリア30%、気力1以上＆相手気力あり: バリア40%/ビーム40%/チャージ20%、気力2以上: メガビーム55%）。
-     - PRACTICEモードでの手動1拍進行（＋AUTO切替対応）。
-     - ヘッダー左「◀ TITLE」ボタンおよびヘッダー右の小型バージョン表示（`v1.0.3`）。
-  3. **設定シート (`SettingSheetView`)**
-     - BPM速度変更（60〜140 BPM、標準88 BPMワンタップ復帰）、先取本数設定、触覚フィードバックON/OFF、ルールガイド表示。
-  4. **アセット・バージョン管理機構**
-     - `AppIcon.appiconset` にオーナー指定の公式デザイン（「BANG BANG BEAM」ネオンロゴ＋主人公レオ、1024x1024 透過なしRGB PNG）を組み込み済み（Light / Dark / Tinted 対応）。
-     - `Title.imageset` にタイトル背景 (`Title.jpg`) を組み込み済み。
-     - `npm run version:bump`（`scripts/bump-version.js`）により `package.json`・`AppVersion.swift`・`project.xcproj` (`MARKETING_VERSION`) を `0.0.1` 刻みで自動更新。
+
+### 1.1 ゲームモード & 初回起動導線
+1. **初回起動時フロー (`PracticeTutorialView`):**
+   - 初回アプリ起動時は自動的に **PRACTICE（チュートリアル）モード** を起動（`UserDefaults` 管理）。
+   - 専用UIにて「📘 ルール学習（全5ステップ・必殺プレビュー付き）」と「🎯 フリー実戦（1拍手動進行 / AUTO練習）」を切り替え可能。
+2. **KUMITEモード（メイン：11人勝ち抜きサバイバル）:**
+   - プレイヤーは主人公 **`Reo` 固定**。
+   - 固定ループ順で11人の敵と対戦：`geek` → `boarder` → `JK` → `engineer` → `alice` → `defective` → `spy` → `Ninja` → `pirate` → `skin` → `oldman`（12戦目以降は再び `geek` から Loop 2 進行）。
+   - 敵ごとに `AITraits`（お手つき率・攻撃積極度・バリア警戒度・必殺指向・状況読み精度）を段階設定し、明確な強弱を実現。
+   - 敵を1人撃破するごとに Reo の体力（`HP = 3`）は全回復し、チャージは `0` にリセットして次戦へ進行。
+   - **世界ランキング:** Apple 公式 **Game Center (`GameKit`)** 連携 (`GameCenterManager`) により最大連勝数を自動送信・表示（未サインイン環境向け自己ベスト＆撃破進捗シート `RankingInfoSheetView` 搭載）。
+
+### 1.2 バトルシステム・演出
+- **体力（HP = 3）＆ 被弾チャージ減少:** 通常ビーム命中時、被弾側は **HP -1** かつ **蓄積チャージ -1**。3回被弾で敗退。
+- **お手つき（無防備）仕様:** 気力不足でビーム／必殺ビームを選んで3拍目を迎えると **不発（無防備状態 `.fumble`）** となり、チャージ増加もガードもなく相手のビームが直撃する。
+- **4チャージ一撃必殺（必殺ビーム）:** 4回チャージで解放。発動時は **目元カットイン演出 (`char_<id>_cutin`) → 必殺アニメーション動画 (`ult_<id>.mp4`)** を再生し、バリア・残りHPを貫通して一撃決着。
+- **ビジュアル＆BGM (`SoundManager`):**
+  - 全12キャラの背景透過立ち絵（通常・喜び・苦痛）＆カットイン画像、手イラスト4種（手拍子・チャージ・バリア・ビーム）、必殺動画12本を組み込み済み。
+  - 非バトル画面で `Neon Overdrive`、バトル画面で `Seamless Looping Cyberpunk BGM` / `Cyber Velocity` をランダム選出しループ再生（設定画面で BGM ON/OFF 切替可能）。
+
+### 1.3 収益化（Google AdMob 基盤 `AdManager`）
+- **バナー広告 (`AdBannerFooterView`):** プレイ画面（`BattleView` / `PracticeTutorialView`）以外の全画面（タイトル・モード選択・設定・ランキングシート）の最下部に常設配置。
+- **インタースティシャル広告:** KUMITE リトライ時に **3回につき1回** スキップ可能な全画面広告を表示。
+- `#if canImport(GoogleMobileAds)` に対応済み。Xcode で `GoogleMobileAds` Swift Package を追加するだけで実テスト広告が配信され、リリース時は `Info.plist` キー（`ADMOB_BANNER_UNIT_ID` / `ADMOB_INTERSTITIAL_UNIT_ID` / `GADApplicationIdentifier`）で本番IDを安全に注入可能（コードへのハードコードなし）。
 
 ---
 
-## 2. ディレクトリ構成
-
-```text
-BangBangBeam/
-├── GEMINI.md                                    # プロジェクト絶対遵守ルール
-├── PROJECT_STATE.md                             # 開発進捗・仕様・履歴管理（本ファイル）
-├── app_spec.md                                  # 詳細仕様書
-├── package.json                                 # バージョン管理スクリプト定義 (v1.0.2)
-├── scripts/
-│   └── bump-version.js                          # 0.0.1 インクリメント自動化スクリプト
-├── BangBangBeam.xcodeproj/                      # Xcode プロジェクト設定 (iOS 17.0+)
-│   └── project.xcproj
-└── BangBangBeam/                                # iOS アプリ SwiftUI ソース & アセット一式
-    ├── App/
-    │   └── BangBangBeamApp.swift
-    ├── Models/
-    │   ├── AppVersion.swift
-    │   ├── AppScreen.swift
-    │   ├── GameMode.swift
-    │   └── GameAction.swift
-    ├── ViewModels/
-    │   └── GameEngine.swift
-    ├── Views/
-    │   ├── Title/
-    │   │   └── TitleView.swift
-    │   ├── Battle/
-    │   │   ├── BattleView.swift
-    │   │   └── EnergyOrbView.swift
-    │   ├── Settings/
-    │   │   └── SettingSheetView.swift
-    │   └── Components/
-    │       ├── CyberTheme.swift
-    │       ├── CyberShape.swift
-    │       └── CyberButtonStyle.swift
-    └── Assets.xcassets/
-        ├── AppIcon.appiconset/ (AppIcon.png 1024x1024 - 主人公レオ版)
-        └── Title.imageset/     (Title.jpg)
-```
-
----
-
-## 3. 開発進捗・残タスク
+## 2. 開発進捗・残タスク
 
 ### 完了済み
-- [x] `GEMINI.md`・`PROJECT_STATE.md`・`.gitignore` の整備
-- [x] バージョン管理機構（ヘッダー小型表示 & `npm run version:bump` による `project.xcproj` 連動スクリプト）の実装
-- [x] Models / ViewModels / Views / Components 分割構成によるコアアプリ一式の実装
-- [x] Mac側の Xcode プロジェクト設定（`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` 等）に合わせた Concurrency 対応
-- [x] リリース向けに Minimum Deployments（対象OS）を `iOS 17.0` へ変更
-- [x] オーナー指定デザインによるアプリアイコン (`AppIcon.png` 1024x1024 RGB PNG) 変換・設定完了
-- [x] `v1.0.3` バンプおよび GitHub リポジトリ (`main`) へのコミット・プッシュ
+- [x] **Phase 1:** 全67アセット（12キャラ透過立ち絵36枚・カットイン12枚・必殺動画12本・手イラスト4枚・BGM3曲）の最適化＆組み込み＋`SoundManager` 実装
+- [x] **Phase 2:** 新ゲームエンジン（HP3・被弾チャージ-1・お手つき無防備・4チャージ一撃必殺・11キャラ段階別AI・撃破時HP全回復勝ち抜きループ）実装
+- [x] **Phase 3:** 新 `BattleView` 演出（立ち絵表情連動・手イラスト変化・カットイン＋`mp4` 動画再生）＆初回起動対応 `PracticeTutorialView` 専用UI実装
+- [x] **Phase 4:** `GameCenterManager` 連勝数世界ランキング連携＆撃破リストシート実装
+- [x] **Phase 5 (基盤):** `AdManager`・非プレイ画面共通バナー枠・リトライ時全画面広告制御・ATT許可リクエスト実装
+- [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
-### 残タスク（次フェーズ以降）
-- [ ] Mac側で `git pull origin main` を実行し、Xcode 上でのビルド（`⌘ + R`）およびシミュレータ／実機での動作確認
-- [ ] （拡張検討）`素材/` フォルダ内の BGM・SE・キャラクター立ち絵／カットイン演出・手イラストの統合
+### 残タスク（確認・ブラッシュアップ・リリース準備）
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で新システム一式（初回チュートリアル・BGM・手イラスト・必殺カットイン＆動画・11人勝ち抜き）の動作確認とバランス・UI微調整
+- [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト広告の描画確認（本番リリース前に AdMob 本番IDを設定）
+- [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
+- [ ] （任意）拍手音・ビーム音などの SE（効果音）音源追加
 
 ---
 
-## 4. 更新履歴 (JST)
+## 3. 更新履歴 (JST)
 
-- **2026-11-05 15:07 (`v1.0.3`)**
-  - オーナー提供の公式アイコン画像を iOS App Store / Xcode 仕様（1024x1024・アルファ透過なし 24-bit RGB PNG・角丸マスクセーフゾーン確認済み）に変換し、`AppIcon.appiconset/AppIcon.png` へ設定。
-  - `npm run version:bump` により `1.0.2 -> 1.0.3` へ更新し、GitHub `main` ブランチへプッシュ。
-- **2026-11-05 14:54 (`v1.0.2`)**
-  - リリース対象ユーザー拡大のため、`BangBangBeam.xcodeproj/project.xcproj` の `IPHONEOS_DEPLOYMENT_TARGET` を `27.2` から `17.0` へ変更。
-  - `Title.jpg` の絵柄・世界観を維持した主人公（レオ）アップ構図の新アプリアイコン (`AppIcon.png` 1024x1024) を作成・差し替え。
-  - `npm run version:bump` により `1.0.1 -> 1.0.2` へ更新し、GitHub `main` ブランチへプッシュ。
-- **2026-11-05 14:42 (`v1.0.1`)**
-  - Mac側ターミナルにて `git pull origin main` が正常完了したことを確認。
-- **2026-11-05 14:38 (`v1.0.1`)**
-  - Mac側初回コミットを取り込み、分割済み SwiftUI コード一式・`Title.imageset`・初期アイコンを統合し `v1.0.1` としてプッシュ。
-- **2026-11-05 13:59 (`v1.0.0`)**
-  - 初版コアコード一式、`GEMINI.md`、`PROJECT_STATE.md`、バージョン自動更新スクリプトを作成。
+- **2026-11-05 16:55 (`v1.0.4`)**
+  - Phase 1〜5 の製品版コア機能・全アセット（キャラ12人・手4種・動画12本・BGM3曲）・新バトルルール・初回チュートリアルUI・Game Center世界ランキング・AdMob広告制御基盤を一括実装し、`v1.0.4` としてプッシュ。
+- **2026-11-05 16:36 (`v1.0.3`)**
+  - 製品版全仕様確定・実装計画書作成。

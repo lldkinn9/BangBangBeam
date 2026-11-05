@@ -1,28 +1,24 @@
 import SwiftUI
 
-/// 画面2: バトルアリーナ画面 (BattleView)
+/// 製品版バトルアリーナ画面（KUMITE 11人勝ち抜き戦：立ち絵表情・HP3・4チャージ・手イラスト・必殺カットイン＆動画対応）
 struct BattleView: View {
     @Bindable var engine: GameEngine
+    @State private var isShowingRankingFallback: Bool = false
 
     var body: some View {
         ZStack {
-            // MARK: 背景（サイバーパンク・グリッドグラデーション）
+            // MARK: 背景グラデーション
             LinearGradient(
-                colors: [
-                    Color.cyberBlack,
-                    Color.cyberPanel,
-                    Color.cyberBlack
-                ],
+                colors: [Color.cyberBlack, Color.cyberPanel, Color.cyberBlack],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
 
-            // 3拍目激突時のフラッシュエフェクト
             if engine.beat == 3 {
                 RadialGradient(
                     colors: [
-                        Color.cyberCyan.opacity(0.22),
+                        Color.cyberCyan.opacity(0.24),
                         Color.cyberEmerald.opacity(0.08),
                         Color.clear
                     ],
@@ -34,222 +30,265 @@ struct BattleView: View {
                 .allowsHitTesting(false)
             }
 
-            // MARK: メインレイアウト
-            VStack(spacing: 12) {
+            // MARK: メイン3段レイアウト
+            VStack(spacing: 8) {
                 headerBar
 
-                cpuStatusPanel
+                enemyFighterCard
 
-                Spacer(minLength: 4)
+                Spacer(minLength: 2)
 
-                rhythmCenterStage
+                handsArenaStage
 
-                if engine.gameMode == .practice {
-                    practiceControlBar
-                }
+                Spacer(minLength: 2)
 
-                Spacer(minLength: 4)
-
-                playerControlPanel
+                playerControlCard
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
 
-            // MARK: 勝敗リザルトオーバーレイ
-            if engine.outcome.isFinished {
-                resultOverlay
+            // MARK: 4チャージ一撃必殺 カットイン＆必殺動画オーバーレイ
+            if let ult = engine.activeUltimate {
+                UltimateCutinOverlayView(
+                    character: ult.character,
+                    isPlayer: ult.isPlayer
+                ) {
+                    engine.completeUltimateSequence()
+                }
+                .zIndex(10)
+            }
+
+            // MARK: 勝敗・次ステージ遷移リザルトオーバーレイ
+            if engine.outcome.isFinished && engine.activeUltimate == nil {
+                kumiteResultOverlay
                     .transition(.opacity.combined(with: .scale(scale: 0.94)))
+                    .zIndex(20)
             }
         }
         .animation(.easeInOut(duration: 0.22), value: engine.outcome)
+        .sheet(isPresented: $isShowingRankingFallback) {
+            RankingInfoSheetView()
+        }
     }
 
-    // MARK: - 1. Header Bar (◀ TITLE + Mode Info + Version)
+    // MARK: - 1. Header Bar
     private var headerBar: some View {
         HStack {
             Button {
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
                 engine.returnToTitle()
             } label: {
-                HStack(spacing: 4) {
-                    Text("◀ TITLE")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                }
-                .foregroundStyle(Color.cyberCyan)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                Text("◀ TITLE")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.cyberCyan)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
             }
             .buttonStyle(
                 CyberButtonStyle(
                     primaryColor: .cyberCyan,
                     secondaryColor: .cyberEmerald,
-                    cutSize: 8,
+                    cutSize: 7,
                     fillOpacity: 0.16
                 )
             )
 
             Spacer()
 
-            VStack(spacing: 2) {
-                Text(engine.gameMode.title)
-                    .font(.system(size: 14, weight: .black, design: .monospaced))
-                    .tracking(2)
-                    .foregroundStyle(.white)
-
+            VStack(spacing: 1) {
                 HStack(spacing: 6) {
-                    Text("BPM \(Int(engine.bpm))")
-                    if engine.targetWins > 1 {
-                        Text("• \(engine.playerScore)-\(engine.cpuScore) (\(engine.targetWins)先取)")
-                    } else {
-                        Text("• TURN \(engine.turnCount)")
+                    if engine.currentLoopNumber > 1 {
+                        Text("LOOP \(engine.currentLoopNumber)")
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.cyberAmber, in: Capsule())
                     }
+                    Text("STAGE \(engine.currentStageInLoop)/11")
+                        .font(.system(size: 13, weight: .black, design: .monospaced))
+                        .foregroundStyle(.white)
                 }
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Color.cyberEmerald)
+
+                Text("🔥 WIN STREAK: \(engine.winStreak)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.cyberEmerald)
             }
 
             Spacer()
 
-            // ヘッダー右側の小型バージョン表示
             Text(AppVersion.displayText)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.65))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
                 .background(Color.white.opacity(0.06), in: Capsule())
         }
-        .padding(.top, 4)
+        .padding(.top, 2)
     }
 
-    // MARK: - 2. CPU Status Panel
-    private var cpuStatusPanel: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Label("ENEMY AI // NEO-CPU", systemImage: "cpu.fill")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.cyberDanger.opacity(0.9))
-                Spacer()
-                if engine.cpuCharge >= 2 {
-                    Text("⚠️ MEGA READY")
-                        .font(.system(size: 10, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color.cyberAmber)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.cyberAmber.opacity(0.18), in: Capsule())
-                }
-            }
-
-            EnergyOrbView(
-                label: "CPU CHARGE",
-                currentCharge: engine.cpuCharge,
-                maxCharge: engine.maxCharge,
-                accentColor: .cyberCyan
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            // CPUアクション表示ボックス（3拍目でオープン）
-            HStack(spacing: 10) {
-                if let cpuAct = engine.revealedCpuAction, engine.beat == 3 {
-                    Text(cpuAct.emoji)
-                        .font(.system(size: 26))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(cpuAct.label)
-                            .font(.system(size: 18, weight: .black))
-                            .foregroundStyle(cpuAct.accentColor)
-                        Text(cpuAct.codeName)
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.6))
-                    }
-                } else {
-                    Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.cyberCyan.opacity(0.7))
-                    Text("SYNCING TACTICS...")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.55))
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .frame(height: 54)
-            .background(
+    // MARK: - 2. Enemy Fighter Card (立ち絵 + HP3 + チャージ0〜4)
+    private var enemyFighterCard: some View {
+        HStack(spacing: 12) {
+            // 敵キャラクター透過立ち絵ポートレート
+            ZStack(alignment: .bottom) {
                 CyberShape(cutSize: 10)
-                    .fill(Color.black.opacity(0.45))
-                    .overlay(
-                        CyberShape(cutSize: 10)
-                            .strokeBorder(Color.cyberCyan.opacity(0.32), lineWidth: 1)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cyberDanger.opacity(0.24), Color.black.opacity(0.65)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-            )
+
+                Image(engine.currentEnemy.standingAsset(for: engine.cpuExpression))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 78, height: 92)
+                    .padding(.top, 4)
+
+                CyberShape(cutSize: 10)
+                    .strokeBorder(Color.cyberDanger.opacity(0.55), lineWidth: 1.2)
+            }
+            .frame(width: 84, height: 96)
+            .clipShape(CyberShape(cutSize: 10))
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Text(engine.currentEnemy.codeName)
+                        .font(.system(size: 17, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    HealthBarView(
+                        currentHP: engine.cpuHP,
+                        maxHP: engine.maxHP,
+                        accentColor: .cyberDanger
+                    )
+                }
+
+                Text(engine.currentEnemy.titleLabel)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.68))
+                    .lineLimit(1)
+
+                HStack {
+                    EnergyOrbView(
+                        label: "CHARGE",
+                        currentCharge: engine.cpuCharge,
+                        maxCharge: engine.maxCharge,
+                        accentColor: .cyberCyan
+                    )
+                    Spacer()
+                    if engine.cpuCharge >= engine.maxCharge {
+                        Text("⚠️ 必殺READY")
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundStyle(Color.cyberAmber)
+                    }
+                }
+            }
         }
-        .padding(14)
+        .padding(10)
         .background(
             CyberShape(cutSize: 14)
-                .fill(Color.cyberPanel.opacity(0.85))
+                .fill(Color.cyberPanel.opacity(0.88))
                 .overlay(
                     CyberShape(cutSize: 14)
-                        .strokeBorder(Color.cyberCyan.opacity(0.35), lineWidth: 1.2)
+                        .strokeBorder(Color.cyberDanger.opacity(0.4), lineWidth: 1.2)
                 )
         )
     }
 
-    // MARK: - 3. Center Rhythm Stage (3拍子インジケーター & コール)
-    private var rhythmCenterStage: some View {
-        VStack(spacing: 14) {
-            // 3拍子ビートインジケーター (1: バン / 2: バン / 3: ビーム)
-            HStack(spacing: 16) {
+    // MARK: - 3. Center Hands & Rhythm Stage
+    private var handsArenaStage: some View {
+        VStack(spacing: 8) {
+            // 3拍子ビートバー
+            HStack(spacing: 14) {
                 ForEach(1...3, id: \.self) { step in
                     let isActive = engine.beat == step
                     let activeColor: Color = (step == 3) ? .cyberEmerald : .cyberCyan
 
-                    VStack(spacing: 4) {
-                        CyberShape(cutSize: 5)
+                    VStack(spacing: 3) {
+                        CyberShape(cutSize: 4)
                             .fill(isActive ? activeColor : Color.white.opacity(0.12))
-                            .frame(width: 64, height: 10)
-                            .shadow(color: isActive ? activeColor.opacity(0.9) : .clear, radius: 8)
+                            .frame(width: 62, height: 8)
+                            .shadow(color: isActive ? activeColor.opacity(0.9) : .clear, radius: 6)
 
                         Text(step == 3 ? "ACTION!" : "BEAT \(step)")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundStyle(isActive ? activeColor : Color.white.opacity(0.4))
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(isActive ? activeColor : Color.white.opacity(0.38))
                     }
                 }
             }
 
-            // メインリズムコール（「せっせっせーの...」「💥 バン！」「⚡️ ビーム！」）
-            Text(engine.calloutText)
-                .font(.system(size: 34, weight: .black, design: .rounded))
-                .foregroundStyle(.white)
-                .shadow(
-                    color: (engine.beat == 3 ? Color.cyberEmerald : Color.cyberCyan).opacity(0.85),
-                    radius: 14
-                )
-                .scaleEffect(engine.beat == 3 ? 1.08 : 1.0)
-                .animation(.spring(response: 0.22, dampingFraction: 0.6), value: engine.beat)
-                .multilineTextAlignment(.center)
+            // 手イラスト演出エリア
+            ZStack {
+                if engine.beat == 1 || engine.beat == 2 {
+                    // 1・2拍目：手拍子イラスト
+                    VStack(spacing: 4) {
+                        Image("hand_clap")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 112)
+                            .shadow(color: Color.cyberCyan.opacity(0.8), radius: 14)
+                            .scaleEffect(engine.beat == 2 ? 1.08 : 0.98)
+                            .animation(.spring(response: 0.2, dampingFraction: 0.55), value: engine.beat)
 
-            // 激突サブテキスト / 自分の出した手との対比
-            if engine.beat == 3,
-               let pAct = engine.revealedPlayerAction,
-               let cAct = engine.revealedCpuAction {
-                HStack(spacing: 14) {
-                    clashBadge(prefix: "YOU", action: pAct)
-                    Text("VS")
-                        .font(.system(size: 13, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color.cyberCyan)
-                    clashBadge(prefix: "CPU", action: cAct)
+                        Text(engine.calloutText)
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: Color.cyberCyan, radius: 10)
+                    }
+                } else if engine.beat == 3,
+                          let pMove = engine.revealedPlayerMove,
+                          let cMove = engine.revealedCpuMove {
+                    // 3拍目：両者の手イラスト激突表示
+                    VStack(spacing: 6) {
+                        HStack(spacing: 12) {
+                            handMoveCard(owner: "REO", move: pMove)
+                            Text("VS")
+                                .font(.system(size: 14, weight: .black, design: .monospaced))
+                                .italic()
+                                .foregroundStyle(Color.cyberCyan)
+                            handMoveCard(owner: engine.currentEnemy.codeName, move: cMove)
+                        }
+
+                        Text(engine.calloutText)
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: Color.cyberEmerald, radius: 10)
+                    }
+                } else {
+                    // 0拍目：導入
+                    VStack(spacing: 8) {
+                        Image("hand_clap")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 92)
+                            .opacity(0.55)
+
+                        Text(engine.calloutText)
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: Color.cyberCyan, radius: 10)
+                    }
                 }
             }
+            .frame(height: 148)
 
             Text(engine.statusDetailText)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.cyberEmerald)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 10)
+                .lineLimit(2)
+                .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
         .background(
             CyberShape(cutSize: 16)
-                .fill(Color.black.opacity(0.42))
+                .fill(Color.black.opacity(0.45))
                 .overlay(
                     CyberShape(cutSize: 16)
                         .strokeBorder(
@@ -264,280 +303,261 @@ struct BattleView: View {
         )
     }
 
-    private func clashBadge(prefix: String, action: GameAction) -> some View {
-        HStack(spacing: 6) {
-            Text(prefix)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+    private func handMoveCard(owner: String, move: ResolvedMove) -> some View {
+        VStack(spacing: 4) {
+            Text(owner)
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.65))
-            Text("\(action.emoji) \(action.label)")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(action.accentColor)
+
+            if let asset = move.handAssetName {
+                Image(asset)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 105, height: 74)
+                    .shadow(color: move.accentColor.opacity(0.85), radius: 8)
+            } else {
+                VStack(spacing: 2) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.cyberDanger)
+                    Text("NO GUARD")
+                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.cyberDanger)
+                }
+                .frame(width: 105, height: 74)
+            }
+
+            Text(move.displayLabel)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(move.accentColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(Color.white.opacity(0.07), in: Capsule())
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
 
-    // MARK: - 4. Practice Mode Control Bar (手動1拍進行 + 自動再生切替)
-    private var practiceControlBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                engine.stepBeatManually()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "forward.frame.fill")
-                    Text("1拍進める (NEXT BEAT)")
-                        .font(.system(size: 14, weight: .black, design: .rounded))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-            }
-            .buttonStyle(
-                CyberButtonStyle(
-                    primaryColor: .cyberEmerald,
-                    secondaryColor: .cyberCyan,
-                    cutSize: 10,
-                    fillOpacity: 0.34
-                )
-            )
-            .disabled(engine.isPracticeAutoPlay || engine.outcome.isFinished)
-            .opacity(engine.isPracticeAutoPlay ? 0.45 : 1.0)
-
-            Button {
-                HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                engine.isPracticeAutoPlay.toggle()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: engine.isPracticeAutoPlay ? "pause.fill" : "play.fill")
-                    Text(engine.isPracticeAutoPlay ? "AUTO" : "MANUAL")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                }
-                .foregroundStyle(engine.isPracticeAutoPlay ? Color.cyberAmber : Color.cyberCyan)
-                .frame(width: 92, height: 44)
-            }
-            .buttonStyle(
-                CyberButtonStyle(
-                    primaryColor: engine.isPracticeAutoPlay ? .cyberAmber : .cyberCyan,
-                    secondaryColor: .cyberEmerald,
-                    cutSize: 10,
-                    fillOpacity: 0.2
-                )
-            )
-        }
-    }
-
-    // MARK: - 5. Player Control Panel (気力オーブ & 4コマンドボタン)
-    private var playerControlPanel: some View {
+    // MARK: - 4. Player (Reo) Status & Command Buttons
+    private var playerControlCard: some View {
         let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10)
         ]
 
-        return VStack(spacing: 12) {
-            HStack {
-                EnergyOrbView(
-                    label: "YOUR CHARGE",
-                    currentCharge: engine.playerCharge,
-                    maxCharge: engine.maxCharge,
-                    accentColor: .cyberEmerald
-                )
+        return VStack(spacing: 10) {
+            // Reo ステータス行
+            HStack(spacing: 10) {
+                ZStack(alignment: .bottom) {
+                    CyberShape(cutSize: 8)
+                        .fill(Color.cyberEmerald.opacity(0.2))
 
-                Spacer()
+                    Image(CharacterProfile.reo.standingAsset(for: engine.playerExpression))
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 54, height: 64)
 
-                // 予約中コマンド表示（気力不足時はお手つき警告色）
-                let lacksEnergy = engine.playerCharge < engine.selectedAction.cost
-                Text(lacksEnergy ? "⚠️ 気力不足: \(engine.selectedAction.label)" : "予約: \(engine.selectedAction.emoji)\(engine.selectedAction.label)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(lacksEnergy ? Color.cyberDanger : Color.cyberCyan)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        (lacksEnergy ? Color.cyberDanger : Color.cyberCyan).opacity(0.15),
-                        in: Capsule()
-                    )
+                    CyberShape(cutSize: 8)
+                        .strokeBorder(Color.cyberEmerald.opacity(0.6), lineWidth: 1)
+                }
+                .frame(width: 58, height: 66)
+                .clipShape(CyberShape(cutSize: 8))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text("REO (YOU)")
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Spacer()
+
+                        HealthBarView(
+                            currentHP: engine.playerHP,
+                            maxHP: engine.maxHP,
+                            accentColor: .cyberEmerald
+                        )
+                    }
+
+                    HStack {
+                        EnergyOrbView(
+                            label: "CHARGE",
+                            currentCharge: engine.playerCharge,
+                            maxCharge: engine.maxCharge,
+                            accentColor: .cyberEmerald
+                        )
+
+                        Spacer()
+
+                        let lacksEnergy = engine.playerCharge < engine.selectedAction.cost
+                        Text(lacksEnergy ? "⚠️お手つき注意" : "予約:\(engine.selectedAction.emoji)\(engine.selectedAction.label)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(lacksEnergy ? Color.cyberDanger : Color.cyberCyan)
+                    }
+                }
             }
 
-            LazyVGrid(columns: columns, spacing: 12) {
+            // 4コマンドボタン
+            LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(GameAction.allCases) { action in
-                    commandButton(for: action)
+                    BattleCommandButton(
+                        action: action,
+                        isSelected: engine.selectedAction == action,
+                        playerCharge: engine.playerCharge
+                    ) {
+                        engine.selectCommand(action)
+                    }
                 }
             }
         }
-        .padding(14)
+        .padding(12)
         .background(
             CyberShape(cutSize: 14)
-                .fill(Color.cyberPanel.opacity(0.9))
+                .fill(Color.cyberPanel.opacity(0.92))
                 .overlay(
                     CyberShape(cutSize: 14)
-                        .strokeBorder(Color.cyberEmerald.opacity(0.4), lineWidth: 1.2)
+                        .strokeBorder(Color.cyberEmerald.opacity(0.42), lineWidth: 1.2)
                 )
         )
     }
 
-    private func commandButton(for action: GameAction) -> some View {
-        let isSelected = engine.selectedAction == action
-        let isAffordable = engine.playerCharge >= action.cost
-        let borderColor: Color = {
-            if isSelected && !isAffordable {
-                return .cyberDanger
-            }
-            return isSelected ? action.accentColor : action.accentColor.opacity(isAffordable ? 0.55 : 0.25)
-        }()
-
-        return Button {
-            engine.selectCommand(action)
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(action.emoji)
-                        .font(.system(size: 20))
-                    Text(action.label)
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(isAffordable ? .white : Color.white.opacity(0.55))
-                    Spacer()
-                }
-
-                HStack {
-                    Text(action.costBadge)
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isAffordable ? action.accentColor : Color.cyberDanger.opacity(0.85))
-
-                    Spacer()
-
-                    if isSelected {
-                        Text("SELECTED")
-                            .font(.system(size: 9, weight: .black, design: .monospaced))
-                            .foregroundStyle(isAffordable ? .black : .white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                isAffordable ? action.accentColor : Color.cyberDanger,
-                                in: Capsule()
-                            )
-                    } else if action == .megaBeam && isAffordable {
-                        Text("READY!")
-                            .font(.system(size: 9, weight: .black, design: .monospaced))
-                            .foregroundStyle(Color.cyberAmber)
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .frame(height: 68)
-            .background(
-                ZStack {
-                    CyberShape(cutSize: 12)
-                        .fill(
-                            isSelected
-                                ? (isAffordable ? action.accentColor.opacity(0.28) : Color.cyberDanger.opacity(0.24))
-                                : Color.black.opacity(0.5)
-                        )
-
-                    CyberShape(cutSize: 12)
-                        .strokeBorder(borderColor, lineWidth: isSelected ? 2.4 : 1.2)
-                }
-            )
-            .shadow(
-                color: isSelected ? borderColor.opacity(0.65) : .clear,
-                radius: isSelected ? 10 : 0
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - 6. Result Overlay (勝敗決着モーダル)
-    private var resultOverlay: some View {
-        let isWin: Bool = {
-            if case .playerWin = engine.outcome { return true }
+    // MARK: - 5. KUMITE Result Overlay (Stage Clear / Game Over + Retry Ad + World Ranking)
+    private var kumiteResultOverlay: some View {
+        let isStageClear: Bool = {
+            if case .stageClear = engine.outcome { return true }
             return false
         }()
 
-        let headline: String = {
-            switch engine.outcome {
-            case .ongoing:
-                return ""
-            case .playerWin:
-                return "YOU WIN"
-            case .playerLose(_, let isFoul):
-                return isFoul ? "FOUL LOSE" : "YOU LOSE"
-            }
-        }()
-
-        let detail: String = {
-            switch engine.outcome {
-            case .ongoing:
-                return ""
-            case .playerWin(let reason):
-                return reason
-            case .playerLose(let reason, _):
-                return reason
-            }
-        }()
-
-        let accent: Color = isWin ? .cyberEmerald : .cyberDanger
+        let accent: Color = isStageClear ? .cyberEmerald : .cyberDanger
+        let nextEnemyInfo = CharacterProfile.enemy(forStreak: engine.winStreak)
 
         return ZStack {
-            Color.black.opacity(0.78)
+            Color.black.opacity(0.82)
                 .ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                Text(headline)
-                    .font(.system(size: 40, weight: .black, design: .rounded))
+            VStack(spacing: 18) {
+                Text(isStageClear ? "STAGE CLEAR!!" : "DEFEATED...")
+                    .font(.system(size: 36, weight: .black, design: .rounded))
                     .italic()
-                    .tracking(3)
+                    .tracking(2)
                     .foregroundStyle(accent)
-                    .shadow(color: accent.opacity(0.9), radius: 16)
+                    .shadow(color: accent.opacity(0.9), radius: 14)
 
-                Text(detail)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 16)
+                if case .stageClear(_, let reason) = engine.outcome {
+                    Text(reason)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
 
-                VStack(spacing: 12) {
+                    VStack(spacing: 4) {
+                        Text("🔥 現在 \(engine.winStreak) 連勝中！")
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.cyberAmber)
+                        Text("次戦: \(nextEnemyInfo.profile.codeName)（ReoのHPは3に全回復します）")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.75))
+                    }
+                    .padding(.vertical, 6)
+
                     Button {
                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                        engine.rematch()
+                        engine.advanceToNextKumiteStage()
                     } label: {
-                        Text("PLAY AGAIN")
+                        Text("NEXT BATTLE ▶")
                             .font(.system(size: 18, weight: .black, design: .rounded))
                             .tracking(2)
                             .foregroundStyle(.white)
-                            .frame(width: 230, height: 50)
+                            .frame(width: 240, height: 52)
                     }
                     .buttonStyle(
                         CyberButtonStyle(
                             primaryColor: .cyberEmerald,
                             secondaryColor: .cyberCyan,
                             cutSize: 12,
-                            fillOpacity: 0.35
+                            fillOpacity: 0.38
+                        )
+                    )
+                } else if case .gameOver(let finalStreak, let reason) = engine.outcome {
+                    Text(reason)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+
+                    VStack(spacing: 4) {
+                        Text("今回の記録: \(finalStreak) 連勝")
+                            .font(.system(size: 20, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.cyberCyan)
+                        Text("自己ベスト: \(GameCenterManager.shared.bestWinStreak) 連勝")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.cyberAmber)
+                    }
+                    .padding(.vertical, 4)
+
+                    // リトライボタン（2〜3回ごとにスキップ可能な全画面広告を表示後に再開）
+                    Button {
+                        HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                        AdManager.shared.handleRetryWithAdIfNeeded {
+                            engine.startKumiteFromBeginning()
+                        }
+                    } label: {
+                        Text("RETRY (最初から挑戦)")
+                            .font(.system(size: 17, weight: .black, design: .rounded))
+                            .tracking(1.5)
+                            .foregroundStyle(.white)
+                            .frame(width: 240, height: 50)
+                    }
+                    .buttonStyle(
+                        CyberButtonStyle(
+                            primaryColor: .cyberEmerald,
+                            secondaryColor: .cyberCyan,
+                            cutSize: 12,
+                            fillOpacity: 0.36
                         )
                     )
 
                     Button {
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                        engine.returnToTitle()
+                        if !GameCenterManager.shared.presentWorldRanking() {
+                            isShowingRankingFallback = true
+                        }
                     } label: {
-                        Text("◀ TITLE")
-                            .font(.system(size: 15, weight: .bold, design: .monospaced))
-                            .tracking(2)
-                            .foregroundStyle(Color.cyberCyan)
-                            .frame(width: 230, height: 44)
+                        HStack(spacing: 6) {
+                            Image(systemName: "trophy.fill")
+                            Text("WORLD RANKING")
+                        }
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.cyberAmber)
+                        .frame(width: 240, height: 42)
                     }
                     .buttonStyle(
                         CyberButtonStyle(
-                            primaryColor: .cyberCyan,
-                            secondaryColor: Color.white.opacity(0.6),
+                            primaryColor: .cyberAmber,
+                            secondaryColor: .cyberCyan,
                             cutSize: 10,
-                            fillOpacity: 0.14
+                            fillOpacity: 0.18
                         )
                     )
                 }
-                .padding(.top, 6)
+
+                Button {
+                    HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                    engine.returnToTitle()
+                } label: {
+                    Text("◀ TITLE")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .tracking(2)
+                        .foregroundStyle(Color.cyberCyan)
+                        .frame(width: 240, height: 42)
+                }
+                .buttonStyle(
+                    CyberButtonStyle(
+                        primaryColor: .cyberCyan,
+                        secondaryColor: Color.white.opacity(0.6),
+                        cutSize: 10,
+                        fillOpacity: 0.14
+                    )
+                )
             }
-            .padding(28)
+            .padding(24)
             .background(
                 CyberShape(cutSize: 18)
                     .fill(Color.cyberPanel)
@@ -547,7 +567,84 @@ struct BattleView: View {
                     )
             )
             .shadow(color: accent.opacity(0.5), radius: 24)
-            .padding(.horizontal, 28)
+            .padding(.horizontal, 24)
         }
+    }
+}
+
+/// 共通のサイバーコマンド選択ボタン（BattleView / PracticeTutorialView 共用）
+struct BattleCommandButton: View {
+    let action: GameAction
+    let isSelected: Bool
+    let playerCharge: Int
+    let onTap: () -> Void
+
+    var body: some View {
+        let isAffordable = playerCharge >= action.cost
+        let borderColor: Color = {
+            if isSelected && !isAffordable {
+                return .cyberDanger
+            }
+            return isSelected ? action.accentColor : action.accentColor.opacity(isAffordable ? 0.6 : 0.25)
+        }()
+
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Text(action.emoji)
+                        .font(.system(size: 18))
+                    Text(action.label)
+                        .font(.system(size: 15, weight: .black, design: .rounded))
+                        .foregroundStyle(isAffordable ? .white : Color.white.opacity(0.5))
+                    Spacer()
+                }
+
+                HStack {
+                    Text(action.costBadge)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isAffordable ? action.accentColor : Color.cyberDanger.opacity(0.85))
+
+                    Spacer()
+
+                    if isSelected {
+                        Text(isAffordable ? "SET" : "不発注意")
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundStyle(isAffordable ? .black : .white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                isAffordable ? action.accentColor : Color.cyberDanger,
+                                in: Capsule()
+                            )
+                    } else if action == .megaBeam && isAffordable {
+                        Text("一撃必殺OK!")
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundStyle(Color.cyberAmber)
+                    }
+                }
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
+            .background(
+                ZStack {
+                    CyberShape(cutSize: 11)
+                        .fill(
+                            isSelected
+                                ? (isAffordable ? action.accentColor.opacity(0.28) : Color.cyberDanger.opacity(0.24))
+                                : Color.black.opacity(0.5)
+                        )
+
+                    CyberShape(cutSize: 11)
+                        .strokeBorder(borderColor, lineWidth: isSelected ? 2.2 : 1.1)
+                }
+            )
+            .shadow(
+                color: isSelected ? borderColor.opacity(0.65) : .clear,
+                radius: isSelected ? 8 : 0
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

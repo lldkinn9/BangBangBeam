@@ -6,6 +6,7 @@ struct TitleView: View {
 
     @State private var isMenuExpanded: Bool = false
     @State private var isShowingSettings: Bool = false
+    @State private var isShowingRankingSheet: Bool = false
     @State private var isPulsing: Bool = false
 
     var body: some View {
@@ -29,12 +30,12 @@ struct TitleView: View {
                     colors: [
                         Color.clear,
                         Color.black.opacity(0.28),
-                        Color.black.opacity(0.68)
+                        Color.black.opacity(0.72)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: 150)
+                .frame(height: 160)
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
@@ -53,9 +54,24 @@ struct TitleView: View {
 
             // MARK: 3. メインUIレイヤー
             VStack(spacing: 0) {
-                // ヘッダー右上の小型バージョン表示
+                // ヘッダー: 自己ベスト連勝バッジ + 小型バージョン表示
                 HStack {
+                    if GameCenterManager.shared.bestWinStreak > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.cyberAmber)
+                            Text("BEST \(GameCenterManager.shared.bestWinStreak)")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.5), in: Capsule())
+                    }
+
                     Spacer()
+
                     Text(AppVersion.displayText)
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.cyberCyan.opacity(0.85))
@@ -66,7 +82,7 @@ struct TitleView: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 4)
 
-                // 上部ロゴ: 少年の頭上の夜空エリアに配置（余計なサブテキストは入れない）
+                // 上部ロゴ: 少年の頭上の夜空エリアに配置
                 Text("BANG BANG BEAM")
                     .font(.system(size: 32, weight: .black, design: .rounded))
                     .italic()
@@ -88,7 +104,6 @@ struct TitleView: View {
 
                 Spacer()
 
-                // 中央〜下部エリア: 初期STARTボタン または 展開後のモード選択メニュー
                 if isMenuExpanded {
                     modeMenuPanel
                         .transition(
@@ -97,15 +112,14 @@ struct TitleView: View {
                                 removal: .opacity.combined(with: .scale(scale: 0.96))
                             )
                         )
-                        .padding(.bottom, 56)
+                        .padding(.bottom, 22)
                 } else {
                     startButton
                         .transition(.opacity.combined(with: .scale(scale: 0.92)))
-                        .padding(.bottom, 34)
+                        .padding(.bottom, 18)
                 }
             }
         }
-        // 背景画像 "Title" を全画面表示（レイアウト幅に影響させないため .background に配置）
         .background {
             Image("Title")
                 .resizable()
@@ -115,7 +129,11 @@ struct TitleView: View {
         .sheet(isPresented: $isShowingSettings) {
             SettingSheetView(engine: engine)
         }
+        .sheet(isPresented: $isShowingRankingSheet) {
+            RankingInfoSheetView()
+        }
         .onAppear {
+            SoundManager.shared.playTitleBGM()
             withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
                 isPulsing = true
             }
@@ -138,7 +156,7 @@ struct TitleView: View {
                     .tracking(4)
             }
             .foregroundStyle(.white)
-            .frame(width: 220, height: 54)
+            .frame(width: 220, height: 52)
             .background(
                 ZStack {
                     CyberShape(cutSize: 15)
@@ -181,46 +199,58 @@ struct TitleView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Mode Selection Menu (Shown over Smoke Overlay)
+    // MARK: - Mode Selection Menu
     private var modeMenuPanel: some View {
-        VStack(spacing: 16) {
-            // ① KUMITE
+        VStack(spacing: 12) {
+            // ① KUMITE (メイン勝ち抜きモード)
             modeButton(
                 title: "KUMITE",
-                subtitle: "1vs1 CPU対戦（勝負制）",
+                subtitle: "11人勝ち抜きサバイバル（世界ランキング対応）",
                 systemImage: "flame.fill",
                 primary: .cyberCyan,
                 secondary: .cyberEmerald
             ) {
                 isMenuExpanded = false
-                engine.startBattle(mode: .kumite)
+                engine.startKumiteFromBeginning()
             }
 
-            // ② PRACTICE
+            // ② PRACTICE (ルール学習＆練習専用UI)
             modeButton(
                 title: "PRACTICE",
-                subtitle: "1拍ずつ手動で進められる練習モード",
-                systemImage: "metronome.fill",
+                subtitle: "ルール学習レッスン ＆ 1拍進行トレーニング",
+                systemImage: "graduationcap.fill",
                 primary: .cyberEmerald,
                 secondary: .cyberCyan
             ) {
                 isMenuExpanded = false
-                engine.startBattle(mode: .practice)
+                engine.startPracticeMode()
             }
 
-            // ③ SETTING
+            // ③ RANKING (世界ランキング & 11人進捗)
+            modeButton(
+                title: "RANKING",
+                subtitle: "連勝数の世界ランキング ＆ 撃破リスト",
+                systemImage: "trophy.fill",
+                primary: .cyberAmber,
+                secondary: .cyberCyan
+            ) {
+                if !GameCenterManager.shared.presentWorldRanking() {
+                    isShowingRankingSheet = true
+                }
+            }
+
+            // ④ SETTING
             modeButton(
                 title: "SETTING",
-                subtitle: "BPM速度・ルール設定",
+                subtitle: "BGM ON/OFF・BPM速度・ルール確認",
                 systemImage: "slider.horizontal.3",
                 primary: Color.white.opacity(0.85),
                 secondary: .cyberCyan
             ) {
-                HapticManager.playLight(enabled: engine.isHapticsEnabled)
                 isShowingSettings = true
             }
 
-            // ④ ✕ BACK
+            // ⑤ ✕ BACK
             Button {
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
                 withAnimation(.easeInOut(duration: 0.28)) {
@@ -228,22 +258,22 @@ struct TitleView: View {
                 }
             } label: {
                 Text("✕ BACK")
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
                     .tracking(2)
                     .foregroundStyle(Color.white.opacity(0.85))
-                    .frame(width: 160, height: 42)
+                    .frame(width: 150, height: 38)
             }
             .buttonStyle(
                 CyberButtonStyle(
                     primaryColor: Color.white.opacity(0.55),
                     secondaryColor: Color.cyberCyan.opacity(0.55),
-                    cutSize: 10,
+                    cutSize: 9,
                     fillOpacity: 0.12
                 )
             )
-            .padding(.top, 6)
+            .padding(.top, 2)
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 26)
     }
 
     private func modeButton(
@@ -258,38 +288,39 @@ struct TitleView: View {
             HapticManager.playMedium(enabled: engine.isHapticsEnabled)
             action()
         } label: {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(primary)
-                    .frame(width: 32)
+                    .frame(width: 28)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 20, weight: .black, design: .rounded))
-                        .tracking(2.5)
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .tracking(2)
                         .foregroundStyle(.white)
 
                     Text(subtitle)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.75))
+                        .lineLimit(1)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(primary)
             }
-            .padding(.horizontal, 20)
-            .frame(maxWidth: 310)
-            .frame(height: 66)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: 320)
+            .frame(height: 58)
         }
         .buttonStyle(
             CyberButtonStyle(
                 primaryColor: primary,
                 secondaryColor: secondary,
-                cutSize: 14,
+                cutSize: 13,
                 fillOpacity: 0.28
             )
         )

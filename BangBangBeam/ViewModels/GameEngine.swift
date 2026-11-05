@@ -1,20 +1,23 @@
 import SwiftUI
 import Observation
 
-/// 勝敗結果の状態定義
+/// 勝敗・ステージ進行状態
 enum BattleOutcome: Equatable, Sendable {
     case ongoing
-    case playerWin(reason: String)
-    case playerLose(reason: String, isFoul: Bool)
+    case stageClear(enemyName: String, reason: String)
+    case gameOver(finalStreak: Int, reason: String)
+    case practiceClear(isWin: Bool, reason: String)
 
     nonisolated static func == (lhs: BattleOutcome, rhs: BattleOutcome) -> Bool {
         switch (lhs, rhs) {
         case (.ongoing, .ongoing):
             return true
-        case let (.playerWin(a), .playerWin(b)):
-            return a == b
-        case let (.playerLose(r1, f1), .playerLose(r2, f2)):
-            return r1 == r2 && f1 == f2
+        case let (.stageClear(e1, r1), .stageClear(e2, r2)):
+            return e1 == e2 && r1 == r2
+        case let (.gameOver(s1, r1), .gameOver(s2, r2)):
+            return s1 == s2 && r1 == r2
+        case let (.practiceClear(w1, r1), .practiceClear(w2, r2)):
+            return w1 == w2 && r1 == r2
         default:
             return false
         }
@@ -26,16 +29,33 @@ enum BattleOutcome: Equatable, Sendable {
     }
 }
 
-/// 1vs1リズムバトルの状態管理・タイマー制御・勝敗判定・CPU思考を担うゲームエンジン
+/// 4チャージ一撃必殺発動時のカットイン＆動画再生リクエスト
+struct UltimatePresentation: Equatable, Sendable {
+    let character: CharacterProfile
+    let isPlayer: Bool
+
+    nonisolated static func == (lhs: UltimatePresentation, rhs: UltimatePresentation) -> Bool {
+        lhs.character == rhs.character && lhs.isPlayer == rhs.isPlayer
+    }
+}
+
+/// 製品版ゲームエンジン（KUMITE 11人勝ち抜き・HP3制・被弾チャージ-1・お手つき無防備・4チャージ一撃必殺）
 @Observable
 @MainActor
 final class GameEngine {
+    // MARK: - Persistence Keys
+    private let initialPracticeDoneKey = "BangBangBeam.hasCompletedInitialPractice"
+
     // MARK: - Navigation & Mode
     var currentScreen: AppScreen = .title
     var gameMode: GameMode = .kumite
+    var isFirstLaunchTutorial: Bool = false
 
-    // MARK: - Settings
-    /// テンポ設定（デフォルト BPM 88 -> 約 0.68秒間隔）
+    // MARK: - Constants & Settings
+    let maxHP: Int = 3
+    let maxCharge: Int = 4
+
+    /// テンポ設定（デフォルト BPM 88 -> 約0.68秒/拍）
     var bpm: Double = 88.0 {
         didSet {
             if isAutoLoopRunning {
@@ -44,48 +64,47 @@ final class GameEngine {
         }
     }
 
-    /// 気力（Charge）の最大ストック数（仕様: 0〜5個）
-    var maxCharge: Int = 5
-
-    /// 勝利に必要なラウンド先取数（デフォルト: 1本勝負）
-    var targetWins: Int = 1
-
-    /// 触覚フィードバック（CoreHaptics / UIImpactFeedbackGenerator）の有効フラグ
     var isHapticsEnabled: Bool = true
 
-    // MARK: - Battle State
-    /// 現在の拍（0: せっせっせーの..., 1: バン！, 2: バン！, 3: ビーム！激突解決）
-    var beat: Int = 0
+    // MARK: - KUMITE Progression State
+    var winStreak: Int = 0
+    var currentEnemy: CharacterProfile = CharacterProfile.kumiteRoster[0]
+    var currentLoopNumber: Int = 1
+    var currentStageInLoop: Int = 1
 
-    /// 経過ターン数
+    // MARK: - Battle Live State
+    /// 現在の拍（0: せっせっせーの..., 1: バン！, 2: バン！, 3: アクション激突）
+    var beat: Int = 0
     var turnCount: Int = 1
 
-    /// 気力ストック（0〜5）
+    var playerHP: Int = 3
+    var cpuHP: Int = 3
+
     var playerCharge: Int = 0
     var cpuCharge: Int = 0
 
-    /// ラウンド取得数（複数本先取設定時にも活用）
-    var playerScore: Int = 0
-    var cpuScore: Int = 0
+    var playerExpression: CharacterExpression = .normal
+    var cpuExpression: CharacterExpression = .normal
 
     /// プレイヤーが次の3拍目に向けて予約しているコマンド
     var selectedAction: GameAction = .charge
 
-    /// 直近の3拍目で確定・公開された両者のアクション
-    var revealedPlayerAction: GameAction? = nil
-    var revealedCpuAction: GameAction? = nil
+    /// 直近の3拍目で確定・公開された実効アクション
+    var revealedPlayerMove: ResolvedMove? = nil
+    var revealedCpuMove: ResolvedMove? = nil
 
-    /// アリーナ中央のコールテキスト・サブメッセージ
     var calloutText: String = "せっせっせーの..."
     var statusDetailText: String = "リズムに合わせてコマンドを選択！"
 
-    /// 現在の勝敗状態
     var outcome: BattleOutcome = .ongoing
 
-    /// PRACTICEモード内で自動テンポ再生を試す場合のフラグ（初期値は手動進行）
+    /// 4チャージ一撃必殺発動中のカットイン＆動画演出状態
+    var activeUltimate: UltimatePresentation? = nil
+
+    /// PRACTICEモードのフリー練習タブ用自動再生フラグ
     var isPracticeAutoPlay: Bool = false {
         didSet {
-            guard currentScreen == .battle, gameMode == .practice, !outcome.isFinished else { return }
+            guard currentScreen == .practiceTutorial, !outcome.isFinished, activeUltimate == nil else { return }
             if isPracticeAutoPlay {
                 startTimer()
             } else {
@@ -94,86 +113,143 @@ final class GameEngine {
         }
     }
 
-    // MARK: - Internal Timer
+    // MARK: - Timer
     private var rhythmTimer: Timer? = nil
 
-    /// 1拍あたりの秒数（BPM 88 のとき約 0.6818秒）
     var beatInterval: TimeInterval {
-        60.0 / max(40.0, min(bpm, 180.0))
+        60.0 / max(50.0, min(bpm, 160.0))
     }
 
     private var isAutoLoopRunning: Bool {
         rhythmTimer != nil
     }
 
-    // MARK: - Navigation Actions
-    /// 指定モードでバトルを開始し、BattleViewへ遷移する
-    func startBattle(mode: GameMode) {
+    // MARK: - Initialization & First Launch Check
+    init() {
+        let completedTutorial = UserDefaults.standard.bool(forKey: initialPracticeDoneKey)
+        if !completedTutorial {
+            // 初回アプリ起動時は自動で PRACTICE（チュートリアル）モードを起動
+            self.isFirstLaunchTutorial = true
+            self.gameMode = .practice
+            self.currentScreen = .practiceTutorial
+            setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
+        } else {
+            self.currentScreen = .title
+        }
+    }
+
+    /// 起動完了時のオーディオ・サービス初期化フック
+    func onAppAppear() {
+        GameCenterManager.shared.authenticateLocalPlayer()
+        AdManager.shared.startSDKAndRequestATT()
+
+        switch currentScreen {
+        case .title:
+            SoundManager.shared.playTitleBGM()
+        case .kumiteBattle, .practiceTutorial:
+            SoundManager.shared.playBattleBGM(forceNewRandom: true)
+        }
+    }
+
+    func markTutorialCompleted() {
+        UserDefaults.standard.set(true, forKey: initialPracticeDoneKey)
+        isFirstLaunchTutorial = false
+    }
+
+    // MARK: - Navigation Transitions
+    /// KUMITE（勝ち抜きサバイバル）を Stage 1 (geek) から開始
+    func startKumiteFromBeginning() {
+        markTutorialCompleted()
         stopTimer()
-        gameMode = mode
+        gameMode = .kumite
+        winStreak = 0
+        loadEnemyForCurrentStreak()
+        setupMatchState(enemy: currentEnemy)
+        currentScreen = .kumiteBattle
+        SoundManager.shared.playBattleBGM(forceNewRandom: true)
+        startTimer()
+    }
+
+    /// KUMITEで敵撃破後、ReoのHP=3全回復・チャージ0リセットで次の敵へ進む
+    func advanceToNextKumiteStage() {
+        stopTimer()
+        loadEnemyForCurrentStreak()
+        setupMatchState(enemy: currentEnemy)
+        SoundManager.shared.playBattleBGM(forceNewRandom: true)
+        startTimer()
+    }
+
+    /// PRACTICE（ルール学習＆練習専用UI）を開始
+    func startPracticeMode() {
+        stopTimer()
+        gameMode = .practice
         isPracticeAutoPlay = false
-        playerScore = 0
-        cpuScore = 0
-        setupNewRound(resetScores: false)
-        currentScreen = .battle
-
-        if mode == .kumite {
-            startTimer()
-        }
+        setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
+        currentScreen = .practiceTutorial
+        SoundManager.shared.playBattleBGM(forceNewRandom: true)
     }
 
-    /// 現在のモードで最初から再戦する
-    func rematch() {
+    /// PRACTICE内のフリー実戦リセット
+    func resetPracticeSparring() {
         stopTimer()
-        playerScore = 0
-        cpuScore = 0
-        setupNewRound(resetScores: false)
-
-        if gameMode == .kumite || (gameMode == .practice && isPracticeAutoPlay) {
+        setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
+        if isPracticeAutoPlay {
             startTimer()
         }
     }
 
-    /// タイトル画面へ安全に戻る
+    /// タイトル画面へ戻る
     func returnToTitle() {
+        markTutorialCompleted()
         stopTimer()
+        activeUltimate = nil
         isPracticeAutoPlay = false
+        SoundManager.shared.setDucked(false)
         currentScreen = .title
+        SoundManager.shared.playTitleBGM()
     }
 
     // MARK: - Player Input
-    /// プレイヤーがコマンドボタンをタップした際の予約処理
-    /// ※お手つきルールを成立させるため、気力不足のコマンドもあえて選択可能にする
+    /// チャージ不足のボタンもタップ可能（3拍目で無防備のお手つき状態になる）
     func selectCommand(_ action: GameAction) {
-        guard !outcome.isFinished else { return }
+        guard !outcome.isFinished, activeUltimate == nil else { return }
         selectedAction = action
         HapticManager.playMedium(enabled: isHapticsEnabled)
     }
 
-    /// PRACTICEモード用：手動で1拍進める
+    /// 手動で1拍進める（PRACTICE用）
     func stepBeatManually() {
-        guard !outcome.isFinished else { return }
+        guard !outcome.isFinished, activeUltimate == nil else { return }
         advanceBeat()
     }
 
-    // MARK: - Rhythm Loop Engine
-    private func setupNewRound(resetScores: Bool) {
-        if resetScores {
-            playerScore = 0
-            cpuScore = 0
-        }
+    // MARK: - Match Setup & Rhythm Loop
+    private func loadEnemyForCurrentStreak() {
+        let info = CharacterProfile.enemy(forStreak: winStreak)
+        currentEnemy = info.profile
+        currentLoopNumber = info.loopNumber
+        currentStageInLoop = info.stageInLoop
+    }
+
+    private func setupMatchState(enemy: CharacterProfile) {
+        currentEnemy = enemy
         beat = 0
         turnCount = 1
+        playerHP = maxHP
+        cpuHP = maxHP
         playerCharge = 0
         cpuCharge = 0
+        playerExpression = .normal
+        cpuExpression = .normal
         selectedAction = .charge
-        revealedPlayerAction = nil
-        revealedCpuAction = nil
+        revealedPlayerMove = nil
+        revealedCpuMove = nil
+        activeUltimate = nil
         outcome = .ongoing
         calloutText = "せっせっせーの..."
         statusDetailText = gameMode == .practice
-            ? "コマンドを選んで「1拍進める」をタップ"
-            : "1・2拍目の間にコマンドを予約せよ！"
+            ? "1・2拍目でコマンドを選び、3拍目でアクション発動！"
+            : "VS \(enemy.codeName) — 1・2拍目の間にコマンドを予約せよ！"
     }
 
     private func startTimer() {
@@ -196,37 +272,35 @@ final class GameEngine {
         rhythmTimer = nil
     }
 
-    /// 拍を1つ進め、0拍目(導入) -> 1拍目(バン) -> 2拍目(バン) -> 3拍目(ビーム解決) -> 1拍目... の3拍子ループを駆動
     private func advanceBeat() {
-        guard !outcome.isFinished else {
+        guard !outcome.isFinished, activeUltimate == nil else {
             stopTimer()
             return
         }
 
         switch beat {
         case 0, 3:
-            // 新しいターンの1拍目へ移行
             if beat == 3 {
                 turnCount += 1
             }
             beat = 1
-            revealedPlayerAction = nil
-            revealedCpuAction = nil
+            revealedPlayerMove = nil
+            revealedCpuMove = nil
+            playerExpression = .normal
+            cpuExpression = .normal
             calloutText = "💥 バン！"
             statusDetailText = "👏 リズム 1 / 3 — コマンド受付中"
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 1:
-            // 2拍目へ移行
             beat = 2
             calloutText = "💥 バン！"
             statusDetailText = "👏 リズム 2 / 3 — 次でアクション激突！"
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 2:
-            // 3拍目：アクション激突・判定解決
             beat = 3
-            calloutText = "⚡️ ビーム！"
+            calloutText = "⚡️ アクション！"
             resolveClash()
 
         default:
@@ -234,179 +308,262 @@ final class GameEngine {
         }
     }
 
-    // MARK: - Clash Resolution & Rules
+    // MARK: - Clash Resolution (HP=3 / 被弾チャージ-1 / お手つき無防備 / 4チャージ一撃必殺)
     private func resolveClash() {
-        let pAction = selectedAction
-        let cAction = decideCpuAction()
-
-        revealedPlayerAction = pAction
-        revealedCpuAction = cAction
-
-        // 1. お手つき（反則自滅）判定：気力不足でビーム/メガビームを選択して3拍目を迎えた場合、即敗北
-        if playerCharge < pAction.cost {
+        // 1. プレイヤー行動の解決（チャージ不足なら無防備 .fumble）
+        let pMove: ResolvedMove
+        if playerCharge < selectedAction.cost {
+            pMove = .fumble(attempted: selectedAction)
             HapticManager.playRigid(enabled: isHapticsEnabled)
-            statusDetailText = "⚠️ 気力不足で \(pAction.label) を発動！"
-            outcome = .playerLose(reason: "お手つき自滅！YOU LOSE", isFoul: true)
-            stopTimer()
+        } else {
+            playerCharge -= selectedAction.cost
+            pMove = .valid(selectedAction)
+        }
+
+        // 2. CPU行動の解決
+        let cMove = decideCpuMove()
+        if case .valid(let cAct) = cMove {
+            cpuCharge = max(0, cpuCharge - cAct.cost)
+        }
+
+        revealedPlayerMove = pMove
+        revealedCpuMove = cMove
+
+        // 3. 4チャージ一撃必殺（メガビーム）判定
+        let playerUlt = (pMove == .valid(.megaBeam))
+        let cpuUlt = (cMove == .valid(.megaBeam))
+
+        if playerUlt && cpuUlt {
+            HapticManager.playHeavy(enabled: isHapticsEnabled)
+            calloutText = "🌟⚡️ 超激突相殺！！"
+            statusDetailText = "両者の4チャージ必殺ビームが空間ごと相殺した！！"
+            resetSelectionIfUnaffordable()
+            return
+        } else if playerUlt {
+            HapticManager.playHeavy(enabled: isHapticsEnabled)
+            triggerUltimateSequence(character: .reo, isPlayer: true)
+            return
+        } else if cpuUlt {
+            HapticManager.playHeavy(enabled: isHapticsEnabled)
+            triggerUltimateSequence(character: currentEnemy, isPlayer: false)
             return
         }
 
-        // 通常の3拍目激突 Heavy Haptic
-        HapticManager.playHeavy(enabled: isHapticsEnabled)
-
-        // 2. コスト消費
-        playerCharge = max(0, playerCharge - pAction.cost)
-        cpuCharge = max(0, cpuCharge - cAction.cost)
-
-        // 3. 勝敗・相殺・防御マトリクス判定
-        switch (pAction, cAction) {
-        // --- 両者非攻撃 ---
-        case (.charge, .charge):
-            grantCharges(player: pAction, cpu: cAction)
-            statusDetailText = "⚡️ 両者チャージ！お互いに気力 +1"
-
-        case (.charge, .barrier):
-            grantCharges(player: pAction, cpu: cAction)
-            statusDetailText = "⚡️ チャージ成功！相手は様子見のバリア"
-
-        case (.barrier, .charge):
-            grantCharges(player: pAction, cpu: cAction)
-            statusDetailText = "🛡️ バリア展開！相手は気力をチャージ (+1)"
-
-        case (.barrier, .barrier):
-            statusDetailText = "🛡️ 両者バリア！静かな睨み合い..."
-
-        // --- 通常ビーム関連 ---
-        case (.beam, .charge):
-            handleRoundWin(byPlayer: true, detail: "💥 ビーム直撃！無防備なチャージを撃破！")
-
-        case (.charge, .beam):
-            handleRoundWin(byPlayer: false, detail: "💥 チャージ中にビーム被弾！")
-
-        case (.beam, .barrier):
-            statusDetailText = "🛡️ 相手のバリアに通常ビームを防がれた！"
-
-        case (.barrier, .beam):
-            statusDetailText = "🛡️ ナイス防御！相手の通常ビームを完全ブロック！"
-
-        case (.beam, .beam):
-            statusDetailText = "💥 ビーム同士が激突して相殺！！"
-
-        // --- メガビーム（超必殺技・バリア貫通）関連 ---
-        case (.megaBeam, .charge):
-            handleRoundWin(byPlayer: true, detail: "🌟 メガビーム炸裂！圧倒的出力で撃破！")
-
-        case (.megaBeam, .barrier):
-            handleRoundWin(byPlayer: true, detail: "🌟 バリア貫通撃破！！メガビームが盾を粉砕！")
-
-        case (.megaBeam, .beam):
-            handleRoundWin(byPlayer: true, detail: "🌟 出力圧倒！通常ビームを飲み込み撃破！")
-
-        case (.charge, .megaBeam):
-            handleRoundWin(byPlayer: false, detail: "🌟 チャージ中に敵メガビームが直撃！")
-
-        case (.barrier, .megaBeam):
-            handleRoundWin(byPlayer: false, detail: "🌟 バリア貫通被弾！メガビームは防げない！")
-
-        case (.beam, .megaBeam):
-            handleRoundWin(byPlayer: false, detail: "🌟 出力負け！敵メガビームに押し切られた！")
-
-        case (.megaBeam, .megaBeam):
-            statusDetailText = "🌟⚡️ 超激突！！メガビーム同士が空間ごと相殺！！"
+        if case .valid = pMove {
+            HapticManager.playHeavy(enabled: isHapticsEnabled)
         }
 
-        // 次ターンに向けて、気力不足による意図しない連続お手つきを防ぐため選択がコスト超過ならチャージへ戻す
+        // 4. 通常ビーム / バリア / チャージ / お手つき無防備 の勝敗・ダメージ解決
+        let playerFiredBeam = (pMove == .valid(.beam))
+        let cpuFiredBeam = (cMove == .valid(.beam))
+
+        if playerFiredBeam && cpuFiredBeam {
+            calloutText = "💥 ビーム相殺！"
+            statusDetailText = "両者のビームが激突して相殺！"
+        } else if playerFiredBeam && cMove.isVulnerableToBeam {
+            // プレイヤーの通常ビームが命中！（敵HP -1 ＆ 敵の蓄積チャージも -1）
+            cpuHP = max(0, cpuHP - 1)
+            cpuCharge = max(0, cpuCharge - 1)
+            playerExpression = .fun
+            cpuExpression = .sad
+            calloutText = "💥 ビーム直撃！！"
+
+            if case .fumble = cMove {
+                statusDetailText = "敵がお手つき無防備！敵HP -1 ＆ 敵チャージ -1！"
+            } else {
+                statusDetailText = "チャージ中の敵を撃ち抜いた！敵HP -1 ＆ 敵チャージ -1！"
+            }
+
+            if cpuHP <= 0 {
+                finishMatch(playerWon: true, reason: "\(currentEnemy.codeName) の体力を削り切って撃破！")
+                return
+            }
+        } else if cpuFiredBeam && pMove.isVulnerableToBeam {
+            // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）
+            playerHP = max(0, playerHP - 1)
+            playerCharge = max(0, playerCharge - 1)
+            playerExpression = .sad
+            cpuExpression = .fun
+            calloutText = "💥 被弾ダメージ！！"
+
+            if case .fumble(let attempted) = pMove {
+                statusDetailText = "⚠️ お手つき(\(attempted.label)不発)の無防備に被弾！HP -1 ＆ チャージ -1！"
+            } else {
+                statusDetailText = "チャージ中に被弾！HP -1 ＆ チャージ -1！"
+            }
+
+            if playerHP <= 0 {
+                finishMatch(playerWon: false, reason: "ビームを3回被弾して力尽きた...")
+                return
+            }
+        } else if playerFiredBeam && cMove == .valid(.barrier) {
+            calloutText = "🛡️ ガードされた！"
+            statusDetailText = "\(currentEnemy.codeName) のバリアに通常ビームを防がれた！"
+        } else if cpuFiredBeam && pMove == .valid(.barrier) {
+            calloutText = "🛡️ ナイスガード！"
+            statusDetailText = "敵の通常ビームをバリアで完全防御！"
+            playerExpression = .fun
+        } else {
+            // 互いに攻撃命中なし -> チャージを選んでいた側のみチャージ +1
+            var notes: [String] = []
+            if pMove == .valid(.charge) {
+                playerCharge = min(maxCharge, playerCharge + 1)
+                notes.append("Reo チャージ+1")
+            } else if case .fumble(let attempted) = pMove {
+                playerExpression = .sad
+                notes.append("⚠️Reo お手つき無防備(\(attempted.label)不発)")
+            } else if pMove == .valid(.barrier) {
+                notes.append("Reo バリア")
+            }
+
+            if cMove == .valid(.charge) {
+                cpuCharge = min(maxCharge, cpuCharge + 1)
+                notes.append("\(currentEnemy.codeName) チャージ+1")
+            } else if case .fumble = cMove {
+                cpuExpression = .sad
+                notes.append("\(currentEnemy.codeName) お手つき無防備！")
+            } else if cMove == .valid(.barrier) {
+                notes.append("\(currentEnemy.codeName) バリア")
+            }
+
+            calloutText = playerCharge >= maxCharge ? "🌟 必殺READY!!" : "⚡️ 読み合い継続"
+            statusDetailText = notes.joined(separator: " / ")
+        }
+
+        resetSelectionIfUnaffordable()
+    }
+
+    private func resetSelectionIfUnaffordable() {
         if !outcome.isFinished && playerCharge < selectedAction.cost {
             selectedAction = .charge
         }
     }
 
-    private func grantCharges(player: GameAction, cpu: GameAction) {
-        if player.gain > 0 {
-            playerCharge = min(maxCharge, playerCharge + player.gain)
-        }
-        if cpu.gain > 0 {
-            cpuCharge = min(maxCharge, cpuCharge + cpu.gain)
-        }
+    // MARK: - Ultimate Cut-in & Video Sequence
+    private func triggerUltimateSequence(character: CharacterProfile, isPlayer: Bool) {
+        stopTimer()
+        SoundManager.shared.setDucked(true)
+        activeUltimate = UltimatePresentation(character: character, isPlayer: isPlayer)
     }
 
-    private func handleRoundWin(byPlayer: Bool, detail: String) {
-        statusDetailText = detail
-        if byPlayer {
-            playerScore += 1
-            if playerScore >= targetWins {
-                outcome = .playerWin(reason: detail)
-                stopTimer()
-            } else {
-                // 複数本先取時は気力をリセットして次ラウンドへ
-                prepareNextSubRound(banner: "ROUND WIN! (\(playerScore)-\(cpuScore)) — \(detail)")
-            }
+    /// カットイン＆必殺動画の再生終了後に呼ばれ、一撃必殺で勝敗を確定する
+    func completeUltimateSequence() {
+        guard let ult = activeUltimate else { return }
+        activeUltimate = nil
+        SoundManager.shared.setDucked(false)
+
+        if ult.isPlayer {
+            cpuHP = 0
+            playerExpression = .fun
+            cpuExpression = .sad
+            calloutText = "🌟 一撃必殺 K.O.!!"
+            finishMatch(playerWon: true, reason: "4チャージ超必殺ビーム炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！")
         } else {
-            cpuScore += 1
-            if cpuScore >= targetWins {
-                outcome = .playerLose(reason: detail, isFoul: false)
-                stopTimer()
-            } else {
-                prepareNextSubRound(banner: "ROUND LOSE... (\(playerScore)-\(cpuScore)) — \(detail)")
-            }
+            playerHP = 0
+            playerExpression = .sad
+            cpuExpression = .fun
+            calloutText = "💥 一撃必殺 K.O..."
+            finishMatch(playerWon: false, reason: "\(currentEnemy.codeName) の一撃必殺ビームに敗れた...")
         }
     }
 
-    private func prepareNextSubRound(banner: String) {
-        playerCharge = 0
-        cpuCharge = 0
-        selectedAction = .charge
-        beat = 0
-        statusDetailText = banner
+    private func finishMatch(playerWon: Bool, reason: String) {
+        stopTimer()
+        statusDetailText = reason
+
+        if gameMode == .practice {
+            outcome = .practiceClear(isWin: playerWon, reason: reason)
+            return
+        }
+
+        if playerWon {
+            winStreak += 1
+            GameCenterManager.shared.recordWinStreak(winStreak)
+            outcome = .stageClear(enemyName: currentEnemy.codeName, reason: reason)
+        } else {
+            GameCenterManager.shared.recordWinStreak(winStreak)
+            outcome = .gameOver(finalStreak: winStreak, reason: reason)
+        }
     }
 
-    // MARK: - CPU AI Logic (確率ベース行動選択)
-    /// 仕様書 3.3 に準拠したCPU思考ロジック
-    /// - 気力0の時: チャージ 70%、バリア 30%
-    /// - 気力1以上の時: 相手に気力があれば バリア 40%、ビーム 40%、チャージ 20%
-    /// - 気力2以上の時: メガビーム 55% で発動
-    private func decideCpuAction() -> GameAction {
-        let roll = Double.random(in: 0..<1.0)
-        let canChargeMore = cpuCharge < maxCharge
+    // MARK: - 11-Enemy Tiered AI Logic
+    private func decideCpuMove() -> ResolvedMove {
+        let traits = currentEnemy.ai
+        // 2周目以降はわずかに判断精度が上昇
+        let loopBonus = min(0.15, Double(currentLoopNumber - 1) * 0.05)
+        let precision = min(0.99, traits.readPrecision + loopBonus)
 
-        // 1. CPU気力 0 の時
+        // 1. 序盤の弱い敵特有：気力不足なのに誤ってビームを出してお手つき無防備になるミス
+        if cpuCharge == 0 && traits.fumbleChance > 0 {
+            let effectiveFumble = max(0.0, traits.fumbleChance - loopBonus)
+            if Double.random(in: 0..<1.0) < effectiveFumble {
+                return .fumble(attempted: .beam)
+            }
+        }
+
+        // 2. CPUが4チャージ満タンの時：高確率で一撃必殺メガビームを発動！
+        if cpuCharge >= maxCharge {
+            let fireUltProb = 0.65 + (traits.ultimateGreed * 0.32)
+            if Double.random(in: 0..<1.0) < min(0.97, fireUltProb) {
+                return .valid(.megaBeam)
+            }
+            return .valid(.beam)
+        }
+
+        // 3. プレイヤーが4チャージ（一撃必殺可能）の時：賢い敵はバリアが貫通されると知り先制ビームを撃つ
+        if playerCharge >= maxCharge && cpuCharge >= 1 {
+            if Double.random(in: 0..<1.0) < precision {
+                return .valid(.beam)
+            }
+        }
+
+        // 4. プレイヤーが3チャージ（あと1で一撃必殺！）の時：賢い敵はビームでチャージ-1削りを狙う
+        if playerCharge == (maxCharge - 1) && cpuCharge >= 1 {
+            if Double.random(in: 0..<1.0) < (precision * 0.80) {
+                return .valid(.beam)
+            }
+        }
+
+        // 5. CPUがチャージ 0 の時
         if cpuCharge == 0 {
-            // 仕様通り チャージ 70%、バリア 30%
-            return roll < 0.70 ? .charge : .barrier
-        }
-
-        // 2. CPU気力 2以上 の時: 55% で超必殺メガビーム発動
-        if cpuCharge >= 2 {
-            if roll < 0.55 {
-                return .megaBeam
-            }
-            // 残り45%は気力1以上の戦術比率へフォールバック
-            let subRoll = Double.random(in: 0..<1.0)
-            return chooseStandardTactic(roll: subRoll, canChargeMore: canChargeMore)
-        }
-
-        // 3. CPU気力 1 の時
-        return chooseStandardTactic(roll: roll, canChargeMore: canChargeMore)
-    }
-
-    private func chooseStandardTactic(roll: Double, canChargeMore: Bool) -> GameAction {
-        if playerCharge >= 1 {
-            // 相手に気力がある場合: バリア 40% / ビーム 40% / チャージ 20%
-            if roll < 0.40 {
-                return .barrier
-            } else if roll < 0.80 || !canChargeMore {
-                return .beam
+            if playerCharge == 0 {
+                // 相手も0チャージなら攻撃される心配がない：賢い敵は確実にチャージする
+                if Double.random(in: 0..<1.0) < (0.55 + precision * 0.43) {
+                    return .valid(.charge)
+                }
+                return .valid(.barrier)
             } else {
-                return .charge
+                // 相手にチャージがある時：バリア警戒度に応じてガードか強気チャージ
+                let guardProb = 0.20 + (traits.defenseAwareness * 0.55)
+                return Double.random(in: 0..<1.0) < guardProb ? .valid(.barrier) : .valid(.charge)
+            }
+        }
+
+        // 6. CPUがチャージ 1〜3 の通常戦術
+        if playerCharge == 0 {
+            // 相手は攻撃不可：賢い敵ほどバリアを張らず、攻撃か必殺用チャージを選ぶ
+            let smartChoice = Double.random(in: 0..<1.0) < (0.45 + precision * 0.52)
+            if smartChoice {
+                let chargeBias = traits.ultimateGreed * 0.65
+                return Double.random(in: 0..<1.0) < chargeBias ? .valid(.charge) : .valid(.beam)
+            } else {
+                return .valid(.barrier)
             }
         } else {
-            // 相手が気力0（攻撃不可）の場合: バリア不要のため ビーム 65% / チャージ 35%
-            if !canChargeMore || roll < 0.65 {
-                return .beam
+            // お互いに1〜3チャージある白熱の読み合い
+            let wBeam = traits.aggression + (playerHP == 1 ? 0.25 : 0.0)
+            let wBarrier = traits.defenseAwareness
+            let wCharge = traits.ultimateGreed * 0.75
+            let sum = max(0.01, wBeam + wBarrier + wCharge)
+            let r = Double.random(in: 0..<sum)
+
+            if r < wBeam {
+                return .valid(.beam)
+            } else if r < (wBeam + wBarrier) {
+                return .valid(.barrier)
             } else {
-                return .charge
+                return .valid(.charge)
             }
         }
     }
 }
-
