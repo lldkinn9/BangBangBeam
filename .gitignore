@@ -1,0 +1,29 @@
+# Xcode / macOS
+.DS_Store
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Node / Tooling
+node_modules/
+npm-debug.log*
+.env
+.env.*
+
+# ローカル作業用素材・仕様メモ（必要に応じてリポジトリ管理対象を調整）
+素材/
+
