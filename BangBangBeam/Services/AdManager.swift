@@ -6,7 +6,7 @@ import Observation
 import GoogleMobileAds
 #endif
 
-/// Google AdMob 広告管理マネージャー（バナー広告 & リトライ時インタースティシャル広告）
+/// Google AdMob 広告管理マネージャー（バナー広告 ＆ KUMITE敗北時の復活リワード動画広告）
 /// - 本番用広告IDはソースコードにハードコードせず Info.plist 設定値から動的に取得する。
 /// - DEBUGビルド時は AdMob 規約遵守のため Google 公式テスト広告ユニットIDを使用する。
 @Observable
@@ -14,12 +14,13 @@ import GoogleMobileAds
 final class AdManager: NSObject {
     static let shared = AdManager()
 
-    /// リトライ何回につき1回インタースティシャル広告を表示するか（仕様: 2〜3回に1回）
-    let retryAdFrequency: Int = 3
+    var isLoadingRewardedAd: Bool = false
+    var rewardedAdStatusMessage: String? = nil
 
-    private(set) var retryCounter: Int = 0
-    var isPresentingFallbackInterstitial: Bool = false
-    private var pendingInterstitialCompletion: (() -> Void)? = nil
+    /// GoogleMobileAds SDK 未リンク時のリワード広告タイミング＆報酬付与確認用オーバーレイ表示状態
+    var isPresentingFallbackRewardedAd: Bool = false
+    private var pendingRewardHandler: (() -> Void)? = nil
+    private var didEarnRewardInCurrentSession: Bool = false
 
     /// バナー広告ユニットIDの安全な解決
     var bannerAdUnitID: String {
@@ -35,22 +36,22 @@ final class AdManager: NSObject {
         #endif
     }
 
-    /// インタースティシャル広告ユニットIDの安全な解決
-    var interstitialAdUnitID: String {
+    /// リワード動画広告ユニットIDの安全な解決
+    var rewardedAdUnitID: String {
         #if DEBUG
-        // Google公式 iOS テスト用インタースティシャル広告ユニットID
-        return "ca-app-pub-3940256099942544/4411468910"
+        // Google公式 iOS テスト用リワード動画広告ユニットID
+        return "ca-app-pub-3940256099942544/1712485313"
         #else
-        if let prodID = Bundle.main.object(forInfoDictionaryKey: "ADMOB_INTERSTITIAL_UNIT_ID") as? String,
+        if let prodID = Bundle.main.object(forInfoDictionaryKey: "ADMOB_REWARDED_UNIT_ID") as? String,
            !prodID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return prodID
         }
-        return "ca-app-pub-3940256099942544/4411468910"
+        return "ca-app-pub-3940256099942544/1712485313"
         #endif
     }
 
     #if canImport(GoogleMobileAds)
-    private var interstitialAd: InterstitialAd? = nil
+    private var rewardedAd: RewardedAd? = nil
     #endif
 
     private override init() {
@@ -61,7 +62,7 @@ final class AdManager: NSObject {
     func startSDKAndRequestATT() {
         #if canImport(GoogleMobileAds)
         MobileAds.shared.start(completionHandler: nil)
-        loadInterstitial()
+        loadRewardedAd()
         #endif
 
         Task { @MainActor in
@@ -69,57 +70,96 @@ final class AdManager: NSObject {
             if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
                 _ = await ATTrackingManager.requestTrackingAuthorization()
                 #if canImport(GoogleMobileAds)
-                loadInterstitial()
+                loadRewardedAd()
                 #endif
             }
         }
     }
 
     #if canImport(GoogleMobileAds)
-    func loadInterstitial() {
-        InterstitialAd.load(with: interstitialAdUnitID, request: Request()) { [weak self] ad, _ in
+    func loadRewardedAd(onLoaded: (() -> Void)? = nil) {
+        guard !isLoadingRewardedAd else { return }
+        isLoadingRewardedAd = true
+        RewardedAd.load(with: rewardedAdUnitID, request: Request()) { [weak self] ad, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.interstitialAd = ad
-                self.interstitialAd?.fullScreenContentDelegate = self
+                self.isLoadingRewardedAd = false
+                if let ad {
+                    self.rewardedAd = ad
+                    self.rewardedAd?.fullScreenContentDelegate = self
+                    self.rewardedAdStatusMessage = nil
+                    onLoaded?()
+                } else if let error {
+                    self.rewardedAd = nil
+                    self.rewardedAdStatusMessage = "動画広告の読み込みに失敗しました（\(error.localizedDescription)）。通信状況を確認して再度お試しください。"
+                }
             }
         }
     }
     #endif
 
-    /// リトライ実行時に呼び出し、所定回数に達していればスキップ可能な全画面広告を表示後に completion を実行する
-    func handleRetryWithAdIfNeeded(completion: @escaping () -> Void) {
-        retryCounter += 1
-        guard retryCounter % retryAdFrequency == 0 else {
-            completion()
+    /// KUMITE敗北時の「動画広告を見て復活」ボタン押下時に呼び出す
+    /// 最後まで視聴して報酬条件を満たした場合のみ `onRewardEarned` を実行し、連勝維持で再戦させる
+    func presentRewardedAdForRevive(onRewardEarned: @escaping () -> Void) {
+        rewardedAdStatusMessage = nil
+
+        #if canImport(GoogleMobileAds)
+        if let ad = rewardedAd, let topVC = Self.topViewController() {
+            presentLoadedRewardedAd(ad, from: topVC, onRewardEarned: onRewardEarned)
             return
         }
 
-        #if canImport(GoogleMobileAds)
-        if let ad = interstitialAd, let topVC = Self.topViewController() {
-            pendingInterstitialCompletion = completion
-            SoundManager.shared.setDucked(true)
-            ad.present(from: topVC)
-            return
-        } else {
-            loadInterstitial()
-            completion()
-            return
+        // 未ロードの場合は即座に再ロードを試みて表示
+        loadRewardedAd { [weak self] in
+            guard let self,
+                  let ad = self.rewardedAd,
+                  let topVC = Self.topViewController() else {
+                return
+            }
+            self.presentLoadedRewardedAd(ad, from: topVC, onRewardEarned: onRewardEarned)
         }
         #else
-        // GoogleMobileAds Swift Package 未リンク時の開発レイアウト確認シート（偽装せず未リンク状態を明示）
-        pendingInterstitialCompletion = completion
+        // GoogleMobileAds Swift Package 未リンク時の開発検証用オーバーレイ（未リンク状態を明示して報酬導線を確認可能）
+        pendingRewardHandler = onRewardEarned
+        didEarnRewardInCurrentSession = false
         SoundManager.shared.setDucked(true)
-        isPresentingFallbackInterstitial = true
+        isPresentingFallbackRewardedAd = true
         #endif
     }
 
-    func dismissFallbackInterstitial() {
-        isPresentingFallbackInterstitial = false
+    #if canImport(GoogleMobileAds)
+    private func presentLoadedRewardedAd(
+        _ ad: RewardedAd,
+        from topVC: UIViewController,
+        onRewardEarned: @escaping () -> Void
+    ) {
+        pendingRewardHandler = onRewardEarned
+        didEarnRewardInCurrentSession = false
+        SoundManager.shared.setDucked(true)
+        ad.present(from: topVC) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.didEarnRewardInCurrentSession = true
+            }
+        }
+    }
+    #endif
+
+    /// SDK未リンク検証オーバーレイで最後まで視聴完了した際の処理
+    func completeFallbackRewardedAd() {
+        isPresentingFallbackRewardedAd = false
         SoundManager.shared.setDucked(false)
-        let action = pendingInterstitialCompletion
-        pendingInterstitialCompletion = nil
-        action?()
+        let handler = pendingRewardHandler
+        pendingRewardHandler = nil
+        didEarnRewardInCurrentSession = false
+        handler?()
+    }
+
+    /// SDK未リンク検証オーバーレイを途中キャンセルした際の処理（報酬付与せず復活回数も消費しない）
+    func cancelFallbackRewardedAd() {
+        isPresentingFallbackRewardedAd = false
+        SoundManager.shared.setDucked(false)
+        pendingRewardHandler = nil
+        didEarnRewardInCurrentSession = false
     }
 
     static func topViewController() -> UIViewController? {
@@ -142,22 +182,26 @@ extension AdManager: FullScreenContentDelegate {
     nonisolated func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         Task { @MainActor in
             SoundManager.shared.setDucked(false)
-            self.interstitialAd = nil
-            self.loadInterstitial()
-            let action = self.pendingInterstitialCompletion
-            self.pendingInterstitialCompletion = nil
-            action?()
+            self.rewardedAd = nil
+            let earned = self.didEarnRewardInCurrentSession
+            let handler = self.pendingRewardHandler
+            self.pendingRewardHandler = nil
+            self.didEarnRewardInCurrentSession = false
+            self.loadRewardedAd()
+            if earned {
+                handler?()
+            }
         }
     }
 
     nonisolated func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         Task { @MainActor in
             SoundManager.shared.setDucked(false)
-            self.interstitialAd = nil
-            self.loadInterstitial()
-            let action = self.pendingInterstitialCompletion
-            self.pendingInterstitialCompletion = nil
-            action?()
+            self.rewardedAd = nil
+            self.pendingRewardHandler = nil
+            self.didEarnRewardInCurrentSession = false
+            self.rewardedAdStatusMessage = "動画広告を表示できませんでした。通信環境をご確認のうえ再度お試しください。"
+            self.loadRewardedAd()
         }
     }
 }

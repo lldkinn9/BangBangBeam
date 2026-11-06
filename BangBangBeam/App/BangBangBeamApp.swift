@@ -47,11 +47,16 @@ struct RootContainerView: View {
                 }
             }
 
-            // GoogleMobileAds SDK 未リンク時のリトライ全画面広告タイミング確認オーバーレイ
-            if adManager.isPresentingFallbackInterstitial {
-                FallbackInterstitialOverlayView {
-                    adManager.dismissFallbackInterstitial()
-                }
+            // GoogleMobileAds SDK 未リンク時の復活リワード動画広告タイミング確認オーバーレイ
+            if adManager.isPresentingFallbackRewardedAd {
+                FallbackRewardedAdOverlayView(
+                    onRewardComplete: {
+                        adManager.completeFallbackRewardedAd()
+                    },
+                    onCancel: {
+                        adManager.cancelFallbackRewardedAd()
+                    }
+                )
                 .transition(.opacity)
                 .zIndex(50)
             }

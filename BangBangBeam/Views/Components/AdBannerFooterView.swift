@@ -58,64 +58,91 @@ struct AdBannerFooterView: View {
     }
 }
 
-/// GoogleMobileAds SDK 未リンク時にリトライ広告の発火タイミングを検証できる明示確認オーバーレイ
-struct FallbackInterstitialOverlayView: View {
-    let onSkip: () -> Void
-    @State private var canSkip: Bool = false
+/// GoogleMobileAds SDK 未リンク時に「動画広告を見て復活（リワード広告）」の動作を検証できる明示オーバーレイ
+struct FallbackRewardedAdOverlayView: View {
+    let onRewardComplete: () -> Void
+    let onCancel: () -> Void
+
+    @State private var remainingSeconds: Int = 3
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.92)
+            Color.black.opacity(0.94)
                 .ignoresSafeArea()
 
-            VStack(spacing: 20) {
+            VStack(spacing: 22) {
                 HStack {
-                    Text("INTERSTITIAL AD SLOT")
+                    Text("REWARDED VIDEO AD SLOT")
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.cyberCyan)
+                        .foregroundStyle(Color.cyberAmber)
+
                     Spacer()
+
                     Button {
-                        onSkip()
+                        onCancel()
                     } label: {
-                        Text(canSkip ? "✕ SKIP AD" : "SKIP IN 1s...")
-                            .font(.system(size: 12, weight: .black, design: .monospaced))
-                            .foregroundStyle(canSkip ? .black : Color.white.opacity(0.5))
-                            .padding(.horizontal, 12)
+                        Text("✕ 閉じる（復活しない）")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.75))
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(
-                                canSkip ? Color.cyberEmerald : Color.white.opacity(0.12),
-                                in: Capsule()
-                            )
+                            .background(Color.white.opacity(0.12), in: Capsule())
                     }
-                    .disabled(!canSkip)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 
                 Spacer()
 
-                VStack(spacing: 12) {
-                    Image(systemName: "rectangle.inset.filled.and.person.filled")
-                        .font(.system(size: 44))
-                        .foregroundStyle(Color.cyberCyan)
+                VStack(spacing: 14) {
+                    Image(systemName: "play.rectangle.fill")
+                        .font(.system(size: 50))
+                        .foregroundStyle(Color.cyberAmber)
 
-                    Text("全画面広告表示タイミング確認枠")
-                        .font(.system(size: 18, weight: .black))
+                    Text("復活リワード動画広告 確認枠")
+                        .font(.system(size: 19, weight: .black))
                         .foregroundStyle(.white)
 
-                    Text("リトライ \(AdManager.shared.retryAdFrequency) 回ごとのインタースティシャル広告枠です。\nXcode に GoogleMobileAds パッケージを追加すると\n実際のスキップ可能広告が表示されます。")
+                    Text("Xcode に GoogleMobileAds パッケージを追加すると\n実際の動画広告（RewardedAd）が再生されます。")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.white.opacity(0.72))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
+
+                    if remainingSeconds > 0 {
+                        Text("視聴完了まであと \(remainingSeconds) 秒...")
+                            .font(.system(size: 15, weight: .black, design: .monospaced))
+                            .foregroundStyle(Color.cyberCyan)
+                            .padding(.top, 6)
+                    } else {
+                        Button {
+                            onRewardComplete()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bolt.heart.fill")
+                                Text("報酬を獲得してバトルに復活する")
+                            }
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 13)
+                            .background(Color.cyberAmber, in: Capsule())
+                            .shadow(color: Color.cyberAmber.opacity(0.75), radius: 10)
+                        }
+                        .padding(.top, 6)
+                    }
                 }
 
                 Spacer()
             }
         }
         .task {
-            try? await Task.sleep(for: .seconds(1.0))
-            canSkip = true
+            while remainingSeconds > 0 {
+                try? await Task.sleep(for: .seconds(1.0))
+                if remainingSeconds > 0 {
+                    remainingSeconds -= 1
+                }
+            }
         }
     }
 }

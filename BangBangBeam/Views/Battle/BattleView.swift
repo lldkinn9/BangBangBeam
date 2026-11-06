@@ -3,6 +3,7 @@ import SwiftUI
 /// 製品版バトルアリーナ画面（KUMITE 11人勝ち抜き戦：立ち絵表情・HP3・4チャージ・手イラスト・必殺カットイン＆動画対応）
 struct BattleView: View {
     @Bindable var engine: GameEngine
+    @Bindable private var adManager = AdManager.shared
     @State private var isShowingRankingFallback: Bool = false
 
     var body: some View {
@@ -485,25 +486,69 @@ struct BattleView: View {
                     }
                     .padding(.vertical, 4)
 
-                    // リトライボタン（2〜3回ごとにスキップ可能な全画面広告を表示後に再開）
+                    // 動画広告を見て復活（1回のKUMITE挑戦につき最大2回まで：連勝を維持して負けたバトルをやり直し）
+                    if engine.remainingRevives > 0 {
+                        Button {
+                            HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
+                            adManager.presentRewardedAdForRevive {
+                                engine.reviveCurrentKumiteMatch()
+                            }
+                        } label: {
+                            VStack(spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "play.tv.fill")
+                                    Text(adManager.isLoadingRewardedAd ? "動画広告を読み込み中..." : "動画広告を見て復活")
+                                }
+                                .font(.system(size: 16, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+
+                                Text("連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.maxRevivesPerRun) 回）")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(Color.cyberAmber)
+                            }
+                            .frame(width: 256, height: 56)
+                        }
+                        .buttonStyle(
+                            CyberButtonStyle(
+                                primaryColor: .cyberAmber,
+                                secondaryColor: .cyberEmerald,
+                                cutSize: 12,
+                                fillOpacity: 0.38
+                            )
+                        )
+                        .disabled(adManager.isLoadingRewardedAd)
+
+                        if let adError = adManager.rewardedAdStatusMessage {
+                            Text(adError)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.cyberDanger)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: 256)
+                        }
+                    } else {
+                        Text("※今回の挑戦での復活回数（最大\(engine.maxRevivesPerRun)回）を使い切りました")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                            .multilineTextAlignment(.center)
+                    }
+
+                    // 最初から挑戦（連勝0・復活残り2回にリセットして再開）
                     Button {
                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                        AdManager.shared.handleRetryWithAdIfNeeded {
-                            engine.startKumiteFromBeginning()
-                        }
+                        engine.startKumiteFromBeginning()
                     } label: {
                         Text("RETRY (最初から挑戦)")
-                            .font(.system(size: 17, weight: .black, design: .rounded))
-                            .tracking(1.5)
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .tracking(1.2)
                             .foregroundStyle(.white)
-                            .frame(width: 240, height: 50)
+                            .frame(width: 256, height: 46)
                     }
                     .buttonStyle(
                         CyberButtonStyle(
                             primaryColor: .cyberEmerald,
                             secondaryColor: .cyberCyan,
                             cutSize: 12,
-                            fillOpacity: 0.36
+                            fillOpacity: 0.28
                         )
                     )
 
@@ -517,7 +562,7 @@ struct BattleView: View {
                         }
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.cyberAmber)
-                        .frame(width: 240, height: 42)
+                        .frame(width: 256, height: 40)
                     }
                     .buttonStyle(
                         CyberButtonStyle(
@@ -537,7 +582,7 @@ struct BattleView: View {
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .tracking(2)
                         .foregroundStyle(Color.cyberCyan)
-                        .frame(width: 240, height: 42)
+                        .frame(width: 256, height: 40)
                 }
                 .buttonStyle(
                     CyberButtonStyle(

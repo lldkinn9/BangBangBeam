@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 18:48 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.10`（アイコン設定機能［全84種・KUMITE撃破解放・グレーシルエット］＆ TEMPO 2択化［標準/速め］＆ ランキング画面アイコン反映＋確認用モック登録）
+最終更新日時: 2026-11-06 19:09 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.11`（アイコン設定＆ランキングのヘッダー固定化・reo-icon3の50連勝解放化・設定画面からの練習導線化・KUMITE敗北時の動画広告復活［最大2回］実装）
 
 ---
 
@@ -33,10 +33,10 @@
   - 全12キャラの背景透過立ち絵（通常・喜び・苦痛）＆カットイン画像、手イラスト4種（手拍子・チャージ・バリア・ビーム）、必殺動画12本を組み込み済み。
   - 非バトル画面で `Neon Overdrive`、バトル画面で `Seamless Looping Cyberpunk BGM` / `Cyber Velocity` をランダム選出しループ再生（設定画面で BGM ON/OFF 切替可能）。
 
-### 1.3 収益化（Google AdMob 基盤 `AdManager`）
-- **バナー広告 (`AdBannerFooterView`):** プレイ画面（`BattleView` / `PracticeTutorialView`）以外の全画面（タイトル・モード選択・設定・ランキングシート）の最下部に常設配置。
-- **インタースティシャル広告:** KUMITE リトライ時に **3回につき1回** スキップ可能な全画面広告を表示。
-- `#if canImport(GoogleMobileAds)` に対応済み。Xcode で `GoogleMobileAds` Swift Package を追加するだけで実テスト広告が配信され、リリース時は `Info.plist` キー（`ADMOB_BANNER_UNIT_ID` / `ADMOB_INTERSTITIAL_UNIT_ID` / `GADApplicationIdentifier`）で本番IDを安全に注入可能（コードへのハードコードなし）。
+### 1.3 収益化（Google AdMob 基盤 `AdManager`：バナー広告 ＋ 復活リワード動画広告）
+- **バナー広告 (`AdBannerFooterView`):** プレイ画面（`BattleView` / `PracticeTutorialView`）以外の全画面（タイトル・モード選択・設定・アイコン設定・ランキングシート）の最下部に常設配置。
+- **復活リワード動画広告 (`RewardedAd`):** KUMITE 敗北時の結果画面に「動画広告を見て復活」を搭載。**1回の KUMITE 挑戦につき最大2回まで**、動画広告を最後まで視聴することで現在の連勝記録を維持したまま負けたバトルをやり直し可能（従来のリトライ時インタースティシャル広告は廃止し、バナー＋リワード動画広告の2本柱に一本化）。
+- `#if canImport(GoogleMobileAds)` に対応済み。Xcode で `GoogleMobileAds` Swift Package を追加するだけで実テスト広告が配信され、リリース時は `Info.plist` キー（`ADMOB_BANNER_UNIT_ID` / `ADMOB_REWARDED_UNIT_ID` / `GADApplicationIdentifier`）で本番IDを安全に注入可能（コードへのハードコードなし）。
 
 ---
 
@@ -51,15 +51,21 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.10`（アイコン設定・グレーシルエット・TEMPO 2択・ランキングモック表示＆アイコン反映）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.11`（固定ヘッダー・`reo-icon3` 50連勝解放・設定画面「練習モードで1戦」・KUMITE動画広告復活［最大2回］）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
-- [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト広告の描画確認（本番リリース前に AdMob 本番IDを設定）
+- [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
 - [ ] （任意）拍手音・ビーム音などの SE（効果音）音源追加
 
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 19:09 (`v1.0.11`)**
+  - **アイコン設定画面のヘッダー＆メッセージ枠固定化 ＆ `reo-icon3` 50連勝解放化:** [`IconSettingView.swift`](BangBangBeam/Views/Settings/IconSettingView.swift) の現在のアイコン表示枠とその下のメッセージ枠（未解放ガイド等）を `ScrollView` 外の上部へ固定表示に変更。[`PlayerIconManager.swift`](BangBangBeam/Services/PlayerIconManager.swift) の初期解放を `reo` の `icon1・2` のみに変更し、`icon3` は KUMITE 50連勝達成で解放されるよう変更（旧保存データの移行処理込み）。
+  - **ランキング画面の自分の情報枠固定化:** [`RankingInfoSheetView.swift`](BangBangBeam/Views/Title/RankingInfoSheetView.swift) の「YOUR RANKING（自分の順位・自己ベスト・アイコン）」枠を上部固定とし、1〜100位リストのみがスクロールするように変更。
+  - **モード選択メニューから `PRACTICE` を削除し、設定画面最下部へ「練習モードで1戦」ボタンを新設:** [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) から `PRACTICE` ボタンを削除し、[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) の `BATTLE RULES` 最下部に「練習モードで1戦」ボタンを配置（タップで練習画面の実戦タブを起動）。
+  - **KUMITE敗北時の「動画広告を見て復活（最大2回）」実装 ＆ 広告構成の一本化:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)、[`AdManager.swift`](BangBangBeam/Services/AdManager.swift)、[`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) を更新し、1回のKUMITE挑戦につき2回までリワード動画広告（`RewardedAd`）視聴により連勝記録を維持したまま負けたバトルを再戦できる機能を実装。従来のリトライ時インタースティシャル広告を廃止し、「復活リワード動画広告 ＋ バナー広告」へ一本化。
 
 - **2026-11-06 18:48 (`v1.0.10`)**
   - **TEMPO / BPM 設定の2択化（標準 / 速め）:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) に `TempoPreset`（`標準`: 88 BPM / `速め`: 116 BPM、`UserDefaults` 永続化）を追加し、[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) のスライダーを「標準」「速め」の選択ボタンUIへ変更。

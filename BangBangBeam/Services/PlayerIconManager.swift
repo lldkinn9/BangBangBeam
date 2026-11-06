@@ -1,7 +1,7 @@
 import SwiftUI
 import Observation
 
-/// プレイヤーが選択・解放できるアイコン定義（全21キャラ × 4種 ＝ 全84個：通常83個 ＋ 100連勝記念 reo-icon100）
+/// プレイヤーが選択・解放できるアイコン定義（全21キャラ × 4種 ＝ 全84個）
 struct PlayerIconItem: Identifiable, Equatable, Sendable {
     let id: String
     let numericCode: Int
@@ -31,7 +31,7 @@ struct CharacterIconGroup: Identifiable, Sendable {
     let icons: [PlayerIconItem]
 }
 
-/// アイコン選択状態・KUMITE撃破による解放状態を永続管理するマネージャー
+/// アイコン選択状態・KUMITE撃破／連勝による解放状態を永続管理するマネージャー
 @Observable
 @MainActor
 final class PlayerIconManager {
@@ -39,12 +39,13 @@ final class PlayerIconManager {
 
     private let selectedIconKey = "BangBangBeam.selectedPlayerIconID"
     private let unlockedIconsKey = "BangBangBeam.unlockedPlayerIconIDs"
+    private let reoIcon3RuleMigratedKey = "BangBangBeam.migratedReoIcon3To50Wins"
 
     static let defaultIconID = "icon_reo_1"
+    /// 初期解放は reo の icon1, icon2 のみ（icon3 は 50連勝、icon100 は 100連勝で解放）
     static let initialUnlockedIDs: Set<String> = [
         "icon_reo_1",
-        "icon_reo_2",
-        "icon_reo_3"
+        "icon_reo_2"
     ]
 
     let characterGroups: [CharacterIconGroup]
@@ -66,11 +67,18 @@ final class PlayerIconManager {
         self.characterGroups = builtGroups
         self.allIcons = builtGroups.flatMap(\.icons)
 
-        let savedUnlocked = UserDefaults.standard.stringArray(forKey: unlockedIconsKey) ?? []
-        var mergedUnlocked = Self.initialUnlockedIDs.union(savedUnlocked)
-
-        // 既存の自己ベスト連勝記録があれば解放状態を整合同期
         let existingBestStreak = UserDefaults.standard.integer(forKey: "BangBangBeam.bestWinStreak")
+        var savedSet = Set(UserDefaults.standard.stringArray(forKey: unlockedIconsKey) ?? [])
+
+        // 旧バージョンで初期解放扱いだった icon_reo_3 を、50連勝未満なら未解放へ移行
+        if !UserDefaults.standard.bool(forKey: reoIcon3RuleMigratedKey) {
+            if existingBestStreak < 50 {
+                savedSet.remove("icon_reo_3")
+            }
+            UserDefaults.standard.set(true, forKey: reoIcon3RuleMigratedKey)
+        }
+
+        var mergedUnlocked = Self.initialUnlockedIDs.union(savedSet)
         if existingBestStreak > 0 {
             mergedUnlocked.formUnion(Self.computeUnlockedIDs(forWinStreak: existingBestStreak))
         }
@@ -81,6 +89,7 @@ final class PlayerIconManager {
             self.selectedIconID = savedSelected
         } else {
             self.selectedIconID = Self.defaultIconID
+            UserDefaults.standard.set(Self.defaultIconID, forKey: selectedIconKey)
         }
 
         persistUnlocked()
@@ -106,7 +115,7 @@ final class PlayerIconManager {
     }
 
     // MARK: - Unlock Progression (KUMITE)
-    /// KUMITEで敵を1人撃破するたびに呼び出し、周回数に応じたアイコンおよび100連勝アイコンを解放する
+    /// KUMITEで敵を1人撃破するたびに呼び出し、周回数に応じたアイコンおよび50連勝・100連勝アイコンを解放する
     func recordKumiteVictory(enemy: CharacterProfile, loopNumber: Int, newWinStreak: Int) {
         var updated = false
 
@@ -121,6 +130,13 @@ final class PlayerIconManager {
                 if unlockedIconIDs.insert(targetID).inserted {
                     updated = true
                 }
+            }
+        }
+
+        // KUMITE 50連勝達成で reo-icon3 を解放
+        if newWinStreak >= 50 {
+            if unlockedIconIDs.insert("icon_reo_3").inserted {
+                updated = true
             }
         }
 
@@ -155,7 +171,6 @@ final class PlayerIconManager {
     private static func computeUnlockedIDs(forWinStreak streak: Int) -> Set<String> {
         guard streak > 0 else { return [] }
         var result: Set<String> = []
-        // 連勝を伸ばす過程で倒した全ステージ (0 ..< streak) のアイコンを算出（上限95で全敵icon4まで網羅）
         let maxSim = min(streak, 95)
         for s in 0..<maxSim {
             let stageInfo = CharacterProfile.enemy(forStreak: s)
@@ -165,6 +180,9 @@ final class PlayerIconManager {
                 let tier = min(4, rawTier)
                 result.insert("icon_\(stageInfo.profile.id)_\(tier)")
             }
+        }
+        if streak >= 50 {
+            result.insert("icon_reo_3")
         }
         if streak >= 100 {
             result.insert("icon_reo_100")
@@ -176,11 +194,11 @@ final class PlayerIconManager {
         var groups: [CharacterIconGroup] = []
         var nextCode = 1
 
-        // 1. 主人公 REO (icon1〜3: 初期解放 / icon100: KUMITE 100連勝達成)
+        // 1. 主人公 REO (icon1〜2: 初期解放 / icon3: 50連勝 / icon100: 100連勝)
         let reoVariants: [(suffix: String, label: String, condition: String)] = [
             ("1", "ICON 1", "初期解放"),
             ("2", "ICON 2", "初期解放"),
-            ("3", "ICON 3", "初期解放"),
+            ("3", "ICON 3", "KUMITE 50連勝達成で解放"),
             ("100", "ICON 100", "KUMITE 100連勝達成で解放")
         ]
         var reoItems: [PlayerIconItem] = []
@@ -201,7 +219,7 @@ final class PlayerIconManager {
             CharacterIconGroup(
                 id: "reo",
                 codeName: "REO",
-                subtitle: "PLAYER // 初期アイコン＆100連勝記念",
+                subtitle: "初期解放(1・2) / 50連勝(3) / 100連勝(100)",
                 icons: reoItems
             )
         )

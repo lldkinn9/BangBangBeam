@@ -170,6 +170,33 @@ struct SettingSheetView: View {
                                 desc: "チャージ０の状態でビームを選択すると不発となります。\n無防備な状態となり相手がビームの場合、体力とチャージが1削られます。",
                                 titleColor: .cyberDanger
                             )
+
+                            Divider()
+                                .background(Color.white.opacity(0.15))
+                                .padding(.vertical, 4)
+
+                            Button {
+                                HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                                dismiss()
+                                Task { @MainActor in
+                                    engine.startPracticeMode(openSparringTab: true)
+                                }
+                            } label: {
+                                Text("練習モードで1戦")
+                                    .font(.system(size: 16, weight: .black, design: .rounded))
+                                    .tracking(1.5)
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                            }
+                            .buttonStyle(
+                                CyberButtonStyle(
+                                    primaryColor: .cyberEmerald,
+                                    secondaryColor: .cyberCyan,
+                                    cutSize: 12,
+                                    fillOpacity: 0.34
+                                )
+                            )
                         }
                     }
                 }

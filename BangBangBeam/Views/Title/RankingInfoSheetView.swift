@@ -8,18 +8,25 @@ struct RankingInfoSheetView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    // MARK: 1. 自分の順位カード (MY RANK + 選択中アイコン)
-                    myRankCard
+            VStack(spacing: 0) {
+                // MARK: 1. スクロール固定：自分の順位＆選択アイコン枠
+                myRankCard
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 10)
+                    .background(Color.cyberBlack)
 
-                    // MARK: 2. 世界 1位〜100位 リスト (TOP 1 - 100)
+                Divider()
+                    .background(Color.cyberCyan.opacity(0.25))
+
+                // MARK: 2. スクロール領域：世界 1位〜100位 リスト (TOP 1 - 100)
+                ScrollView {
                     top100ListCard
+                        .padding(16)
                 }
-                .padding(16)
-            }
-            .refreshable {
-                await gcManager.fetchTop100Ranking()
+                .refreshable {
+                    await gcManager.fetchTop100Ranking()
+                }
             }
             .background(Color.cyberBlack.ignoresSafeArea())
             .safeAreaInset(edge: .bottom, spacing: 0) {

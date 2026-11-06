@@ -77,10 +77,12 @@ final class GameEngine {
     var currentScreen: AppScreen = .title
     var gameMode: GameMode = .kumite
     var isFirstLaunchTutorial: Bool = false
+    var startPracticeOnSparringTab: Bool = false
 
     // MARK: - Constants & Settings
     let maxHP: Int = 3
     let maxCharge: Int = 4
+    let maxRevivesPerRun: Int = 2
 
     /// テンポ選択（標準 / 速め）
     var tempoPreset: TempoPreset = .standard {
@@ -103,6 +105,7 @@ final class GameEngine {
 
     // MARK: - KUMITE Progression State
     var winStreak: Int = 0
+    var remainingRevives: Int = 2
     var currentEnemy: CharacterProfile = CharacterProfile.kumiteRoster[0]
     var currentLoopNumber: Int = 1
     var currentStageInLoop: Int = 1
@@ -208,10 +211,22 @@ final class GameEngine {
         stopTimer()
         gameMode = .kumite
         winStreak = 0
+        remainingRevives = maxRevivesPerRun
         loadEnemyForCurrentStreak()
         setupMatchState(enemy: currentEnemy)
         currentScreen = .kumiteBattle
         SoundManager.shared.playBattleBGM(forceNewRandom: true)
+        startTimer()
+    }
+
+    /// 動画広告（リワード広告）視聴完了後、現在の連勝記録を維持したまま負けたバトルをやり直す（1挑戦につき最大2回）
+    func reviveCurrentKumiteMatch() {
+        guard remainingRevives > 0 else { return }
+        remainingRevives -= 1
+        stopTimer()
+        setupMatchState(enemy: currentEnemy)
+        currentScreen = .kumiteBattle
+        SoundManager.shared.playBattleBGM(forceNewRandom: false)
         startTimer()
     }
 
@@ -225,9 +240,10 @@ final class GameEngine {
     }
 
     /// PRACTICE（ルール学習＆練習専用UI）を開始
-    func startPracticeMode() {
+    func startPracticeMode(openSparringTab: Bool = false) {
         stopTimer()
         gameMode = .practice
+        startPracticeOnSparringTab = openSparringTab
         isPracticeAutoPlay = false
         setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
         currentScreen = .practiceTutorial

@@ -214,19 +214,7 @@ struct TitleView: View {
                 engine.startKumiteFromBeginning()
             }
 
-            // ② PRACTICE (ルール学習＆練習専用UI)
-            modeButton(
-                title: "PRACTICE",
-                subtitle: "ルール学習",
-                systemImage: "graduationcap.fill",
-                primary: .cyberEmerald,
-                secondary: .cyberCyan
-            ) {
-                isMenuExpanded = false
-                engine.startPracticeMode()
-            }
-
-            // ③ RANKING (世界ランキング：自分の順位 ＆ 1〜100位)
+            // ② RANKING (世界ランキング：自分の順位 ＆ 1〜100位)
             modeButton(
                 title: "RANKING",
                 subtitle: "世界ランキング",
@@ -237,7 +225,7 @@ struct TitleView: View {
                 isShowingRankingSheet = true
             }
 
-            // ④ SETTING
+            // ③ SETTING
             modeButton(
                 title: "SETTING",
                 subtitle: "各種設定",
@@ -248,7 +236,7 @@ struct TitleView: View {
                 isShowingSettings = true
             }
 
-            // ⑤ ✕ BACK
+            // ④ ✕ BACK
             Button {
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
                 withAnimation(.easeInOut(duration: 0.28)) {

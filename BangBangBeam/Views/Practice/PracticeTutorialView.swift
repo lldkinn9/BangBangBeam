@@ -53,7 +53,7 @@ struct PracticeTutorialView: View {
         LessonItem(
             badge: "STEP 5 / 5",
             title: "準備完了！KUMITEへ挑め！",
-            body: "メインモード「KUMITE」では、主人公 Reo となって11人の個性豊かな敵たちと順番に勝ち抜き戦を行います。\n\n敵を1人倒すごとにHPは3に全回復！連勝記録を伸ばして世界ランキング頂点を目指しましょう！",
+            body: "メインモード「KUMITE」では、主人公 Reo となって個性豊かな敵たちと順番に勝ち抜き戦を行います。\n\n敵を1人倒すごとにHPは3に全回復！連勝記録を伸ばして世界ランキング頂点を目指しましょう！",
             handAsset: "hand_beam",
             highlightTip: "🔥 上の「🎯 フリー実戦」タブで1拍ずつ手動練習することもできます！"
         )
@@ -102,6 +102,9 @@ struct PracticeTutorialView: View {
                 }
                 .zIndex(16)
             }
+        }
+        .onAppear {
+            selectedTab = engine.startPracticeOnSparringTab ? .sparring : .guide
         }
         .onChange(of: selectedTab) { _, newValue in
             if newValue == .guide {

@@ -1,48 +1,38 @@
 import SwiftUI
 
-/// 全84個（通常83個 ＋ 100連勝記念 reo-icon100）からアイコンを選択する「アイコン設定」画面
+/// 全84個からアイコンを選択する「アイコン設定」画面（最上部の選択中アイコン枠＆メッセージ枠はスクロール固定）
 struct IconSettingView: View {
     @Bindable var engine: GameEngine
     @Bindable private var iconManager = PlayerIconManager.shared
-    @State private var lockedHintText: String? = nil
+    @State private var statusMessageText: String = "未解放シルエットをタップすると解放条件を確認できます"
+    @State private var isLockedWarning: Bool = false
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // MARK: 現在選択中のアイコン ＆ 解放状況ヘッダー
+        VStack(spacing: 0) {
+            // MARK: 1. スクロール固定ヘッダー（現在のアイコン枠 ＋ メッセージ枠）
+            VStack(spacing: 10) {
                 currentSelectionBanner
-
-                // MARK: 未解放アイコンタップ時の解放条件ガイド表示
-                if let lockedHintText {
-                    HStack(spacing: 8) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Color.cyberAmber)
-                        Text(lockedHintText)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.cyberAmber.opacity(0.14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(Color.cyberAmber.opacity(0.55), lineWidth: 1)
-                            )
-                    )
-                }
-
-                // MARK: 全キャラクター別 4列アイコングリッド（全84個）
-                ForEach(iconManager.characterGroups) { group in
-                    characterGroupCard(group)
-                }
+                pinnedMessageBanner
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+            .background(Color.cyberBlack)
+
+            Divider()
+                .background(Color.cyberCyan.opacity(0.25))
+
+            // MARK: 2. スクロール可能な全キャラクター別 4列アイコングリッド
+            ScrollView {
+                VStack(spacing: 14) {
+                    ForEach(iconManager.characterGroups) { group in
+                        characterGroupCard(group)
+                    }
+                }
+                .padding(16)
+            }
         }
         .background(Color.cyberBlack.ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -52,7 +42,7 @@ struct IconSettingView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Current Selected Icon Card
+    // MARK: - Pinned Current Selected Icon Card
     private var currentSelectionBanner: some View {
         let current = iconManager.selectedIcon
 
@@ -60,7 +50,7 @@ struct IconSettingView: View {
             Image(current.unlockedAssetName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 64, height: 64)
+                .frame(width: 60, height: 60)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
@@ -68,8 +58,8 @@ struct IconSettingView: View {
                 )
                 .shadow(color: Color.cyberCyan.opacity(0.45), radius: 6)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("ランキング表示アイコン")
+            VStack(alignment: .leading, spacing: 3) {
+                Text("現在の設定アイコン（ランキング反映）")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.cyberCyan)
 
@@ -84,13 +74,44 @@ struct IconSettingView: View {
 
             Spacer()
         }
-        .padding(14)
+        .padding(12)
         .background(
             CyberShape(cutSize: 12)
                 .fill(Color.cyberPanel)
                 .overlay(
                     CyberShape(cutSize: 12)
                         .strokeBorder(Color.cyberCyan.opacity(0.5), lineWidth: 1.2)
+                )
+        )
+    }
+
+    // MARK: - Pinned Message Banner (未解放メッセージ等もスクロールせず常時表示)
+    private var pinnedMessageBanner: some View {
+        let accent: Color = isLockedWarning ? .cyberAmber : .cyberCyan
+
+        return HStack(spacing: 8) {
+            Image(systemName: isLockedWarning ? "lock.fill" : "info.circle.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(accent)
+
+            Text(statusMessageText)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isLockedWarning ? Color.white : Color.white.opacity(0.82))
+                .lineLimit(2)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 9)
+                .fill(isLockedWarning ? Color.cyberAmber.opacity(0.16) : Color.cyberPanel)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9)
+                        .strokeBorder(
+                            isLockedWarning ? Color.cyberAmber.opacity(0.6) : Color.white.opacity(0.14),
+                            lineWidth: 1
+                        )
                 )
         )
     }
@@ -142,12 +163,13 @@ struct IconSettingView: View {
         return Button {
             if unlocked {
                 iconManager.selectIcon(item.id)
-                lockedHintText = nil
+                isLockedWarning = false
+                statusMessageText = "\(item.characterCodeName)（\(item.variantLabel)）をアイコンに設定しました"
                 HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                // ランキング表示にも即座に選択アイコンを反映
                 GameCenterManager.shared.refreshSelectedIconInRanking()
             } else {
-                lockedHintText = "未解放：\(item.unlockConditionText)"
+                isLockedWarning = true
+                statusMessageText = "未解放：\(item.unlockConditionText)"
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
             }
         } label: {
