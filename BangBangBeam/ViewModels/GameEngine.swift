@@ -71,6 +71,7 @@ final class GameEngine {
     var currentEnemy: CharacterProfile = CharacterProfile.kumiteRoster[0]
     var currentLoopNumber: Int = 1
     var currentStageInLoop: Int = 1
+    var totalStagesInCurrentLoop: Int = 11
 
     // MARK: - Battle Live State
     /// 現在の拍（0: せっせっせーの..., 1: バン！, 2: バン！, 3: アクション激突）
@@ -229,6 +230,7 @@ final class GameEngine {
         currentEnemy = info.profile
         currentLoopNumber = info.loopNumber
         currentStageInLoop = info.stageInLoop
+        totalStagesInCurrentLoop = info.totalStagesInLoop
     }
 
     private func setupMatchState(enemy: CharacterProfile) {
@@ -484,68 +486,69 @@ final class GameEngine {
         }
     }
 
-    // MARK: - 11-Enemy Tiered AI Logic
+    // MARK: - Enemy Tiered AI Logic (お手つきは一切しない仕様)
     private func decideCpuMove() -> ResolvedMove {
+        let chosenAction = selectCpuAction()
+        // 万一にも気力不足の行動が選ばれないよう安全ガード（お手つき防止保証）
+        if cpuCharge < chosenAction.cost {
+            return .valid(.charge)
+        }
+        return .valid(chosenAction)
+    }
+
+    private func selectCpuAction() -> GameAction {
         let traits = currentEnemy.ai
         // 2周目以降はわずかに判断精度が上昇
         let loopBonus = min(0.15, Double(currentLoopNumber - 1) * 0.05)
         let precision = min(0.99, traits.readPrecision + loopBonus)
 
-        // 1. 序盤の弱い敵特有：気力不足なのに誤ってビームを出してお手つき無防備になるミス
-        if cpuCharge == 0 && traits.fumbleChance > 0 {
-            let effectiveFumble = max(0.0, traits.fumbleChance - loopBonus)
-            if Double.random(in: 0..<1.0) < effectiveFumble {
-                return .fumble(attempted: .beam)
-            }
-        }
-
-        // 2. CPUが4チャージ満タンの時：高確率で一撃必殺メガビームを発動！
+        // 1. CPUが4チャージ満タンの時：高確率で一撃必殺メガビームを発動！
         if cpuCharge >= maxCharge {
             let fireUltProb = 0.65 + (traits.ultimateGreed * 0.32)
             if Double.random(in: 0..<1.0) < min(0.97, fireUltProb) {
-                return .valid(.megaBeam)
+                return .megaBeam
             }
-            return .valid(.beam)
+            return .beam
         }
 
-        // 3. プレイヤーが4チャージ（一撃必殺可能）の時：賢い敵はバリアが貫通されると知り先制ビームを撃つ
+        // 2. プレイヤーが4チャージ（一撃必殺可能）の時：賢い敵はバリアが貫通されると知り先制ビームを撃つ
         if playerCharge >= maxCharge && cpuCharge >= 1 {
             if Double.random(in: 0..<1.0) < precision {
-                return .valid(.beam)
+                return .beam
             }
         }
 
-        // 4. プレイヤーが3チャージ（あと1で一撃必殺！）の時：賢い敵はビームでチャージ-1削りを狙う
+        // 3. プレイヤーが3チャージ（あと1で一撃必殺！）の時：賢い敵はビームでチャージ-1削りを狙う
         if playerCharge == (maxCharge - 1) && cpuCharge >= 1 {
             if Double.random(in: 0..<1.0) < (precision * 0.80) {
-                return .valid(.beam)
+                return .beam
             }
         }
 
-        // 5. CPUがチャージ 0 の時
+        // 4. CPUがチャージ 0 の時（チャージ または バリア のみ選択＝絶対にお手つきしない）
         if cpuCharge == 0 {
             if playerCharge == 0 {
                 // 相手も0チャージなら攻撃される心配がない：賢い敵は確実にチャージする
                 if Double.random(in: 0..<1.0) < (0.55 + precision * 0.43) {
-                    return .valid(.charge)
+                    return .charge
                 }
-                return .valid(.barrier)
+                return .barrier
             } else {
                 // 相手にチャージがある時：バリア警戒度に応じてガードか強気チャージ
                 let guardProb = 0.20 + (traits.defenseAwareness * 0.55)
-                return Double.random(in: 0..<1.0) < guardProb ? .valid(.barrier) : .valid(.charge)
+                return Double.random(in: 0..<1.0) < guardProb ? .barrier : .charge
             }
         }
 
-        // 6. CPUがチャージ 1〜3 の通常戦術
+        // 5. CPUがチャージ 1〜3 の通常戦術
         if playerCharge == 0 {
             // 相手は攻撃不可：賢い敵ほどバリアを張らず、攻撃か必殺用チャージを選ぶ
             let smartChoice = Double.random(in: 0..<1.0) < (0.45 + precision * 0.52)
             if smartChoice {
                 let chargeBias = traits.ultimateGreed * 0.65
-                return Double.random(in: 0..<1.0) < chargeBias ? .valid(.charge) : .valid(.beam)
+                return Double.random(in: 0..<1.0) < chargeBias ? .charge : .beam
             } else {
-                return .valid(.barrier)
+                return .barrier
             }
         } else {
             // お互いに1〜3チャージある白熱の読み合い
@@ -556,11 +559,11 @@ final class GameEngine {
             let r = Double.random(in: 0..<sum)
 
             if r < wBeam {
-                return .valid(.beam)
+                return .beam
             } else if r < (wBeam + wBarrier) {
-                return .valid(.barrier)
+                return .barrier
             } else {
-                return .valid(.charge)
+                return .charge
             }
         }
     }

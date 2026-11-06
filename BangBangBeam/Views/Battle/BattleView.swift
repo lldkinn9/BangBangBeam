@@ -105,7 +105,7 @@ struct BattleView: View {
                             .padding(.vertical, 1)
                             .background(Color.cyberAmber, in: Capsule())
                     }
-                    Text("STAGE \(engine.currentStageInLoop)/11")
+                    Text("STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)")
                         .font(.system(size: 13, weight: .black, design: .monospaced))
                         .foregroundStyle(.white)
                 }

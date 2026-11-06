@@ -205,7 +205,7 @@ struct TitleView: View {
             // ① KUMITE (メイン勝ち抜きモード)
             modeButton(
                 title: "KUMITE",
-                subtitle: "11人勝ち抜きサバイバル（世界ランキング対応）",
+                subtitle: "勝ち抜きサバイバル（世界ランキング対応）",
                 systemImage: "flame.fill",
                 primary: .cyberCyan,
                 secondary: .cyberEmerald

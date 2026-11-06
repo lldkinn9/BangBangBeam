@@ -114,11 +114,6 @@ struct SettingSheetView: View {
             .navigationTitle("SETTING")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Text(AppVersion.displayText)
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.cyberCyan.opacity(0.8))
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完了") {
                         dismiss()
