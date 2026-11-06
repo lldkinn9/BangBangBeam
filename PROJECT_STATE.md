@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 21:55 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.20`（`button.mp3` 対象ボタン4箇所への限定 ＆ BGM OFF時の全SE無音連動化）
+最終更新日時: 2026-11-06 22:09 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.21`（設定画面へのBGM・SE個別音量スライダー実装 ＆ SE音源音圧最適化）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.20`（指定4ボタンのみの `button.mp3` 再生・必殺カットインの `cutin.mp3`・BGM OFF時の全SE消音）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.21`（設定画面のBGM・SE個別音量設定 ＆ OFF時の完全無音連動）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 22:09 (`v1.0.21`)**
+  - **設定画面に BGM 音量・SE（効果音）音量の個別スライダー実装 ＆ SE音圧の最適化:** [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) に `bgmVolume`（初期値 45%）および `seVolume`（初期値 90%）の `UserDefaults` 永続化・リアルタイム反映処理を実装し、[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) の `AUDIO & HAPTICS` セクションに 0%〜100%（5%刻み）の音量スライダーを追加（サウンド設定が OFF の場合はスライダー値にかかわらず BGM・SE ともに一切音が出ない仕様を維持）。あわせてバンドル内の `button.mp3` / `cutin.mp3` の音圧バランスも歪みなく最適化。
 
 - **2026-11-06 21:55 (`v1.0.20`)**
   - **ボタン効果音（`button.mp3`）の対象限定 ＆ BGM OFF時の全SE消音連動化:** `button.mp3` が再生される対象を [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) の4ボタン（タイトル画面「`START`」、モード選択画面「`KUMITE`」「`RANKING`」「`SETTING`」）のみに限定（必殺技カットイン演出時の `cutin.mp3` は維持）。あわせて [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) の共通SE再生基盤 `playSE(_:)` および `isBGMEnabled` 更新処理にて、BGM設定が OFF の時は今後追加されるものも含めすべての効果音（SE）が無音（再生中SEも即時停止）になるよう対応。

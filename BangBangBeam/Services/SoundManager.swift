@@ -9,19 +9,10 @@ enum BGMTrack: String {
     case battle2 = "bgm_battle_2"
 }
 
-/// SE（効果音）種別（今後追加されるSEもこのenumに追加するだけで一括でBGM ON/OFF設定に従う）
+/// SE（効果音）種別（今後追加されるSEもこのenumに追加するだけで一括でBGM ON/OFF設定・SE音量設定に従う）
 enum SoundEffect: String, CaseIterable {
     case button = "button"
     case cutin = "cutin"
-
-    var defaultVolume: Float {
-        switch self {
-        case .button:
-            return 0.85
-        case .cutin:
-            return 1.0
-        }
-    }
 
     var poolSize: Int {
         switch self {
@@ -33,15 +24,17 @@ enum SoundEffect: String, CaseIterable {
     }
 }
 
-/// アプリ全体のBGMループ再生・効果音（SE）再生・サウンドON/OFF設定を一元管理するサウンドマネージャー
+/// アプリ全体のBGMループ再生・効果音（SE）再生・サウンドON/OFF・BGM/SE個別音量を一元管理するサウンドマネージャー
 @Observable
 @MainActor
 final class SoundManager {
     static let shared = SoundManager()
 
     private let bgmEnabledKey = "BangBangBeam.isBGMEnabled"
+    private let bgmVolumeKey = "BangBangBeam.bgmVolume"
+    private let seVolumeKey = "BangBangBeam.seVolume"
 
-    /// BGM（および全SE効果音）のON/OFF設定。OFF時はBGM・既存SE・今後追加される全SEを無音化する。
+    /// サウンド（BGMおよび全SE効果音）のON/OFF設定。OFF時は音量スライダーの値にかかわらずBGM・全SEを完全無音化する。
     var isBGMEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isBGMEnabled, forKey: bgmEnabledKey)
@@ -61,6 +54,40 @@ final class SoundManager {
         }
     }
 
+    /// BGM 音量（0.0 〜 1.0、初期値 0.45 = 45%）
+    var bgmVolume: Double {
+        didSet {
+            let clamped = min(1.0, max(0.0, bgmVolume))
+            if bgmVolume != clamped {
+                bgmVolume = clamped
+                return
+            }
+            UserDefaults.standard.set(clamped, forKey: bgmVolumeKey)
+            if isBGMEnabled {
+                audioPlayer?.volume = effectiveBGMVolume
+            }
+        }
+    }
+
+    /// SE（効果音）音量（0.0 〜 1.0、初期値 0.90 = 90%）
+    var seVolume: Double {
+        didSet {
+            let clamped = min(1.0, max(0.0, seVolume))
+            if seVolume != clamped {
+                seVolume = clamped
+                return
+            }
+            UserDefaults.standard.set(clamped, forKey: seVolumeKey)
+            let vol = Float(clamped)
+            for effect in SoundEffect.allCases {
+                guard let pool = sePlayerPools[effect] else { continue }
+                for player in pool {
+                    player.volume = isBGMEnabled ? vol : 0.0
+                }
+            }
+        }
+    }
+
     private enum BGMContext {
         case title
         case battle
@@ -69,7 +96,12 @@ final class SoundManager {
     private var desiredContext: BGMContext? = nil
     private var currentTrack: BGMTrack? = nil
     private var audioPlayer: AVAudioPlayer? = nil
-    private let defaultVolume: Float = 0.55
+    private var isDucked: Bool = false
+
+    private var effectiveBGMVolume: Float {
+        let base = Float(min(1.0, max(0.0, bgmVolume)))
+        return isDucked ? (base * 0.25) : base
+    }
 
     // MARK: - SE Preloaded Pools（全SoundEffect共通管理）
     private var sePlayerPools: [SoundEffect: [AVAudioPlayer]] = [:]
@@ -82,6 +114,21 @@ final class SoundManager {
         } else {
             self.isBGMEnabled = UserDefaults.standard.bool(forKey: bgmEnabledKey)
         }
+
+        if UserDefaults.standard.object(forKey: bgmVolumeKey) == nil {
+            UserDefaults.standard.set(0.45, forKey: bgmVolumeKey)
+            self.bgmVolume = 0.45
+        } else {
+            self.bgmVolume = min(1.0, max(0.0, UserDefaults.standard.double(forKey: bgmVolumeKey)))
+        }
+
+        if UserDefaults.standard.object(forKey: seVolumeKey) == nil {
+            UserDefaults.standard.set(0.90, forKey: seVolumeKey)
+            self.seVolume = 0.90
+        } else {
+            self.seVolume = min(1.0, max(0.0, UserDefaults.standard.double(forKey: seVolumeKey)))
+        }
+
         configureAudioSession()
         preloadSoundEffects()
     }
@@ -108,12 +155,13 @@ final class SoundManager {
             return []
         }
 
+        let initialVol = Float(min(1.0, max(0.0, seVolume)))
         var pool: [AVAudioPlayer] = []
         pool.reserveCapacity(effect.poolSize)
         for _ in 0..<effect.poolSize {
             if let player = try? AVAudioPlayer(data: data, fileTypeHint: AVFileType.mp3.rawValue) {
                 player.numberOfLoops = 0
-                player.volume = effect.defaultVolume
+                player.volume = initialVol
                 player.prepareToPlay()
                 pool.append(player)
             }
@@ -121,10 +169,13 @@ final class SoundManager {
         return pool
     }
 
-    // MARK: - SE Playback（すべてこのメソッドを経由するため、BGM OFF時は今後の追加SEも含めて確実に無音）
-    /// 指定された効果音（SE）を再生する（BGM設定がOFFの時は一切再生しない）
+    // MARK: - SE Playback（すべてこのメソッドを経由するため、OFF時は音量設定にかかわらず今後の追加SEも含めて確実に無音）
+    /// 指定された効果音（SE）を再生する（サウンド設定がOFFの時は一切再生しない）
     func playSE(_ effect: SoundEffect) {
         guard isBGMEnabled else { return }
+
+        let vol = Float(min(1.0, max(0.0, seVolume)))
+        guard vol > 0.001 else { return }
 
         var pool = sePlayerPools[effect] ?? []
         if pool.isEmpty {
@@ -141,7 +192,7 @@ final class SoundManager {
             player.stop()
         }
         player.currentTime = 0
-        player.volume = effect.defaultVolume
+        player.volume = vol
         player.play()
     }
 
@@ -182,7 +233,7 @@ final class SoundManager {
         desiredContext = .title
         guard isBGMEnabled else { return }
         if currentTrack == .title, audioPlayer?.isPlaying == true {
-            audioPlayer?.volume = defaultVolume
+            audioPlayer?.volume = effectiveBGMVolume
             return
         }
         startTrack(.title)
@@ -197,7 +248,7 @@ final class SoundManager {
            let current = currentTrack,
            (current == .battle1 || current == .battle2),
            audioPlayer?.isPlaying == true {
-            audioPlayer?.volume = defaultVolume
+            audioPlayer?.volume = effectiveBGMVolume
             return
         }
 
@@ -207,8 +258,9 @@ final class SoundManager {
 
     /// 必殺動画演出中の一時音量ダッキング
     func setDucked(_ ducked: Bool) {
-        guard let player = audioPlayer else { return }
-        player.volume = ducked ? (defaultVolume * 0.25) : defaultVolume
+        isDucked = ducked
+        guard isBGMEnabled, let player = audioPlayer else { return }
+        player.volume = effectiveBGMVolume
     }
 
     func stopBGM() {
@@ -218,14 +270,15 @@ final class SoundManager {
     }
 
     private func startTrack(_ track: BGMTrack) {
-        guard let url = resolveBundleURL(name: track.rawValue, ext: "mp3") else {
+        guard isBGMEnabled,
+              let url = resolveBundleURL(name: track.rawValue, ext: "mp3") else {
             return
         }
 
         do {
             let player = try AVAudioPlayer(contentsOf: url)
             player.numberOfLoops = -1 // 無限ループ
-            player.volume = defaultVolume
+            player.volume = effectiveBGMVolume
             player.prepareToPlay()
             player.play()
             self.audioPlayer = player

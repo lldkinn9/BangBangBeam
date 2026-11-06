@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// アイコン設定・BGM ON/OFF・TEMPO(標準/速め)・製品版ルールを確認できる設定シート（最下部にバナー広告常設）
+/// アイコン設定・サウンドON/OFF・BGM/SE音量設定・TEMPO(標準/速め)・製品版ルールを確認できる設定シート（最下部にバナー広告常設）
 struct SettingSheetView: View {
     @Bindable var engine: GameEngine
     @Bindable private var soundManager = SoundManager.shared
@@ -67,20 +67,72 @@ struct SettingSheetView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // MARK: 2. サウンド & 触覚設定
+                    // MARK: 2. サウンド & 触覚設定（ON/OFF・BGM音量・SE音量・Haptics）
                     settingCard(title: "AUDIO & HAPTICS", icon: "speaker.wave.2.fill") {
                         VStack(spacing: 14) {
                             Toggle(isOn: $soundManager.isBGMEnabled) {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("BGM サウンド再生")
+                                    Text("サウンド再生 (BGM / SE)")
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(.white)
-                                    Text("タイトル (Neon Overdrive) / バトルランダムBGM")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(Color.white.opacity(0.6))
+                                    Text(
+                                        soundManager.isBGMEnabled
+                                            ? "BGMと効果音（SE）を再生中"
+                                            : "現在OFFのため音量設定にかかわらず消音中"
+                                    )
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(
+                                        soundManager.isBGMEnabled
+                                            ? Color.white.opacity(0.6)
+                                            : Color.cyberAmber
+                                    )
                                 }
                             }
                             .tint(Color.cyberCyan)
+
+                            // BGM 音量設定（0% 〜 100%：OFF時も設定変更可能だが音は出ない）
+                            VStack(spacing: 6) {
+                                HStack {
+                                    Label("BGM 音量", systemImage: "music.note")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                    Spacer()
+                                    Text("\(Int((soundManager.bgmVolume * 100).rounded()))%")
+                                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                                        .foregroundStyle(Color.cyberCyan)
+                                }
+
+                                Slider(value: $soundManager.bgmVolume, in: 0.0...1.0, step: 0.05)
+                                    .tint(Color.cyberCyan)
+                            }
+                            .opacity(soundManager.isBGMEnabled ? 1.0 : 0.52)
+
+                            // SE（効果音）音量設定（0% 〜 100%：ON時のみ調整完了時にテスト再生、OFF時は完全無音）
+                            VStack(spacing: 6) {
+                                HStack {
+                                    Label("SE（効果音）音量", systemImage: "waveform")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                    Spacer()
+                                    Text("\(Int((soundManager.seVolume * 100).rounded()))%")
+                                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                                        .foregroundStyle(Color.cyberEmerald)
+                                }
+
+                                Slider(
+                                    value: $soundManager.seVolume,
+                                    in: 0.0...1.0,
+                                    step: 0.05
+                                ) {
+                                    Text("SE音量")
+                                } onEditingChanged: { isEditing in
+                                    if !isEditing && soundManager.isBGMEnabled {
+                                        SoundManager.shared.playButtonSE()
+                                    }
+                                }
+                                .tint(Color.cyberEmerald)
+                            }
+                            .opacity(soundManager.isBGMEnabled ? 1.0 : 0.52)
 
                             Divider().background(Color.white.opacity(0.15))
 
