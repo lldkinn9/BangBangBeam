@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 17:19 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.9`（全21キャラクターのネイティブ背景透過PNG画像差し替え反映 ＆ 設定画面BATTLE RULES表記更新）
+最終更新日時: 2026-11-06 18:48 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.10`（アイコン設定機能［全84種・KUMITE撃破解放・グレーシルエット］＆ TEMPO 2択化［標準/速め］＆ ランキング画面アイコン反映＋確認用モック登録）
 
 ---
 
@@ -51,7 +51,8 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で新システム一式（初回チュートリアル・BGM・手イラスト・必殺カットイン＆動画・11人勝ち抜き）の動作確認とバランス・UI微調整
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.10`（アイコン設定・グレーシルエット・TEMPO 2択・ランキングモック表示＆アイコン反映）の動作確認
+- [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
 - [ ] （任意）拍手音・ビーム音などの SE（効果音）音源追加
@@ -59,6 +60,14 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 18:48 (`v1.0.10`)**
+  - **TEMPO / BPM 設定の2択化（標準 / 速め）:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) に `TempoPreset`（`標準`: 88 BPM / `速め`: 116 BPM、`UserDefaults` 永続化）を追加し、[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) のスライダーを「標準」「速め」の選択ボタンUIへ変更。
+  - **設定画面最上部への「アイコン設定」機能実装（全84種・KUMITE周回解放・グレーシルエット表示）:**
+    - 全21キャラクター分のアイコン画像（通常83個 ＋ 100連勝記念 `reo-icon100` ＝ 計84個）および未解放用のグレーシルエット画像84個を [`Assets.xcassets/Icons`](BangBangBeam/Assets.xcassets/Icons) に組み込み。
+    - [`PlayerIconManager.swift`](BangBangBeam/Services/PlayerIconManager.swift) と [`IconSettingView.swift`](BangBangBeam/Views/Settings/IconSettingView.swift) を新規作成し、設定画面の最上部に配置。
+    - 初期状態は `reo` の `icon1〜3` のみ選択可能。既存11キャラは KUMITE 1〜4周目撃破で `icon1〜4` 解放、2周目から出現する追加9キャラは 2〜5周目撃破で `icon1〜4` 解放、KUMITE 100連勝達成で `reo-icon100` 解放。未解放アイコンは選択不可のグレーシルエットで表示。
+  - **ランキング画面への選択アイコン反映 ＆ 表示確認用モックデータ登録:** [`GameCenterManager.swift`](BangBangBeam/Services/GameCenterManager.swift) と [`RankingInfoSheetView.swift`](BangBangBeam/Views/Title/RankingInfoSheetView.swift) を更新し、「自分の順位」カードおよび「1〜100位」リストの各行にアイコンを表示（本番 Game Center でも `context` 値でアイコンIDを同期対応）。オーナー依頼に基づき確認用モックデータ（`useMockRankingForPreview = true`）を仮登録。
 
 - **2026-11-06 17:19 (`v1.0.9`)**
   - **全21キャラ分の差し替え済みネイティブ背景透過PNG反映:** `素材/Characters/` 配下の全21キャラクター（主人公 `reo` ＋ 敵20名）の通常・喜び・苦痛（計63枚）を、オーナー差し替え済みのネイティブ透過PNG（`RGBA`）から直接リサイズ・トリミングして [`Assets.xcassets/Characters`](BangBangBeam/Assets.xcassets/Characters) に反映。

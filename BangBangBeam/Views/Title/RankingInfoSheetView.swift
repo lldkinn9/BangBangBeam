@@ -1,15 +1,16 @@
 import SwiftUI
 
-/// 世界ランキング画面（自分の順位 ＆ 世界1位〜100位を表示）
+/// 世界ランキング画面（自分の順位・選択アイコン ＆ 世界1位〜100位を表示）
 struct RankingInfoSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable private var gcManager = GameCenterManager.shared
+    @Bindable private var iconManager = PlayerIconManager.shared
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    // MARK: 1. 自分の順位カード (MY RANK)
+                    // MARK: 1. 自分の順位カード (MY RANK + 選択中アイコン)
                     myRankCard
 
                     // MARK: 2. 世界 1位〜100位 リスト (TOP 1 - 100)
@@ -55,9 +56,10 @@ struct RankingInfoSheetView: View {
         .preferredColorScheme(.dark)
     }
 
-    // MARK: - 1. 自分の順位カード
+    // MARK: - 1. 自分の順位カード（設定画面で選択したアイコンを反映）
     private var myRankCard: some View {
         let displayedStreak = max(gcManager.bestWinStreak, gcManager.myGlobalScore ?? 0)
+        let myIconAsset = iconManager.selectedIcon.unlockedAssetName
 
         return VStack(spacing: 12) {
             HStack {
@@ -71,58 +73,76 @@ struct RankingInfoSheetView: View {
                     Circle()
                         .fill(gcManager.isAuthenticated ? Color.cyberEmerald : Color.cyberAmber)
                         .frame(width: 7, height: 7)
-                    Text(gcManager.isAuthenticated ? gcManager.playerDisplayName : "Game Center 未接続")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.8))
-                        .lineLimit(1)
+                    Text(
+                        gcManager.isAuthenticated
+                            ? gcManager.playerDisplayName
+                            : (GameCenterManager.useMockRankingForPreview ? "モックプレビュー表示中" : "Game Center 未接続")
+                    )
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.8))
+                    .lineLimit(1)
                 }
             }
 
-            HStack(spacing: 0) {
-                // 左：自分の世界順位
-                VStack(spacing: 4) {
-                    Text("自分の順位")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.65))
+            HStack(spacing: 12) {
+                // 設定画面で選択したプレイヤーアイコン
+                Image(myIconAsset)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 58, height: 58)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .strokeBorder(Color.cyberAmber, lineWidth: 2)
+                    )
+                    .shadow(color: Color.cyberAmber.opacity(0.45), radius: 5)
 
-                    if let rank = gcManager.myGlobalRank {
-                        HStack(alignment: .firstTextBaseline, spacing: 2) {
-                            Text("\(rank)")
-                                .font(.system(size: 32, weight: .black, design: .rounded))
-                                .foregroundStyle(Color.cyberAmber)
-                            Text("位")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.cyberAmber)
+                HStack(spacing: 0) {
+                    // 左：自分の世界順位
+                    VStack(spacing: 4) {
+                        Text("自分の順位")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.65))
+
+                        if let rank = gcManager.myGlobalRank {
+                            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                Text("\(rank)")
+                                    .font(.system(size: 30, weight: .black, design: .rounded))
+                                    .foregroundStyle(Color.cyberAmber)
+                                Text("位")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(Color.cyberAmber)
+                            }
+                        } else {
+                            Text(gcManager.isAuthenticated ? "未ランクイン" : "—")
+                                .font(.system(size: 18, weight: .black, design: .rounded))
+                                .foregroundStyle(Color.white.opacity(0.55))
+                                .frame(height: 34)
                         }
-                    } else {
-                        Text(gcManager.isAuthenticated ? "未ランクイン" : "—")
-                            .font(.system(size: 20, weight: .black, design: .rounded))
-                            .foregroundStyle(Color.white.opacity(0.55))
-                            .frame(height: 36)
                     }
-                }
-                .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity)
 
-                Rectangle()
-                    .fill(Color.white.opacity(0.14))
-                    .frame(width: 1, height: 46)
+                    Rectangle()
+                        .fill(Color.white.opacity(0.14))
+                        .frame(width: 1, height: 44)
 
-                // 右：自己ベスト連勝数
-                VStack(spacing: 4) {
-                    Text("自己ベスト記録")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.65))
+                    // 右：自己ベスト連勝数
+                    VStack(spacing: 4) {
+                        Text("自己ベスト記録")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.65))
 
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text("\(displayedStreak)")
-                            .font(.system(size: 32, weight: .black, design: .rounded))
-                            .foregroundStyle(Color.cyberCyan)
-                        Text("連勝")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.cyberCyan)
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text("\(displayedStreak)")
+                                .font(.system(size: 30, weight: .black, design: .rounded))
+                                .foregroundStyle(Color.cyberCyan)
+                            Text("連勝")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.cyberCyan)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 4)
         }
@@ -205,22 +225,41 @@ struct RankingInfoSheetView: View {
 
     private func rankingRow(entry: LeaderboardRowEntry) -> some View {
         let rankAccent = rankColor(for: entry.rank)
+        let displayedIcon = entry.isLocalPlayer
+            ? iconManager.selectedIcon.unlockedAssetName
+            : entry.iconAssetName
 
-        return HStack(spacing: 12) {
+        return HStack(spacing: 10) {
             // 順位バッジ (1〜100)
             ZStack {
                 RoundedRectangle(cornerRadius: 7)
                     .fill(entry.rank <= 3 ? rankAccent.opacity(0.22) : Color.white.opacity(0.06))
                 Text("\(entry.rank)")
-                    .font(.system(size: 14, weight: .black, design: .monospaced))
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
                     .foregroundStyle(rankAccent)
             }
-            .frame(width: 42, height: 32)
+            .frame(width: 38, height: 32)
+
+            // プレイヤーアイコン
+            Image(displayedIcon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 38, height: 38)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(
+                            entry.isLocalPlayer
+                                ? Color.cyberEmerald
+                                : (entry.rank <= 3 ? rankAccent.opacity(0.8) : Color.white.opacity(0.18)),
+                            lineWidth: entry.isLocalPlayer || entry.rank <= 3 ? 1.6 : 0.8
+                        )
+                )
 
             // プレイヤー名
             HStack(spacing: 6) {
                 Text(entry.displayName)
-                    .font(.system(size: 14, weight: entry.isLocalPlayer ? .black : .semibold))
+                    .font(.system(size: 13, weight: entry.isLocalPlayer ? .black : .semibold))
                     .foregroundStyle(entry.isLocalPlayer ? Color.cyberEmerald : .white)
                     .lineLimit(1)
 
@@ -234,7 +273,7 @@ struct RankingInfoSheetView: View {
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // 連勝スコア
             HStack(alignment: .firstTextBaseline, spacing: 2) {

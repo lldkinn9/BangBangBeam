@@ -39,12 +39,39 @@ struct UltimatePresentation: Equatable, Sendable {
     }
 }
 
+/// リズム速度プリセット（標準 / 速め の2択）
+enum TempoPreset: String, CaseIterable, Identifiable, Sendable {
+    case standard
+    case fast
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .standard:
+            return "標準"
+        case .fast:
+            return "速め"
+        }
+    }
+
+    var bpmValue: Double {
+        switch self {
+        case .standard:
+            return 88.0
+        case .fast:
+            return 116.0
+        }
+    }
+}
+
 /// 製品版ゲームエンジン（KUMITE 11人勝ち抜き・HP3制・被弾チャージ-1・お手つき無防備・4チャージ一撃必殺）
 @Observable
 @MainActor
 final class GameEngine {
     // MARK: - Persistence Keys
     private let initialPracticeDoneKey = "BangBangBeam.hasCompletedInitialPractice"
+    private let tempoPresetKey = "BangBangBeam.tempoPreset"
 
     // MARK: - Navigation & Mode
     var currentScreen: AppScreen = .title
@@ -55,7 +82,15 @@ final class GameEngine {
     let maxHP: Int = 3
     let maxCharge: Int = 4
 
-    /// テンポ設定（デフォルト BPM 88 -> 約0.68秒/拍）
+    /// テンポ選択（標準 / 速め）
+    var tempoPreset: TempoPreset = .standard {
+        didSet {
+            UserDefaults.standard.set(tempoPreset.rawValue, forKey: tempoPresetKey)
+            bpm = tempoPreset.bpmValue
+        }
+    }
+
+    /// テンポ実効BPM（標準: 88 BPM / 速め: 116 BPM）
     var bpm: Double = 88.0 {
         didSet {
             if isAutoLoopRunning {
@@ -127,6 +162,15 @@ final class GameEngine {
 
     // MARK: - Initialization & First Launch Check
     init() {
+        if let savedRaw = UserDefaults.standard.string(forKey: tempoPresetKey),
+           let savedPreset = TempoPreset(rawValue: savedRaw) {
+            self.tempoPreset = savedPreset
+            self.bpm = savedPreset.bpmValue
+        } else {
+            self.tempoPreset = .standard
+            self.bpm = TempoPreset.standard.bpmValue
+        }
+
         let completedTutorial = UserDefaults.standard.bool(forKey: initialPracticeDoneKey)
         if !completedTutorial {
             // 初回アプリ起動時は自動で PRACTICE（チュートリアル）モードを起動
@@ -478,6 +522,11 @@ final class GameEngine {
 
         if playerWon {
             winStreak += 1
+            PlayerIconManager.shared.recordKumiteVictory(
+                enemy: currentEnemy,
+                loopNumber: currentLoopNumber,
+                newWinStreak: winStreak
+            )
             GameCenterManager.shared.recordWinStreak(winStreak)
             outcome = .stageClear(enemyName: currentEnemy.codeName, reason: reason)
         } else {

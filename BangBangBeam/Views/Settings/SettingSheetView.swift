@@ -1,16 +1,73 @@
 import SwiftUI
 
-/// BGM ON/OFF・BPM速度・製品版ルールを確認できる設定シート（最下部にバナー広告常設）
+/// アイコン設定・BGM ON/OFF・TEMPO(標準/速め)・製品版ルールを確認できる設定シート（最下部にバナー広告常設）
 struct SettingSheetView: View {
     @Bindable var engine: GameEngine
     @Bindable private var soundManager = SoundManager.shared
+    @Bindable private var iconManager = PlayerIconManager.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    // MARK: 1. サウンド & 触覚設定
+                    // MARK: 1. アイコン設定（最上部）
+                    settingCard(title: "アイコン設定", icon: "person.crop.circle.badge.checkmark") {
+                        NavigationLink {
+                            IconSettingView(engine: engine)
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(iconManager.selectedIcon.unlockedAssetName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 56, height: 56)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(Color.cyberCyan, lineWidth: 2)
+                                    )
+                                    .shadow(color: Color.cyberCyan.opacity(0.4), radius: 5)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(iconManager.selectedIcon.characterCodeName) — \(iconManager.selectedIcon.variantLabel)")
+                                        .font(.system(size: 14, weight: .black, design: .monospaced))
+                                        .foregroundStyle(.white)
+
+                                    Text("ランキングに表示されるアイコンを選択")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.white.opacity(0.65))
+
+                                    Text("解放済み \(iconManager.unlockedIconIDs.count) / \(iconManager.allIcons.count)")
+                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.cyberEmerald)
+                                }
+
+                                Spacer()
+
+                                HStack(spacing: 4) {
+                                    Text("変更")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .bold))
+                                }
+                                .foregroundStyle(Color.cyberCyan)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.cyberCyan.opacity(0.14))
+                                        .overlay(
+                                            Capsule()
+                                                .strokeBorder(Color.cyberCyan.opacity(0.5), lineWidth: 1)
+                                        )
+                                )
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // MARK: 2. サウンド & 触覚設定
                     settingCard(title: "AUDIO & HAPTICS", icon: "speaker.wave.2.fill") {
                         VStack(spacing: 14) {
                             Toggle(isOn: $soundManager.isBGMEnabled) {
@@ -41,7 +98,7 @@ struct SettingSheetView: View {
                         }
                     }
 
-                    // MARK: 2. BPM テンポ設定
+                    // MARK: 3. TEMPO / BPM 設定（標準 / 速め の選択形式）
                     settingCard(title: "TEMPO / BPM", icon: "metronome.fill") {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -49,31 +106,42 @@ struct SettingSheetView: View {
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(.white)
                                 Spacer()
-                                Text("\(Int(engine.bpm)) BPM (約\(String(format: "%.2f", engine.beatInterval))秒/拍)")
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                Text(engine.tempoPreset.title)
+                                    .font(.system(size: 13, weight: .black))
                                     .foregroundStyle(Color.cyberCyan)
                             }
 
-                            Slider(value: $engine.bpm, in: 60...140, step: 2)
-                                .tint(Color.cyberCyan)
-
-                            HStack {
-                                Text("SLOW (60)")
-                                Spacer()
-                                Button("標準 (88 BPM) に戻す") {
-                                    engine.bpm = 88.0
+                            HStack(spacing: 12) {
+                                ForEach(TempoPreset.allCases) { preset in
+                                    let isSelected = (engine.tempoPreset == preset)
+                                    Button {
+                                        engine.tempoPreset = preset
+                                        HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                                    } label: {
+                                        Text(preset.title)
+                                            .font(.system(size: 15, weight: .black))
+                                            .foregroundStyle(isSelected ? .black : .white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(isSelected ? Color.cyberCyan : Color.black.opacity(0.45))
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 10)
+                                                            .strokeBorder(
+                                                                isSelected ? Color.cyberCyan : Color.white.opacity(0.22),
+                                                                lineWidth: isSelected ? 2 : 1
+                                                            )
+                                                    )
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(Color.cyberEmerald)
-                                Spacer()
-                                Text("FAST (140)")
                             }
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.5))
                         }
                     }
 
-                    // MARK: 3. 製品版コマンド＆ルールガイド（アイコン無し）
+                    // MARK: 4. 製品版コマンド＆ルールガイド（アイコン無し）
                     settingCard(title: "BATTLE RULES", icon: nil) {
                         VStack(alignment: .leading, spacing: 12) {
                             ruleRow(
