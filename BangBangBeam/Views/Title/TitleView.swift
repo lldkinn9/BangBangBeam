@@ -202,13 +202,16 @@ struct TitleView: View {
     // MARK: - Mode Selection Menu
     private var modeMenuPanel: some View {
         VStack(spacing: 12) {
-            // ① KUMITE (メイン勝ち抜きモード：中断記録があれば連勝数＆復活回数を引き継いで再開)
+            // ① KUMITE (メイン勝ち抜きモード：中断記録があれば右上に「〇連勝中」バッジを表示し引き継ぎ再開)
             modeButton(
                 title: "KUMITE",
                 subtitle: "勝ち抜きサバイバル（ランキング対象）",
                 systemImage: "flame.fill",
                 primary: .cyberCyan,
-                secondary: .cyberEmerald
+                secondary: .cyberEmerald,
+                topTrailingBadge: (engine.hasSavedKumiteSession && engine.winStreak > 0)
+                    ? "\(engine.winStreak)連勝中"
+                    : nil
             ) {
                 isMenuExpanded = false
                 engine.startOrResumeKumite()
@@ -268,6 +271,7 @@ struct TitleView: View {
         systemImage: String,
         primary: Color,
         secondary: Color,
+        topTrailingBadge: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button {
@@ -310,5 +314,25 @@ struct TitleView: View {
                 fillOpacity: 0.28
             )
         )
+        .overlay(alignment: .topTrailing) {
+            if let topTrailingBadge {
+                Text(topTrailingBadge)
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.cyberAmber)
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.white.opacity(0.85), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: Color.cyberAmber.opacity(0.75), radius: 6)
+                    .offset(x: -8, y: -9)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }

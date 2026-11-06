@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 20:00 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.12`（バトル間BGM継続再生・勝利後Title帰還時の連勝＆復活回数引き継ぎ・YOU WIN / YOU LOSE... リザルト刷新＆イラスト追加）
+最終更新日時: 2026-11-06 20:11 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.13`（モード選択KUMITEカードの「〇連勝中」バッジ追加 ＆ 勝敗リザルト枠内「YOU」左下へのイラスト再配置）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.12`（次戦BGM継続・勝利後Title帰還からの連勝＆復活残り回数引き継ぎ・YOU WIN / YOU LOSE... リザルト表示＆イラスト配置）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.13`（KUMITEカード右上「〇連勝中」バッジ・リザルト画面「YOU」左下のイラスト配置）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -60,6 +60,10 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 20:11 (`v1.0.13`)**
+  - **モード選択メニューの `KUMITE` カード右上へ「〇連勝中」バッジ追加:** [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) にて、連勝継続状態（勝利後リザルトから Title に戻っている状態）のとき、`KUMITE` カード右上に `〇連勝中` バッジを表示するよう対応。
+  - **勝敗リザルト画面のイラスト配置調整（「YOU」の左下あたりへ配置＆要素被り回避）:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の `YOU WIN` / `YOU LOSE...` リザルト枠内にて、`YOU` の左下あたりに `reo-huppy.png` / `lose.png` を配置し、連勝数・記録テキストやボタン類を右側および下側へずらして他要素と一切被らないレイアウトに調整。
 
 - **2026-11-06 20:00 (`v1.0.12`)**
   - **次戦移行時のBGM継続再生化:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) の `advanceToNextKumiteStage()` で `playBattleBGM(forceNewRandom: false)` を呼ぶよう変更し、バトル後に次の試合へ進む際に BGM がリセット・曲変更されずシームレスに継続再生されるように修正。

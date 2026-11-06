@@ -414,7 +414,7 @@ struct BattleView: View {
         )
     }
 
-    // MARK: - 5. KUMITE Result Overlay (YOU WIN / YOU LOSE... + 枠下左寄りイラスト表示)
+    // MARK: - 5. KUMITE Result Overlay (YOU WIN / YOU LOSE... — 「YOU」の左下にイラスト配置＆他要素は右・下へ整理)
     private var kumiteResultOverlay: some View {
         let isStageClear: Bool = {
             if case .stageClear = engine.outcome { return true }
@@ -427,140 +427,197 @@ struct BattleView: View {
             Color.black.opacity(0.84)
                 .ignoresSafeArea()
 
-            VStack(spacing: 10) {
-                Spacer(minLength: 8)
+            VStack(spacing: 14) {
+                Text(isStageClear ? "YOU WIN" : "YOU LOSE...")
+                    .font(.system(size: 35, weight: .black, design: .rounded))
+                    .italic()
+                    .tracking(2)
+                    .foregroundStyle(accent)
+                    .shadow(color: accent.opacity(0.9), radius: 14)
 
-                // MARK: リザルトメイン枠
-                VStack(spacing: 14) {
-                    Text(isStageClear ? "YOU WIN" : "YOU LOSE...")
-                        .font(.system(size: 36, weight: .black, design: .rounded))
-                        .italic()
-                        .tracking(2)
-                        .foregroundStyle(accent)
-                        .shadow(color: accent.opacity(0.9), radius: 14)
+                if case .stageClear = engine.outcome {
+                    // 「YOU」の左下あたりに reo-huppy.png を表示し、連勝数・ボタンは右側へ配置
+                    HStack(alignment: .center, spacing: 12) {
+                        Image("result_reo_happy")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 104, height: 152)
+                            .shadow(color: accent.opacity(0.45), radius: 8)
 
-                    if case .stageClear = engine.outcome {
-                        Text("\(engine.winStreak)連勝")
-                            .font(.system(size: 28, weight: .black, design: .rounded))
-                            .foregroundStyle(Color.cyberAmber)
-                            .padding(.vertical, 4)
-
-                        Button {
-                            HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                            engine.advanceToNextKumiteStage()
-                        } label: {
-                            Text("NEXT BATTLE ▶")
-                                .font(.system(size: 18, weight: .black, design: .rounded))
-                                .tracking(2)
-                                .foregroundStyle(.white)
-                                .frame(width: 256, height: 50)
-                        }
-                        .buttonStyle(
-                            CyberButtonStyle(
-                                primaryColor: .cyberEmerald,
-                                secondaryColor: .cyberCyan,
-                                cutSize: 12,
-                                fillOpacity: 0.38
-                            )
-                        )
-                    } else if case .gameOver(let finalStreak, _) = engine.outcome {
-                        VStack(spacing: 4) {
-                            Text("今回の記録: \(finalStreak) 連勝")
-                                .font(.system(size: 20, weight: .black, design: .rounded))
-                                .foregroundStyle(Color.cyberCyan)
-                            Text("自己ベスト: \(GameCenterManager.shared.bestWinStreak) 連勝")
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        VStack(spacing: 12) {
+                            Text("\(engine.winStreak)連勝")
+                                .font(.system(size: 28, weight: .black, design: .rounded))
                                 .foregroundStyle(Color.cyberAmber)
-                        }
-                        .padding(.vertical, 2)
+                                .minimumScaleFactor(0.8)
+                                .lineLimit(1)
 
-                        // 動画広告を見て復活（1回のKUMITE挑戦につき最大2回まで：連勝を維持して負けたバトルをやり直し）
-                        if engine.remainingRevives > 0 {
                             Button {
-                                HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
-                                adManager.presentRewardedAdForRevive {
-                                    engine.reviveCurrentKumiteMatch()
-                                }
+                                HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                                engine.advanceToNextKumiteStage()
                             } label: {
-                                VStack(spacing: 3) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "play.tv.fill")
-                                        Text(adManager.isLoadingRewardedAd ? "動画広告を読み込み中..." : "動画広告を見て復活")
-                                    }
+                                Text("NEXT BATTLE ▶")
                                     .font(.system(size: 16, weight: .black, design: .rounded))
+                                    .tracking(1.2)
+                                    .minimumScaleFactor(0.8)
+                                    .lineLimit(1)
                                     .foregroundStyle(.white)
-
-                                    Text("連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.maxRevivesPerRun) 回）")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(Color.cyberAmber)
-                                }
-                                .frame(width: 256, height: 54)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 48)
                             }
                             .buttonStyle(
                                 CyberButtonStyle(
-                                    primaryColor: .cyberAmber,
-                                    secondaryColor: .cyberEmerald,
-                                    cutSize: 12,
+                                    primaryColor: .cyberEmerald,
+                                    secondaryColor: .cyberCyan,
+                                    cutSize: 11,
                                     fillOpacity: 0.38
                                 )
                             )
-                            .disabled(adManager.isLoadingRewardedAd)
 
-                            if let adError = adManager.rewardedAdStatusMessage {
-                                Text(adError)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(Color.cyberDanger)
-                                    .multilineTextAlignment(.center)
-                                    .frame(maxWidth: 256)
+                            Button {
+                                HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                                engine.returnToTitle()
+                            } label: {
+                                Text("◀ TITLE")
+                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                    .tracking(1.5)
+                                    .foregroundStyle(Color.cyberCyan)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
                             }
-                        } else {
-                            Text("※今回の挑戦での復活回数（最大\(engine.maxRevivesPerRun)回）を使い切りました")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(0.6))
-                                .multilineTextAlignment(.center)
-                        }
-
-                        // 最初から挑戦（連勝0・復活残り2回にリセットして再開）
-                        Button {
-                            HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                            engine.startKumiteFromBeginning()
-                        } label: {
-                            Text("RETRY (最初から挑戦)")
-                                .font(.system(size: 15, weight: .black, design: .rounded))
-                                .tracking(1.2)
-                                .foregroundStyle(.white)
-                                .frame(width: 256, height: 44)
-                        }
-                        .buttonStyle(
-                            CyberButtonStyle(
-                                primaryColor: .cyberEmerald,
-                                secondaryColor: .cyberCyan,
-                                cutSize: 12,
-                                fillOpacity: 0.28
+                            .buttonStyle(
+                                CyberButtonStyle(
+                                    primaryColor: .cyberCyan,
+                                    secondaryColor: Color.white.opacity(0.6),
+                                    cutSize: 10,
+                                    fillOpacity: 0.14
+                                )
                             )
-                        )
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
 
+                    Text("※TITLEに戻っても現在の連勝状況と復活残り回数（あと\(engine.remainingRevives)回）は次回KUMITE開始時に引き継がれます")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.75))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(2)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 2)
+                } else if case .gameOver(let finalStreak, _) = engine.outcome {
+                    // 「YOU」の左下あたりに lose.png を表示し、記録テキストは右へ、ボタン群は下へずらして配置
+                    HStack(alignment: .center, spacing: 12) {
+                        Image("result_reo_lose")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 118, height: 72)
+                            .shadow(color: accent.opacity(0.45), radius: 8)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("今回の記録: \(finalStreak) 連勝")
+                                .font(.system(size: 18, weight: .black, design: .rounded))
+                                .foregroundStyle(Color.cyberCyan)
+                                .minimumScaleFactor(0.8)
+                                .lineLimit(1)
+
+                            Text("自己ベスト: \(GameCenterManager.shared.bestWinStreak) 連勝")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.cyberAmber)
+                                .minimumScaleFactor(0.85)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 2)
+
+                    // 動画広告を見て復活（1回のKUMITE挑戦につき最大2回まで：連勝を維持して負けたバトルをやり直し）
+                    if engine.remainingRevives > 0 {
                         Button {
-                            HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                            isShowingRankingFallback = true
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "trophy.fill")
-                                Text("WORLD RANKING")
+                            HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
+                            adManager.presentRewardedAdForRevive {
+                                engine.reviveCurrentKumiteMatch()
                             }
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.cyberAmber)
-                            .frame(width: 256, height: 38)
+                        } label: {
+                            VStack(spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "play.tv.fill")
+                                    Text(adManager.isLoadingRewardedAd ? "動画広告を読み込み中..." : "動画広告を見て復活")
+                                }
+                                .font(.system(size: 16, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+
+                                Text("連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.maxRevivesPerRun) 回）")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(Color.cyberAmber)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
                         }
                         .buttonStyle(
                             CyberButtonStyle(
                                 primaryColor: .cyberAmber,
-                                secondaryColor: .cyberCyan,
-                                cutSize: 10,
-                                fillOpacity: 0.18
+                                secondaryColor: .cyberEmerald,
+                                cutSize: 12,
+                                fillOpacity: 0.38
                             )
                         )
+                        .disabled(adManager.isLoadingRewardedAd)
+
+                        if let adError = adManager.rewardedAdStatusMessage {
+                            Text(adError)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.cyberDanger)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        Text("※今回の挑戦での復活回数（最大\(engine.maxRevivesPerRun)回）を使い切りました")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                            .multilineTextAlignment(.center)
                     }
+
+                    // 最初から挑戦（連勝0・復活残り2回にリセットして再開）
+                    Button {
+                        HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                        engine.startKumiteFromBeginning()
+                    } label: {
+                        Text("RETRY (最初から挑戦)")
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .tracking(1.2)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                    }
+                    .buttonStyle(
+                        CyberButtonStyle(
+                            primaryColor: .cyberEmerald,
+                            secondaryColor: .cyberCyan,
+                            cutSize: 12,
+                            fillOpacity: 0.28
+                        )
+                    )
+
+                    Button {
+                        HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                        isShowingRankingFallback = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "trophy.fill")
+                            Text("WORLD RANKING")
+                        }
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.cyberAmber)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                    }
+                    .buttonStyle(
+                        CyberButtonStyle(
+                            primaryColor: .cyberAmber,
+                            secondaryColor: .cyberCyan,
+                            cutSize: 10,
+                            fillOpacity: 0.18
+                        )
+                    )
 
                     Button {
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
@@ -570,7 +627,8 @@ struct BattleView: View {
                             .font(.system(size: 14, weight: .bold, design: .monospaced))
                             .tracking(2)
                             .foregroundStyle(Color.cyberCyan)
-                            .frame(width: 256, height: 38)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 38)
                     }
                     .buttonStyle(
                         CyberButtonStyle(
@@ -580,43 +638,19 @@ struct BattleView: View {
                             fillOpacity: 0.14
                         )
                     )
-
-                    if isStageClear {
-                        Text("※TITLEに戻っても現在の連勝状況と復活残り回数（あと\(engine.remainingRevives)回）は次回KUMITE開始時に引き継がれます")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.75))
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(2)
-                            .frame(maxWidth: 260)
-                            .padding(.top, 2)
-                    }
                 }
-                .padding(22)
-                .background(
-                    CyberShape(cutSize: 18)
-                        .fill(Color.cyberPanel)
-                        .overlay(
-                            CyberShape(cutSize: 18)
-                                .strokeBorder(accent, lineWidth: 2)
-                        )
-                )
-                .shadow(color: accent.opacity(0.5), radius: 24)
-                .padding(.horizontal, 24)
-
-                // MARK: 枠の下・左寄りにキャラクター結果イラストを表示（勝利: reo-huppy.png / 敗退: lose.png）
-                HStack {
-                    Image(isStageClear ? "result_reo_happy" : "result_reo_lose")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: isStageClear ? 164 : 122)
-                        .shadow(color: accent.opacity(0.45), radius: 10)
-
-                    Spacer()
-                }
-                .padding(.horizontal, 28)
-
-                Spacer(minLength: 6)
             }
+            .padding(20)
+            .background(
+                CyberShape(cutSize: 18)
+                    .fill(Color.cyberPanel)
+                    .overlay(
+                        CyberShape(cutSize: 18)
+                            .strokeBorder(accent, lineWidth: 2)
+                    )
+            )
+            .shadow(color: accent.opacity(0.5), radius: 24)
+            .padding(.horizontal, 18)
         }
     }
 }
