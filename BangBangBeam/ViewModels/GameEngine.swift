@@ -618,6 +618,11 @@ final class GameEngine {
     }
 
     private func selectCpuAction() -> GameAction {
+        // 0. 初手（1ターン目）は両者チャージ0で他行動が無意味なため、必ずチャージを選択
+        if turnCount == 1 {
+            return .charge
+        }
+
         let traits = currentEnemy.ai
         // 2周目以降はわずかに判断精度が上昇
         let loopBonus = min(0.15, Double(currentLoopNumber - 1) * 0.05)

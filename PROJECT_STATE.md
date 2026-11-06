@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 20:57 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.15`（勝利時リザルト画面「YOU WIN」への次戦テンポ切替［標準 / 速め］機能追加）
+最終更新日時: 2026-11-06 21:07 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.16`（敵キャラクターの初手［1ターン目］を必ずチャージにするようAI調整）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.15`（勝利リザルト画面でのテンポ切替［標準 / 速め］と次戦反映）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.16`（敵AIの初手確定チャージ化）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -60,6 +60,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 21:07 (`v1.0.16`)**
+  - **敵AIの初手確定チャージ化:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) の `selectCpuAction()` 先頭に `turnCount == 1` 判定を追加し、全敵キャラクターが初手（1ターン目）では必ず「チャージ」を選択するよう変更。
 
 - **2026-11-06 20:57 (`v1.0.15`)**
   - **勝利リザルト画面（`YOU WIN`）に次戦テンポ変更ボタン（標準 / 速め）を実装:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の `YOU WIN` 枠内にテンポ選択パネル（`標準` / `速め`）を追加。選択すると `engine.tempoPreset`（および設定画面の選択状態・`UserDefaults`）が即時更新され、`NEXT BATTLE ▶` で始まる次の戦闘から新しいリズム速度が反映される仕様に対応。
