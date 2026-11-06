@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-05 16:55 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.4`（製品版コアシステム・全素材・演出・ランキング・広告枠 統合完了）
+最終更新日時: 2026-11-06 13:34 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.5`（必殺アニメーション動画の iOS AVPlayer 互換コーデック `H.264 avc1` 再エンコード＆再生制御修正）
 
 ---
 
@@ -58,6 +58,9 @@
 
 ## 3. 更新履歴 (JST)
 
+- **2026-11-06 13:34 (`v1.0.5`)**
+  - **不具合修正（必殺アニメーション非表示）:** 元動画（Google Flow生成MP4）の映像コーデックタグが `hev1`（Apple `AVFoundation` / `AVPlayer` 非対応タグ）だったためデコードエラーとなっていた問題を特定。全12本の `ult_*.mp4` を iOS 完全互換の **`H.264 (avc1, yuv420p, +faststart)`** へ再エンコード。
+  - 併せて [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) の `AVPlayer` プリロード処理・`AVPlayerItem.status` 監視・動画尺（約10秒）に合わせたフォールバックタイムアウト（7秒→13.5秒）・カットイン横幅クリップ・BGM設定連動ミュート制御を改善。
 - **2026-11-05 16:55 (`v1.0.4`)**
   - Phase 1〜5 の製品版コア機能・全アセット（キャラ12人・手4種・動画12本・BGM3曲）・新バトルルール・初回チュートリアルUI・Game Center世界ランキング・AdMob広告制御基盤を一括実装し、`v1.0.4` としてプッシュ。
 - **2026-11-05 16:36 (`v1.0.3`)**

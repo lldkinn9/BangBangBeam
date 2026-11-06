@@ -17,15 +17,28 @@ struct UltimateCutinOverlayView: View {
     }
 
     var body: some View {
+        let videoURL = SoundManager.shared.resolveBundleURL(name: character.ultimateVideoName, ext: "mp4")
+
         ZStack {
-            Color.black.opacity(phase == .video ? 0.96 : 0.82)
+            Color.black.opacity(phase == .video ? 0.96 : 0.84)
                 .ignoresSafeArea()
+
+            // カットイン中から裏でデコーダをプリロードしておき、phase == .video 移行と同時に即座に再生開始
+            if let url = videoURL {
+                SeamlessVideoPlayerView(
+                    url: url,
+                    isPlaying: phase == .video,
+                    isMuted: !SoundManager.shared.isBGMEnabled
+                ) {
+                    finishOnce()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
+                .opacity(phase == .video ? 1.0 : 0.0)
+            }
 
             if phase == .cutin {
                 cutinView
-                    .transition(.opacity)
-            } else {
-                videoPlayerSection
                     .transition(.opacity)
             }
 
@@ -54,13 +67,13 @@ struct UltimateCutinOverlayView: View {
             }
         }
         .task {
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.74)) {
                 showCutinBanner = true
             }
-            try? await Task.sleep(for: .milliseconds(1050))
+            try? await Task.sleep(for: .milliseconds(1100))
             guard !hasCompleted else { return }
 
-            if SoundManager.shared.resolveBundleURL(name: character.ultimateVideoName, ext: "mp4") != nil {
+            if videoURL != nil {
                 withAnimation(.easeInOut(duration: 0.18)) {
                     phase = .video
                 }
@@ -80,44 +93,34 @@ struct UltimateCutinOverlayView: View {
                 .foregroundStyle(accent)
                 .shadow(color: accent, radius: 10)
 
-            ZStack {
-                Image(character.cutinAsset)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 190)
-                    .clipped()
-                    .overlay(
-                        Rectangle()
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [.white, accent, .cyberCyan],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 3
-                            )
-                    )
-                    .shadow(color: accent.opacity(0.95), radius: 24)
-            }
-            .offset(x: showCutinBanner ? 0 : (isPlayer ? -380 : 380))
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: 186)
+                .overlay {
+                    Image(character.cutinAsset)
+                        .resizable()
+                        .scaledToFill()
+                }
+                .clipped()
+                .overlay(
+                    Rectangle()
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.white, accent, .cyberCyan],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 3
+                        )
+                )
+                .shadow(color: accent.opacity(0.95), radius: 24)
+                .offset(x: showCutinBanner ? 0 : (isPlayer ? -380 : 380))
 
             Text("\(character.codeName) // 一撃必殺！！")
                 .font(.system(size: 26, weight: .black, design: .rounded))
                 .italic()
                 .foregroundStyle(.white)
                 .shadow(color: accent, radius: 12)
-        }
-    }
-
-    private var videoPlayerSection: some View {
-        Group {
-            if let url = SoundManager.shared.resolveBundleURL(name: character.ultimateVideoName, ext: "mp4") {
-                SeamlessVideoPlayerView(url: url) {
-                    finishOnce()
-                }
-                .ignoresSafeArea()
-            }
         }
     }
 
@@ -128,9 +131,11 @@ struct UltimateCutinOverlayView: View {
     }
 }
 
-/// コントロールバーを表示せず全画面で必殺mp4動画を再生し、終了時にコールバックを呼ぶプレイヤー
+/// コントロールバーを表示せず全画面で必殺mp4動画 (H.264 avc1) を再生し、終了時にコールバックを呼ぶプレイヤー
 private struct SeamlessVideoPlayerView: UIViewRepresentable {
     let url: URL
+    let isPlaying: Bool
+    let isMuted: Bool
     let onEnded: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -139,17 +144,31 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PlayerContainerUIView {
         let view = PlayerContainerUIView()
-        let item = AVPlayerItem(url: url)
+        view.backgroundColor = .clear
+        view.clipsToBounds = true
+
+        let asset = AVURLAsset(url: url)
+        let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
-        player.isMuted = true // BGM無し仕様に準拠
+        player.isMuted = isMuted
+        player.actionAtItemEnd = .pause
+
         view.playerLayer.player = player
         view.playerLayer.videoGravity = .resizeAspectFill
-        context.coordinator.observe(item: item, player: player)
-        player.play()
+
+        context.coordinator.setup(item: item, player: player)
+        if isPlaying {
+            context.coordinator.startPlaybackIfNeeded()
+        }
         return view
     }
 
-    func updateUIView(_ uiView: PlayerContainerUIView, context: Context) {}
+    func updateUIView(_ uiView: PlayerContainerUIView, context: Context) {
+        uiView.playerLayer.player?.isMuted = isMuted
+        if isPlaying {
+            context.coordinator.startPlaybackIfNeeded()
+        }
+    }
 
     static func dismantleUIView(_ uiView: PlayerContainerUIView, coordinator: Coordinator) {
         uiView.playerLayer.player?.pause()
@@ -159,15 +178,20 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
 
     final class Coordinator {
         private let onEnded: () -> Void
-        private var observer: NSObjectProtocol?
+        private var player: AVPlayer?
+        private var endObserver: NSObjectProtocol?
+        private var statusObservation: NSKeyValueObservation?
         private var fallbackTask: Task<Void, Never>?
+        private var didStartPlayback: Bool = false
 
         init(onEnded: @escaping () -> Void) {
             self.onEnded = onEnded
         }
 
-        func observe(item: AVPlayerItem, player: AVPlayer) {
-            observer = NotificationCenter.default.addObserver(
+        func setup(item: AVPlayerItem, player: AVPlayer) {
+            self.player = player
+
+            endObserver = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: item,
                 queue: .main
@@ -177,9 +201,29 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
                 }
             }
 
-            // 万一再生通知が届かない場合の安全タイムアウト（最大7秒）
+            statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observedItem, _ in
+                let currentStatus = observedItem.status
+                if currentStatus == .failed {
+                    Task { @MainActor [weak self] in
+                        self?.onEnded()
+                    }
+                }
+            }
+        }
+
+        func startPlaybackIfNeeded() {
+            guard !didStartPlayback, let player else { return }
+            if player.currentItem?.status == .failed {
+                onEnded()
+                return
+            }
+            didStartPlayback = true
+            player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+            player.play()
+
+            // 動画尺（約10.03秒）を最後まで再生した上で、万一終了通知が届かない場合のみ安全回収（13.5秒）
             fallbackTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(7.0))
+                try? await Task.sleep(for: .milliseconds(13500))
                 if !Task.isCancelled {
                     self?.onEnded()
                 }
@@ -187,12 +231,16 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
         }
 
         func cleanup() {
-            if let observer {
-                NotificationCenter.default.removeObserver(observer)
-                self.observer = nil
+            if let endObserver {
+                NotificationCenter.default.removeObserver(endObserver)
+                self.endObserver = nil
             }
+            statusObservation?.invalidate()
+            statusObservation = nil
             fallbackTask?.cancel()
             fallbackTask = nil
+            player?.pause()
+            player = nil
         }
     }
 }
