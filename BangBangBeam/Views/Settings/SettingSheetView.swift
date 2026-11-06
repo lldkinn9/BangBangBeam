@@ -6,6 +6,7 @@ struct SettingSheetView: View {
     @Bindable private var soundManager = SoundManager.shared
     @Bindable private var iconManager = PlayerIconManager.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var isShowingIconSetting: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -13,8 +14,10 @@ struct SettingSheetView: View {
                 VStack(spacing: 18) {
                     // MARK: 1. アイコン設定（最上部）
                     settingCard(title: "アイコン設定", icon: "person.crop.circle.badge.checkmark") {
-                        NavigationLink {
-                            IconSettingView(engine: engine)
+                        Button {
+                            SoundManager.shared.playButtonSE()
+                            HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                            isShowingIconSetting = true
                         } label: {
                             HStack(spacing: 14) {
                                 Image(iconManager.selectedIcon.unlockedAssetName)
@@ -81,6 +84,9 @@ struct SettingSheetView: View {
                                 }
                             }
                             .tint(Color.cyberCyan)
+                            .onChange(of: soundManager.isBGMEnabled) { _, _ in
+                                SoundManager.shared.playButtonSE()
+                            }
 
                             Divider().background(Color.white.opacity(0.15))
 
@@ -95,6 +101,9 @@ struct SettingSheetView: View {
                                 }
                             }
                             .tint(Color.cyberEmerald)
+                            .onChange(of: engine.isHapticsEnabled) { _, _ in
+                                SoundManager.shared.playButtonSE()
+                            }
                         }
                     }
 
@@ -115,6 +124,7 @@ struct SettingSheetView: View {
                                 ForEach(TempoPreset.allCases) { preset in
                                     let isSelected = (engine.tempoPreset == preset)
                                     Button {
+                                        SoundManager.shared.playButtonSE()
                                         engine.tempoPreset = preset
                                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                                     } label: {
@@ -176,6 +186,7 @@ struct SettingSheetView: View {
                                 .padding(.vertical, 4)
 
                             Button {
+                                SoundManager.shared.playButtonSE()
                                 HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                                 dismiss()
                                 Task { @MainActor in
@@ -206,11 +217,15 @@ struct SettingSheetView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 AdBannerFooterView()
             }
+            .navigationDestination(isPresented: $isShowingIconSetting) {
+                IconSettingView(engine: engine)
+            }
             .navigationTitle("SETTING")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完了") {
+                        SoundManager.shared.playButtonSE()
                         dismiss()
                     }
                     .fontWeight(.bold)

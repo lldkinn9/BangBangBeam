@@ -143,6 +143,7 @@ struct TitleView: View {
     // MARK: - Compact START Button (Width: 220px on Center Road)
     private var startButton: some View {
         Button {
+            SoundManager.shared.playButtonSE()
             HapticManager.playMedium(enabled: engine.isHapticsEnabled)
             withAnimation(.easeInOut(duration: 0.30)) {
                 isMenuExpanded = true
@@ -241,6 +242,7 @@ struct TitleView: View {
 
             // ④ ✕ BACK
             Button {
+                SoundManager.shared.playButtonSE()
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
                 withAnimation(.easeInOut(duration: 0.28)) {
                     isMenuExpanded = false
@@ -275,6 +277,7 @@ struct TitleView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button {
+            SoundManager.shared.playButtonSE()
             HapticManager.playMedium(enabled: engine.isHapticsEnabled)
             action()
         } label: {

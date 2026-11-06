@@ -46,6 +46,8 @@ struct UltimateCutinOverlayView: View {
                 HStack {
                     Spacer()
                     Button {
+                        SoundManager.shared.playButtonSE()
+                        SoundManager.shared.stopCutinSE()
                         finishOnce()
                     } label: {
                         Text("SKIP ▶▶")
@@ -66,6 +68,7 @@ struct UltimateCutinOverlayView: View {
             }
         }
         .task {
+            SoundManager.shared.playCutinSE()
             withAnimation(.spring(response: 0.28, dampingFraction: 0.74)) {
                 showCutinBanner = true
             }
@@ -79,6 +82,9 @@ struct UltimateCutinOverlayView: View {
             } else {
                 finishOnce()
             }
+        }
+        .onDisappear {
+            SoundManager.shared.stopCutinSE()
         }
     }
 

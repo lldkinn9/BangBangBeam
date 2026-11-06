@@ -329,6 +329,7 @@ final class GameEngine {
     func selectCommand(_ action: GameAction) {
         guard !outcome.isFinished, activeUltimate == nil else { return }
         selectedAction = action
+        SoundManager.shared.playButtonSE()
         HapticManager.playMedium(enabled: isHapticsEnabled)
     }
 
