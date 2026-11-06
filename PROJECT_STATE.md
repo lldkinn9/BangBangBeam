@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 21:11 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.17`（戦闘画面の敵サブ情報ラベル削除 ＆ プレイヤー体力下の予約表示削除）
+最終更新日時: 2026-11-06 21:21 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.18`（戦闘結果画面に勝敗共通のBGMオンオフ［スピーカーアイコン］ボタン実装）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.17`（敵キャラ名下の説明削除・プレイヤー体力下の予約テキスト削除）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.18`（戦闘結果画面の勝敗共通BGMオンオフ［スピーカーアイコン］ボタン）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -60,6 +60,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 21:21 (`v1.0.18`)**
+  - **戦闘結果画面（勝敗共通）にBGMオンオフ（スピーカーアイコン）ボタンを実装:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の `kumiteResultOverlay` 右上に、勝利（`YOU WIN`）・敗退（`YOU LOSE...`）にかかわらず表示されるスピーカーアイコン切替ボタン（`speaker.wave.2.fill` / `speaker.slash.fill`）を追加。`SoundManager.shared.isBGMEnabled` と双方向連動し、その場でBGMの即時ミュート／再開および設定保存（`UserDefaults`）が可能。
 
 - **2026-11-06 21:11 (`v1.0.17`)**
   - **戦闘画面HUDの不要テキスト整理:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) にて、敵キャラクター名の下に表示していた敵情報（肩書き・特性ラベル）を削除し、さらに自分（Reo）の体力バー下に表示していた `予約:⚡️チャージ` 等のテキスト表示も削除してシンプル化。

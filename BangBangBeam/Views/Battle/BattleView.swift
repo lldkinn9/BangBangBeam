@@ -4,6 +4,7 @@ import SwiftUI
 struct BattleView: View {
     @Bindable var engine: GameEngine
     @Bindable private var adManager = AdManager.shared
+    @Bindable private var soundManager = SoundManager.shared
     @State private var isShowingRankingFallback: Bool = false
 
     var body: some View {
@@ -393,7 +394,14 @@ struct BattleView: View {
             Color.black.opacity(0.84)
                 .ignoresSafeArea()
 
-            VStack(spacing: 14) {
+            VStack(spacing: 10) {
+                // 勝敗にかかわらず表示される BGM ON/OFF（スピーカーアイコン）ボタン
+                HStack {
+                    Spacer()
+                    resultBGMToggleButton
+                }
+
+                VStack(spacing: 14) {
                 Text(isStageClear ? "YOU WIN" : "YOU LOSE...")
                     .font(.system(size: 35, weight: .black, design: .rounded))
                     .italic()
@@ -666,8 +674,42 @@ struct BattleView: View {
                     )
             )
             .shadow(color: accent.opacity(0.5), radius: 24)
+            }
             .padding(.horizontal, 18)
         }
+    }
+
+    /// 戦闘結果画面（勝利・敗退共通）の BGM ON/OFF スピーカーアイコンボタン
+    private var resultBGMToggleButton: some View {
+        let isOn = soundManager.isBGMEnabled
+        return Button {
+            HapticManager.playLight(enabled: engine.isHapticsEnabled)
+            soundManager.isBGMEnabled.toggle()
+        } label: {
+            Image(systemName: isOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(isOn ? Color.cyberCyan : Color.white.opacity(0.45))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 42, height: 42)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.cyberPanel.opacity(0.92))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(isOn ? Color.cyberCyan.opacity(0.14) : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(
+                                    isOn ? Color.cyberCyan : Color.white.opacity(0.25),
+                                    lineWidth: isOn ? 1.5 : 1.1
+                                )
+                        )
+                )
+                .shadow(color: isOn ? Color.cyberCyan.opacity(0.4) : .clear, radius: 8)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isOn ? "BGMをオフにする" : "BGMをオンにする")
     }
 }
 
