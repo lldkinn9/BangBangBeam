@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 16:32 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.7`（敵のお手つき廃止・設定画面バージョン非表示・2周目23人目以降の追加敵9名統合）
+最終更新日時: 2026-11-06 16:52 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.8`（バージョン表示のタイトル右上限定化・モード選択文言修正・世界ランキング1〜100位＆自分順位専用UI化）
 
 ---
 
@@ -23,7 +23,7 @@
    - **3周目以降（32人目〜）:** 「既存11名 → 追加9名」の計20名サイクルを周回。
    - 敵AIはお手つきを一切行わず、キャラクターごとに `AITraits`（攻撃積極度・バリア警戒度・必殺指向・状況読み精度）を段階設定し明確な強弱を実現。
    - 敵を1人撃破するごとに Reo の体力（`HP = 3`）は全回復し、チャージは `0` にリセットして次戦へ進行。
-   - **世界ランキング:** Apple 公式 **Game Center (`GameKit`)** 連携 (`GameCenterManager`) により最大連勝数を自動送信・表示（未サインイン環境向け自己ベスト＆撃破進捗シート `RankingInfoSheetView` 搭載）。
+   - **世界ランキング:** Apple 公式 **Game Center (`GameKit`)** 連携 (`GameCenterManager` / `RankingInfoSheetView`) により、最大連勝数の自動送信および「自分の順位 ＋ 世界 1位〜100位」のランキング一覧を表示（撃破キャラ一覧は廃止）。
 
 ### 1.2 バトルシステム・演出
 - **体力（HP = 3）＆ 被弾チャージ減少:** 通常ビーム命中時、被弾側は **HP -1** かつ **蓄積チャージ -1**。3回被弾で敗退。
@@ -60,6 +60,10 @@
 
 ## 3. 更新履歴 (JST)
 
+- **2026-11-06 16:52 (`v1.0.8`)**
+  - **バージョン表示のタイトル右上限定化:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) および [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) からバージョン表示を削除し、[`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) の右上のみに表示するよう統一。
+  - **モード選択メニューの表記変更:** `KUMITE`（勝ち抜きサバイバル（ランキング対象））、`PRACTICE`（ルール学習）、`RANKING`（世界ランキング）、`SETTING`（各種設定）へサブタイトル文言を更新。
+  - **ランキング画面の刷新（自分の順位 ＋ 1〜100位表示）:** [`GameCenterManager.swift`](BangBangBeam/Services/GameCenterManager.swift) に `GKLeaderboard.loadEntries`（`1...100`）取得ロジックを実装し、[`RankingInfoSheetView.swift`](BangBangBeam/Views/Title/RankingInfoSheetView.swift) を「自分の順位・自己ベスト」と「1位〜100位リスト」のみの構成に刷新（撃破キャラクターリストを削除）。
 - **2026-11-06 16:32 (`v1.0.7`)**
   - **敵AIのお手つき完全廃止:** [`CharacterProfile.swift`](BangBangBeam/Models/CharacterProfile.swift) と [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) から敵のお手つき確率・分岐を削除し、気力不足の行動を絶対に選択しない安全ガードを追加。
   - **設定画面のバージョン非表示化:** [`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) のナビゲーションバー左上からバージョン表記を削除。

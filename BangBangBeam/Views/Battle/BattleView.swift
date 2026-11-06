@@ -73,27 +73,29 @@ struct BattleView: View {
 
     // MARK: - 1. Header Bar
     private var headerBar: some View {
-        HStack {
-            Button {
-                HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                engine.returnToTitle()
-            } label: {
-                Text("◀ TITLE")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.cyberCyan)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-            }
-            .buttonStyle(
-                CyberButtonStyle(
-                    primaryColor: .cyberCyan,
-                    secondaryColor: .cyberEmerald,
-                    cutSize: 7,
-                    fillOpacity: 0.16
+        ZStack {
+            HStack {
+                Button {
+                    HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                    engine.returnToTitle()
+                } label: {
+                    Text("◀ TITLE")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.cyberCyan)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(
+                    CyberButtonStyle(
+                        primaryColor: .cyberCyan,
+                        secondaryColor: .cyberEmerald,
+                        cutSize: 7,
+                        fillOpacity: 0.16
+                    )
                 )
-            )
 
-            Spacer()
+                Spacer()
+            }
 
             VStack(spacing: 1) {
                 HStack(spacing: 6) {
@@ -114,15 +116,6 @@ struct BattleView: View {
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.cyberEmerald)
             }
-
-            Spacer()
-
-            Text(AppVersion.displayText)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.65))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Color.white.opacity(0.06), in: Capsule())
         }
         .padding(.top, 2)
     }
@@ -516,9 +509,7 @@ struct BattleView: View {
 
                     Button {
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                        if !GameCenterManager.shared.presentWorldRanking() {
-                            isShowingRankingFallback = true
-                        }
+                        isShowingRankingFallback = true
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "trophy.fill")

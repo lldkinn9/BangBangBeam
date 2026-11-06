@@ -113,27 +113,29 @@ struct PracticeTutorialView: View {
 
     // MARK: - Header
     private var topHeader: some View {
-        HStack {
-            Button {
-                HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                engine.returnToTitle()
-            } label: {
-                Text(engine.isFirstLaunchTutorial ? "SKIP ▶ TITLE" : "◀ TITLE")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.cyberCyan)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-            }
-            .buttonStyle(
-                CyberButtonStyle(
-                    primaryColor: .cyberCyan,
-                    secondaryColor: .cyberEmerald,
-                    cutSize: 7,
-                    fillOpacity: 0.16
+        ZStack {
+            HStack {
+                Button {
+                    HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                    engine.returnToTitle()
+                } label: {
+                    Text(engine.isFirstLaunchTutorial ? "SKIP ▶ TITLE" : "◀ TITLE")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.cyberCyan)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(
+                    CyberButtonStyle(
+                        primaryColor: .cyberCyan,
+                        secondaryColor: .cyberEmerald,
+                        cutSize: 7,
+                        fillOpacity: 0.16
+                    )
                 )
-            )
 
-            Spacer()
+                Spacer()
+            }
 
             VStack(spacing: 1) {
                 Text("PRACTICE // ACADEMY")
@@ -143,15 +145,6 @@ struct PracticeTutorialView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Color.cyberEmerald)
             }
-
-            Spacer()
-
-            Text(AppVersion.displayText)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.65))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Color.white.opacity(0.06), in: Capsule())
         }
         .padding(.horizontal, 14)
         .padding(.top, 4)

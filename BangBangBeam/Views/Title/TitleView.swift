@@ -205,7 +205,7 @@ struct TitleView: View {
             // ① KUMITE (メイン勝ち抜きモード)
             modeButton(
                 title: "KUMITE",
-                subtitle: "勝ち抜きサバイバル（世界ランキング対応）",
+                subtitle: "勝ち抜きサバイバル（ランキング対象）",
                 systemImage: "flame.fill",
                 primary: .cyberCyan,
                 secondary: .cyberEmerald
@@ -217,7 +217,7 @@ struct TitleView: View {
             // ② PRACTICE (ルール学習＆練習専用UI)
             modeButton(
                 title: "PRACTICE",
-                subtitle: "ルール学習レッスン ＆ 1拍進行トレーニング",
+                subtitle: "ルール学習",
                 systemImage: "graduationcap.fill",
                 primary: .cyberEmerald,
                 secondary: .cyberCyan
@@ -226,23 +226,21 @@ struct TitleView: View {
                 engine.startPracticeMode()
             }
 
-            // ③ RANKING (世界ランキング & 11人進捗)
+            // ③ RANKING (世界ランキング：自分の順位 ＆ 1〜100位)
             modeButton(
                 title: "RANKING",
-                subtitle: "連勝数の世界ランキング ＆ 撃破リスト",
+                subtitle: "世界ランキング",
                 systemImage: "trophy.fill",
                 primary: .cyberAmber,
                 secondary: .cyberCyan
             ) {
-                if !GameCenterManager.shared.presentWorldRanking() {
-                    isShowingRankingSheet = true
-                }
+                isShowingRankingSheet = true
             }
 
             // ④ SETTING
             modeButton(
                 title: "SETTING",
-                subtitle: "BGM ON/OFF・BPM速度・ルール確認",
+                subtitle: "各種設定",
                 systemImage: "slider.horizontal.3",
                 primary: Color.white.opacity(0.85),
                 secondary: .cyberCyan
