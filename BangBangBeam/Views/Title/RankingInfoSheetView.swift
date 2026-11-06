@@ -37,7 +37,6 @@ struct RankingInfoSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        SoundManager.shared.playButtonSE()
                         Task {
                             await gcManager.fetchTop100Ranking()
                         }
@@ -51,7 +50,6 @@ struct RankingInfoSheetView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("閉じる") {
-                        SoundManager.shared.playButtonSE()
                         dismiss()
                     }
                     .fontWeight(.bold)

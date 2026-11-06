@@ -10,7 +10,6 @@ struct PracticeTutorialView: View {
     }
 
     @State private var selectedTab: PracticeTab = .guide
-    @State private var didAppearOnce: Bool = false
     @State private var lessonStep: Int = 0
     @State private var showDemoUltimate: Bool = false
 
@@ -106,14 +105,8 @@ struct PracticeTutorialView: View {
         }
         .onAppear {
             selectedTab = engine.startPracticeOnSparringTab ? .sparring : .guide
-            Task { @MainActor in
-                didAppearOnce = true
-            }
         }
         .onChange(of: selectedTab) { _, newValue in
-            if didAppearOnce {
-                SoundManager.shared.playButtonSE()
-            }
             if newValue == .guide {
                 engine.isPracticeAutoPlay = false
                 engine.stopTimer()
@@ -126,7 +119,6 @@ struct PracticeTutorialView: View {
         ZStack {
             HStack {
                 Button {
-                    SoundManager.shared.playButtonSE()
                     HapticManager.playLight(enabled: engine.isHapticsEnabled)
                     engine.returnToTitle()
                 } label: {
@@ -223,7 +215,6 @@ struct PracticeTutorialView: View {
 
                     if lessonStep == 3 {
                         Button {
-                            SoundManager.shared.playButtonSE()
                             HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
                             showDemoUltimate = true
                         } label: {
@@ -256,7 +247,6 @@ struct PracticeTutorialView: View {
             HStack(spacing: 12) {
                 if lessonStep > 0 {
                     Button {
-                        SoundManager.shared.playButtonSE()
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
                         withAnimation { lessonStep -= 1 }
                     } label: {
@@ -277,7 +267,6 @@ struct PracticeTutorialView: View {
 
                 if lessonStep < lessons.count - 1 {
                     Button {
-                        SoundManager.shared.playButtonSE()
                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                         withAnimation { lessonStep += 1 }
                     } label: {
@@ -316,7 +305,6 @@ struct PracticeTutorialView: View {
                     )
 
                     Button {
-                        SoundManager.shared.playButtonSE()
                         HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
                         engine.startOrResumeKumite()
                     } label: {
@@ -408,7 +396,6 @@ struct PracticeTutorialView: View {
             HStack(spacing: 8) {
                 if engine.outcome.isFinished {
                     Button {
-                        SoundManager.shared.playButtonSE()
                         engine.resetPracticeSparring()
                     } label: {
                         Text("🔄 もう一度練習する")
@@ -422,7 +409,6 @@ struct PracticeTutorialView: View {
                     )
                 } else {
                     Button {
-                        SoundManager.shared.playButtonSE()
                         engine.stepBeatManually()
                     } label: {
                         HStack(spacing: 6) {
@@ -442,7 +428,6 @@ struct PracticeTutorialView: View {
                 }
 
                 Button {
-                    SoundManager.shared.playButtonSE()
                     engine.isPracticeAutoPlay.toggle()
                 } label: {
                     Text(engine.isPracticeAutoPlay ? "⏸ AUTO" : "▶ MANUAL")

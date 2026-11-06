@@ -161,7 +161,6 @@ struct IconSettingView: View {
         let isSelected = (iconManager.selectedIconID == item.id)
 
         return Button {
-            SoundManager.shared.playButtonSE()
             if unlocked {
                 iconManager.selectIcon(item.id)
                 isLockedWarning = false

@@ -242,7 +242,6 @@ struct TitleView: View {
 
             // ④ ✕ BACK
             Button {
-                SoundManager.shared.playButtonSE()
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
                 withAnimation(.easeInOut(duration: 0.28)) {
                     isMenuExpanded = false

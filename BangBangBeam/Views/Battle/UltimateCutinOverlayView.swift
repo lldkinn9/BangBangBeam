@@ -46,7 +46,6 @@ struct UltimateCutinOverlayView: View {
                 HStack {
                     Spacer()
                     Button {
-                        SoundManager.shared.playButtonSE()
                         SoundManager.shared.stopCutinSE()
                         finishOnce()
                     } label: {

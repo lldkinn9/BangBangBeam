@@ -426,7 +426,6 @@ struct BattleView: View {
                                 .lineLimit(1)
 
                             Button {
-                                SoundManager.shared.playButtonSE()
                                 HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                                 engine.advanceToNextKumiteStage()
                             } label: {
@@ -449,7 +448,6 @@ struct BattleView: View {
                             )
 
                             Button {
-                                SoundManager.shared.playButtonSE()
                                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
                                 engine.returnToTitle()
                             } label: {
@@ -488,7 +486,6 @@ struct BattleView: View {
                             ForEach(TempoPreset.allCases) { preset in
                                 let isSelected = (engine.tempoPreset == preset)
                                 Button {
-                                    SoundManager.shared.playButtonSE()
                                     engine.tempoPreset = preset
                                     HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                                 } label: {
@@ -559,7 +556,6 @@ struct BattleView: View {
                     // 動画広告を見て復活（1回のKUMITE挑戦につき最大2回まで：連勝を維持して負けたバトルをやり直し）
                     if engine.remainingRevives > 0 {
                         Button {
-                            SoundManager.shared.playButtonSE()
                             HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
                             adManager.presentRewardedAdForRevive {
                                 engine.reviveCurrentKumiteMatch()
@@ -606,7 +602,6 @@ struct BattleView: View {
 
                     // 最初から挑戦（連勝0・復活残り2回にリセットして再開）
                     Button {
-                        SoundManager.shared.playButtonSE()
                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                         engine.startKumiteFromBeginning()
                     } label: {
@@ -627,7 +622,6 @@ struct BattleView: View {
                     )
 
                     Button {
-                        SoundManager.shared.playButtonSE()
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
                         isShowingRankingFallback = true
                     } label: {
@@ -650,7 +644,6 @@ struct BattleView: View {
                     )
 
                     Button {
-                        SoundManager.shared.playButtonSE()
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
                         engine.returnToTitle()
                     } label: {
@@ -690,7 +683,6 @@ struct BattleView: View {
     private var resultBGMToggleButton: some View {
         let isOn = soundManager.isBGMEnabled
         return Button {
-            SoundManager.shared.playButtonSE()
             HapticManager.playLight(enabled: engine.isHapticsEnabled)
             soundManager.isBGMEnabled.toggle()
         } label: {

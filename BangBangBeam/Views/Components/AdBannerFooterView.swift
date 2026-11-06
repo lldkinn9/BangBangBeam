@@ -79,7 +79,6 @@ struct FallbackRewardedAdOverlayView: View {
                     Spacer()
 
                     Button {
-                        SoundManager.shared.playButtonSE()
                         onCancel()
                     } label: {
                         Text("✕ 閉じる（復活しない）")
@@ -117,7 +116,6 @@ struct FallbackRewardedAdOverlayView: View {
                             .padding(.top, 6)
                     } else {
                         Button {
-                            SoundManager.shared.playButtonSE()
                             onRewardComplete()
                         } label: {
                             HStack(spacing: 8) {
