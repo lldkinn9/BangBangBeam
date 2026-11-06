@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 13:34 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.5`（必殺アニメーション動画の iOS AVPlayer 互換コーデック `H.264 avc1` 再エンコード＆再生制御修正）
+最終更新日時: 2026-11-06 14:23 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.6`（全12キャラ必殺技アニメーションの完全無音化＆BGM等倍継続再生対応）
 
 ---
 
@@ -58,6 +58,8 @@
 
 ## 3. 更新履歴 (JST)
 
+- **2026-11-06 14:23 (`v1.0.6`)**
+  - **必殺技アニメーションの完全無音化＆BGM継続再生:** 全12キャラクター分の `ult_*.mp4` から音声トラックを完全除去（`-an`）した上で、`AVPlayer` 側も常時ミュート固定（`isMuted = true`, `volume = 0`）に設定。さらに必殺技発動中の BGM 音量ダッキング処理を解除し、元々流れている BGM が音量変化なくそのまま継続再生されるように改修。
 - **2026-11-06 13:34 (`v1.0.5`)**
   - **不具合修正（必殺アニメーション非表示）:** 元動画（Google Flow生成MP4）の映像コーデックタグが `hev1`（Apple `AVFoundation` / `AVPlayer` 非対応タグ）だったためデコードエラーとなっていた問題を特定。全12本の `ult_*.mp4` を iOS 完全互換の **`H.264 (avc1, yuv420p, +faststart)`** へ再エンコード。
   - 併せて [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) の `AVPlayer` プリロード処理・`AVPlayerItem.status` 監視・動画尺（約10秒）に合わせたフォールバックタイムアウト（7秒→13.5秒）・カットイン横幅クリップ・BGM設定連動ミュート制御を改善。

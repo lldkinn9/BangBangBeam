@@ -91,7 +91,6 @@ struct PracticeTutorialView: View {
             // Step 4 の必殺プレビュー または フリー実戦の必殺演出
             if showDemoUltimate {
                 UltimateCutinOverlayView(character: .reo, isPlayer: true) {
-                    SoundManager.shared.setDucked(false)
                     showDemoUltimate = false
                 }
                 .zIndex(15)
@@ -221,7 +220,6 @@ struct PracticeTutorialView: View {
                     if lessonStep == 3 {
                         Button {
                             HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
-                            SoundManager.shared.setDucked(true)
                             showDemoUltimate = true
                         } label: {
                             HStack(spacing: 8) {

@@ -23,12 +23,11 @@ struct UltimateCutinOverlayView: View {
             Color.black.opacity(phase == .video ? 0.96 : 0.84)
                 .ignoresSafeArea()
 
-            // カットイン中から裏でデコーダをプリロードしておき、phase == .video 移行と同時に即座に再生開始
+            // カットイン中から裏でデコーダをプリロードしておき、phase == .video 移行と同時に即座に無音再生開始（BGM継続）
             if let url = videoURL {
                 SeamlessVideoPlayerView(
                     url: url,
-                    isPlaying: phase == .video,
-                    isMuted: !SoundManager.shared.isBGMEnabled
+                    isPlaying: phase == .video
                 ) {
                     finishOnce()
                 }
@@ -131,11 +130,10 @@ struct UltimateCutinOverlayView: View {
     }
 }
 
-/// コントロールバーを表示せず全画面で必殺mp4動画 (H.264 avc1) を再生し、終了時にコールバックを呼ぶプレイヤー
+/// コントロールバーを表示せず全画面で必殺mp4動画 (H.264 avc1・完全無音) を再生し、BGMを妨げず終了時にコールバックを呼ぶプレイヤー
 private struct SeamlessVideoPlayerView: UIViewRepresentable {
     let url: URL
     let isPlaying: Bool
-    let isMuted: Bool
     let onEnded: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -150,7 +148,8 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
         let asset = AVURLAsset(url: url)
         let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
-        player.isMuted = isMuted
+        player.isMuted = true
+        player.volume = 0.0
         player.actionAtItemEnd = .pause
 
         view.playerLayer.player = player
@@ -164,7 +163,8 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PlayerContainerUIView, context: Context) {
-        uiView.playerLayer.player?.isMuted = isMuted
+        uiView.playerLayer.player?.isMuted = true
+        uiView.playerLayer.player?.volume = 0.0
         if isPlaying {
             context.coordinator.startPlaybackIfNeeded()
         }

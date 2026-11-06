@@ -442,7 +442,6 @@ final class GameEngine {
     // MARK: - Ultimate Cut-in & Video Sequence
     private func triggerUltimateSequence(character: CharacterProfile, isPlayer: Bool) {
         stopTimer()
-        SoundManager.shared.setDucked(true)
         activeUltimate = UltimatePresentation(character: character, isPlayer: isPlayer)
     }
 
@@ -450,7 +449,6 @@ final class GameEngine {
     func completeUltimateSequence() {
         guard let ult = activeUltimate else { return }
         activeUltimate = nil
-        SoundManager.shared.setDucked(false)
 
         if ult.isPlayer {
             cpuHP = 0
