@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 20:11 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.13`（モード選択KUMITEカードの「〇連勝中」バッジ追加 ＆ 勝敗リザルト枠内「YOU」左下へのイラスト再配置）
+最終更新日時: 2026-11-06 20:17 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.14`（バトル画面左上のTITLEボタン削除・バトル中離脱不可化）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.13`（KUMITEカード右上「〇連勝中」バッジ・リザルト画面「YOU」左下のイラスト配置）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.14`（バトル画面左上のTITLEボタン非表示化）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -60,6 +60,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 20:17 (`v1.0.14`)**
+  - **バトル画面左上の `◀ TITLE` ボタン削除（バトル中離脱不可化）:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の `headerBar` から左上の `◀ TITLE` ボタンを削除し、バトル決着後のリザルト画面からのみタイトルへ戻れる仕様に変更。
 
 - **2026-11-06 20:11 (`v1.0.13`)**
   - **モード選択メニューの `KUMITE` カード右上へ「〇連勝中」バッジ追加:** [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) にて、連勝継続状態（勝利後リザルトから Title に戻っている状態）のとき、`KUMITE` カード右上に `〇連勝中` バッジを表示するよう対応。

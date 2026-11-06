@@ -72,52 +72,28 @@ struct BattleView: View {
         }
     }
 
-    // MARK: - 1. Header Bar
+    // MARK: - 1. Header Bar（バトル中はタイトルへ戻れない仕様）
     private var headerBar: some View {
-        ZStack {
-            HStack {
-                Button {
-                    HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                    engine.returnToTitle()
-                } label: {
-                    Text("◀ TITLE")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.cyberCyan)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
+        VStack(spacing: 1) {
+            HStack(spacing: 6) {
+                if engine.currentLoopNumber > 1 {
+                    Text("LOOP \(engine.currentLoopNumber)")
+                        .font(.system(size: 9, weight: .black, design: .monospaced))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color.cyberAmber, in: Capsule())
                 }
-                .buttonStyle(
-                    CyberButtonStyle(
-                        primaryColor: .cyberCyan,
-                        secondaryColor: .cyberEmerald,
-                        cutSize: 7,
-                        fillOpacity: 0.16
-                    )
-                )
-
-                Spacer()
+                Text("STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)")
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .foregroundStyle(.white)
             }
 
-            VStack(spacing: 1) {
-                HStack(spacing: 6) {
-                    if engine.currentLoopNumber > 1 {
-                        Text("LOOP \(engine.currentLoopNumber)")
-                            .font(.system(size: 9, weight: .black, design: .monospaced))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.cyberAmber, in: Capsule())
-                    }
-                    Text("STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)")
-                        .font(.system(size: 13, weight: .black, design: .monospaced))
-                        .foregroundStyle(.white)
-                }
-
-                Text("🔥 WIN STREAK: \(engine.winStreak)")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.cyberEmerald)
-            }
+            Text("🔥 WIN STREAK: \(engine.winStreak)")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.cyberEmerald)
         }
+        .frame(maxWidth: .infinity)
         .padding(.top, 2)
     }
 
