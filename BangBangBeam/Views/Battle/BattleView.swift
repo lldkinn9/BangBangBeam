@@ -472,6 +472,56 @@ struct BattleView: View {
                         .frame(maxWidth: .infinity)
                     }
 
+                    // 次戦から反映されるテンポ切替（標準 / 速め）
+                    VStack(spacing: 8) {
+                        HStack {
+                            Label("次戦のテンポ", systemImage: "metronome.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.white.opacity(0.85))
+                            Spacer()
+                            Text(engine.tempoPreset.title)
+                                .font(.system(size: 12, weight: .black))
+                                .foregroundStyle(Color.cyberCyan)
+                        }
+
+                        HStack(spacing: 10) {
+                            ForEach(TempoPreset.allCases) { preset in
+                                let isSelected = (engine.tempoPreset == preset)
+                                Button {
+                                    engine.tempoPreset = preset
+                                    HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                                } label: {
+                                    Text(preset.title)
+                                        .font(.system(size: 14, weight: .black))
+                                        .foregroundStyle(isSelected ? .black : .white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 9)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 9)
+                                                .fill(isSelected ? Color.cyberCyan : Color.black.opacity(0.45))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 9)
+                                                        .strokeBorder(
+                                                            isSelected ? Color.cyberCyan : Color.white.opacity(0.22),
+                                                            lineWidth: isSelected ? 1.8 : 1
+                                                        )
+                                                )
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 11)
+                            .fill(Color.black.opacity(0.32))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 11)
+                                    .strokeBorder(Color.cyberCyan.opacity(0.28), lineWidth: 1)
+                            )
+                    )
+
                     Text("※TITLEに戻っても現在の連勝状況と復活残り回数（あと\(engine.remainingRevives)回）は次回KUMITE開始時に引き継がれます")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.75))
