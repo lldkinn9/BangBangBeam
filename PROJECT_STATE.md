@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 21:07 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.16`（敵キャラクターの初手［1ターン目］を必ずチャージにするようAI調整）
+最終更新日時: 2026-11-06 21:11 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.17`（戦闘画面の敵サブ情報ラベル削除 ＆ プレイヤー体力下の予約表示削除）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.16`（敵AIの初手確定チャージ化）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.17`（敵キャラ名下の説明削除・プレイヤー体力下の予約テキスト削除）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -60,6 +60,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 21:11 (`v1.0.17`)**
+  - **戦闘画面HUDの不要テキスト整理:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) にて、敵キャラクター名の下に表示していた敵情報（肩書き・特性ラベル）を削除し、さらに自分（Reo）の体力バー下に表示していた `予約:⚡️チャージ` 等のテキスト表示も削除してシンプル化。
 
 - **2026-11-06 21:07 (`v1.0.16`)**
   - **敵AIの初手確定チャージ化:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) の `selectCpuAction()` 先頭に `turnCount == 1` 判定を追加し、全敵キャラクターが初手（1ターン目）では必ず「チャージ」を選択するよう変更。

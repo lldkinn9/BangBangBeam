@@ -123,7 +123,7 @@ struct BattleView: View {
             .frame(width: 84, height: 96)
             .clipShape(CyberShape(cutSize: 10))
 
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(engine.currentEnemy.codeName)
                         .font(.system(size: 17, weight: .black, design: .rounded))
@@ -137,11 +137,6 @@ struct BattleView: View {
                         accentColor: .cyberDanger
                     )
                 }
-
-                Text(engine.currentEnemy.titleLabel)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.68))
-                    .lineLimit(1)
 
                 HStack {
                     EnergyOrbView(
@@ -357,11 +352,6 @@ struct BattleView: View {
                         )
 
                         Spacer()
-
-                        let lacksEnergy = engine.playerCharge < engine.selectedAction.cost
-                        Text(lacksEnergy ? "⚠️お手つき注意" : "予約:\(engine.selectedAction.emoji)\(engine.selectedAction.label)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(lacksEnergy ? Color.cyberDanger : Color.cyberCyan)
                     }
                 }
             }
