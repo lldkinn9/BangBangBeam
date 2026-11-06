@@ -662,6 +662,16 @@ struct BattleView: View {
                             fillOpacity: 0.14
                         )
                     )
+
+
+                    if engine.remainingRevives > 0 && finalStreak > 0 {
+                        Text("※復活回数が残っている間は、TITLEに戻っても現在の連勝記録（\(finalStreak)連勝）が保持されます")
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.72))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(2)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
             }
             .padding(20)

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 22:34 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.23`（全21キャラクター必殺アニメーション更新 ＆ 動画音声再生対応）
+最終更新日時: 2026-11-06 23:14 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.24`（敗退後の復活残りあり時におけるタイトル帰還時の連勝保持 ＆ 再開確認ポップアップ実装）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.23`（全21キャラクターの新必殺アニメーション＆動画音声再生）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.24`（敗退後の復活残りあり時におけるタイトル帰還での連勝保持 ＆ 次回KUMITE押下時の確認ポップアップ）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 23:14 (`v1.0.24`)**
+  - **敗退後のタイトル帰還時における連勝保持（復活回数が残っている場合限定）＆ 再開確認ポップアップ実装:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) にて、KUMITE 敗退後（1連勝以上）でも「動画広告を見て復活」の残り回数が 1回以上残っている場合に限り、タイトル画面へ戻っても連勝数・復活残り回数・敗退保留状態を `UserDefaults` に保持する仕様を実装（復活回数が残っていない場合や0連勝時はリセット）。また、敗退保留状態から次回「KUMITE」を押した際に [`BangBangBeamApp.swift`](BangBangBeam/App/BangBangBeamApp.swift) の `PendingRevivePromptOverlayView` 確認ポップアップを表示し、「動画広告を見て復活（連勝継続）」か「最初から挑戦（0連勝）」を選択できるように対応。[`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の敗退画面にも復活残りあり時の保持案内文を追加。
 
 - **2026-11-06 22:34 (`v1.0.23`)**
   - **全21キャラクターの更新版必殺アニメーション反映 ＆ アニメーション音声の再生対応:** `素材/Characters/<各キャラ>/<キャラ>-anime.mp4`（全21本）の最新動画を iOS `AVPlayer` 互換の H.264 (`avc1`) ＋ AAC (`48kHz` ステレオ) ＋ `faststart` 形式に変換して `BangBangBeam/Resources/Videos/ult_<id>.mp4` を一括更新。あわせて [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) の無音固定を解除し、動画再生フェーズではアニメーションの音声が再生されるよう変更（SE音量スライダーおよびサウンドON/OFF設定に連動し、再生中はBGMを一時ダッキングして終了後に自動復帰）。

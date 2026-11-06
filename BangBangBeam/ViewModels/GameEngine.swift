@@ -75,6 +75,7 @@ final class GameEngine {
     private let savedKumiteActiveKey = "BangBangBeam.hasSavedKumiteSession"
     private let savedKumiteStreakKey = "BangBangBeam.savedKumiteWinStreak"
     private let savedKumiteRevivesKey = "BangBangBeam.savedKumiteRemainingRevives"
+    private let savedKumitePendingReviveKey = "BangBangBeam.savedKumitePendingRevive"
 
     // MARK: - Navigation & Mode
     var currentScreen: AppScreen = .title
@@ -110,6 +111,10 @@ final class GameEngine {
     var winStreak: Int = 0
     var remainingRevives: Int = 2
     var hasSavedKumiteSession: Bool = false
+    /// 敗退後に復活回数を残してタイトルへ戻った保留状態かどうか
+    var isPendingKumiteRevive: Bool = false
+    /// 敗退保留状態からKUMITEを押した際の確認ポップアップ表示フラグ
+    var isShowingPendingRevivePrompt: Bool = false
     var currentEnemy: CharacterProfile = CharacterProfile.kumiteRoster[0]
     var currentLoopNumber: Int = 1
     var currentStageInLoop: Int = 1
@@ -180,10 +185,20 @@ final class GameEngine {
         }
 
         if UserDefaults.standard.bool(forKey: savedKumiteActiveKey) {
-            self.hasSavedKumiteSession = true
-            self.winStreak = max(0, UserDefaults.standard.integer(forKey: savedKumiteStreakKey))
-            let savedRevives = UserDefaults.standard.integer(forKey: savedKumiteRevivesKey)
-            self.remainingRevives = min(maxRevivesPerRun, max(0, savedRevives))
+            let loadedStreak = max(0, UserDefaults.standard.integer(forKey: savedKumiteStreakKey))
+            let savedRevives = min(maxRevivesPerRun, max(0, UserDefaults.standard.integer(forKey: savedKumiteRevivesKey)))
+            let pendingRevive = UserDefaults.standard.bool(forKey: savedKumitePendingReviveKey)
+
+            if pendingRevive && (loadedStreak <= 0 || savedRevives <= 0) {
+                clearSavedKumiteSession()
+            } else if loadedStreak > 0 {
+                self.hasSavedKumiteSession = true
+                self.winStreak = loadedStreak
+                self.remainingRevives = savedRevives
+                self.isPendingKumiteRevive = pendingRevive
+            } else {
+                clearSavedKumiteSession()
+            }
         }
 
         let completedTutorial = UserDefaults.standard.bool(forKey: initialPracticeDoneKey)
@@ -219,9 +234,20 @@ final class GameEngine {
     }
 
     // MARK: - Navigation Transitions
-    /// タイトル等からKUMITEを開始（勝利リザルトから中断していた場合は連勝状況・復活残り回数を引き継いで再開）
+    /// タイトル等からKUMITEを開始（勝利中断時はそのまま再開、敗退保留時は確認ポップアップを表示）
     func startOrResumeKumite() {
         if hasSavedKumiteSession && winStreak > 0 {
+            if isPendingKumiteRevive {
+                if remainingRevives > 0 {
+                    AdManager.shared.rewardedAdStatusMessage = nil
+                    isShowingPendingRevivePrompt = true
+                    return
+                } else {
+                    startKumiteFromBeginning()
+                    return
+                }
+            }
+
             let needsTransitionSettle = (currentScreen != .kumiteBattle)
             markTutorialCompleted()
             stopTimer()
@@ -240,6 +266,7 @@ final class GameEngine {
     /// KUMITE（勝ち抜きサバイバル）を最初から（連勝0・復活残り2回）開始
     func startKumiteFromBeginning() {
         let needsTransitionSettle = (currentScreen != .kumiteBattle)
+        isShowingPendingRevivePrompt = false
         markTutorialCompleted()
         stopTimer()
         HapticManager.warmUp(enabled: isHapticsEnabled)
@@ -254,18 +281,29 @@ final class GameEngine {
         startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
     }
 
-    /// 動画広告（リワード広告）視聴完了後、現在の連勝記録を維持したまま負けたバトルをやり直す（1挑戦につき最大2回）
+    /// 動画広告（リワード広告）視聴完了後、現在の連勝記録を維持したまま負けたバトルをやり直す（敗退リザルト画面・タイトル再開確認ポップアップ共通）
     func reviveCurrentKumiteMatch() {
         guard remainingRevives > 0 else { return }
+        let needsTransitionSettle = (currentScreen != .kumiteBattle)
+        isShowingPendingRevivePrompt = false
+        markTutorialCompleted()
         remainingRevives -= 1
+        isPendingKumiteRevive = false
         if winStreak > 0 {
-            saveKumiteSession()
+            saveKumiteSession(isPendingRevive: false)
         }
         stopTimer()
+        HapticManager.warmUp(enabled: isHapticsEnabled)
+        gameMode = .kumite
+        loadEnemyForCurrentStreak()
         setupMatchState(enemy: currentEnemy)
-        currentScreen = .kumiteBattle
-        SoundManager.shared.playBattleBGM(forceNewRandom: false)
-        startTimer()
+        if needsTransitionSettle {
+            currentScreen = .kumiteBattle
+            SoundManager.shared.playBattleBGM(forceNewRandom: true)
+        } else {
+            SoundManager.shared.playBattleBGM(forceNewRandom: false)
+        }
+        startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
     }
 
     /// KUMITEで敵撃破後、BGMはリセットせずそのまま継続再生で次の敵へ進む
@@ -297,13 +335,15 @@ final class GameEngine {
         }
     }
 
-    /// タイトル画面へ戻る（勝利後リザルトからの帰還時は連勝数と復活回数を維持保存）
+    /// タイトル画面へ戻る（勝利後、または敗退後でも復活回数が残っている場合に限り連勝数と復活回数を維持保存）
     func returnToTitle() {
         markTutorialCompleted()
         stopTimer()
         if gameMode == .kumite {
             if case .stageClear = outcome {
-                saveKumiteSession()
+                saveKumiteSession(isPendingRevive: false)
+            } else if case .gameOver = outcome, winStreak > 0, remainingRevives > 0 {
+                saveKumiteSession(isPendingRevive: true)
             } else {
                 clearSavedKumiteSession()
                 winStreak = 0
@@ -317,18 +357,22 @@ final class GameEngine {
         SoundManager.shared.playTitleBGM()
     }
 
-    private func saveKumiteSession() {
+    private func saveKumiteSession(isPendingRevive: Bool = false) {
         hasSavedKumiteSession = true
+        isPendingKumiteRevive = isPendingRevive
         UserDefaults.standard.set(true, forKey: savedKumiteActiveKey)
         UserDefaults.standard.set(winStreak, forKey: savedKumiteStreakKey)
         UserDefaults.standard.set(remainingRevives, forKey: savedKumiteRevivesKey)
+        UserDefaults.standard.set(isPendingRevive, forKey: savedKumitePendingReviveKey)
     }
 
     private func clearSavedKumiteSession() {
         hasSavedKumiteSession = false
+        isPendingKumiteRevive = false
         UserDefaults.standard.set(false, forKey: savedKumiteActiveKey)
         UserDefaults.standard.removeObject(forKey: savedKumiteStreakKey)
         UserDefaults.standard.removeObject(forKey: savedKumiteRevivesKey)
+        UserDefaults.standard.removeObject(forKey: savedKumitePendingReviveKey)
     }
 
     // MARK: - Player Input
@@ -619,7 +663,7 @@ final class GameEngine {
 
         if playerWon {
             winStreak += 1
-            saveKumiteSession()
+            saveKumiteSession(isPendingRevive: false)
             PlayerIconManager.shared.recordKumiteVictory(
                 enemy: currentEnemy,
                 loopNumber: currentLoopNumber,
@@ -628,7 +672,11 @@ final class GameEngine {
             GameCenterManager.shared.recordWinStreak(winStreak)
             outcome = .stageClear(enemyName: currentEnemy.codeName, reason: reason)
         } else {
-            clearSavedKumiteSession()
+            if winStreak > 0 && remainingRevives > 0 {
+                saveKumiteSession(isPendingRevive: true)
+            } else {
+                clearSavedKumiteSession()
+            }
             GameCenterManager.shared.recordWinStreak(winStreak)
             outcome = .gameOver(finalStreak: winStreak, reason: reason)
         }
