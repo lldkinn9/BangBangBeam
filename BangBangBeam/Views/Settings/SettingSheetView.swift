@@ -73,33 +73,33 @@ struct SettingSheetView: View {
                         }
                     }
 
-                    // MARK: 3. 製品版コマンド＆ルールガイド
-                    settingCard(title: "BATTLE RULES", icon: "bolt.horizontal.circle.fill") {
-                        VStack(alignment: .leading, spacing: 10) {
+                    // MARK: 3. 製品版コマンド＆ルールガイド（アイコン無し）
+                    settingCard(title: "BATTLE RULES", icon: nil) {
+                        VStack(alignment: .leading, spacing: 12) {
                             ruleRow(
-                                title: "❤️ 3ライフ体力制 ＆ チャージ削り",
-                                desc: "通常ビームを3回食らうと敗退！ビームを被弾すると溜めたチャージも -1 削られます。"
+                                title: "〇3ライフ体力制",
+                                desc: "ビームを3回被弾すると敗退となります。\nまた、被弾するとチャージも１削られます。"
                             )
                             ruleRow(
-                                title: "⚡️ チャージ (消費0 / +1)",
-                                desc: "気力を1溜める。攻撃に対しては無防備。"
+                                title: "〇チャージ",
+                                desc: "ビームを放つために気力を溜めます。\nチャージ中は相手のビームに被弾します。被弾すると体力とチャージが１削られます。"
                             )
                             ruleRow(
-                                title: "💥 ビーム (消費1)",
-                                desc: "無防備な相手に HP -1 ＆ チャージ -1 ダメージ！バリアには防がれ、ビーム同士は相殺。"
+                                title: "〇ビーム",
+                                desc: "チャージを1消費してビームを放てます。\n相手の手がチャージであれば1ダメージを与えることができます。\nビーム同士の場合はお互い体力は消費しません。チャージは消費します。"
                             )
                             ruleRow(
-                                title: "🛡️ バリア (消費0)",
-                                desc: "相手の通常ビームをノーダメージで完全防御。"
+                                title: "〇バリア",
+                                desc: "相手のビームを防ぎます。\n必殺技は防げません。"
                             )
                             ruleRow(
-                                title: "🌟 必殺ビーム (4チャージ / 一撃必殺)",
-                                desc: "4回チャージで解放！カットイン＆必殺アニメと共にバリアも残りHPも貫通して一撃必殺！"
+                                title: "〇必殺技",
+                                desc: "チャージを4つ溜めると一撃必殺の必殺技を繰り出せます。\n相手の体力やバリアにかかわらず勝利となります。"
                             )
                             Divider().background(Color.white.opacity(0.15))
                             ruleRow(
-                                title: "💦 お手つき（気力不足ミス）",
-                                desc: "気力が足りない状態でビーム／必殺ビームを選んで3拍目を迎えると、不発となり【無防備状態】になります（相手がビームなら被弾ダメージ）。",
+                                title: "〇お手付き",
+                                desc: "チャージ０の状態でビームを選択すると不発となります。\n無防備な状態となり相手がビームの場合、体力とチャージが1削られます。",
                                 titleColor: .cyberDanger
                             )
                         }
@@ -128,13 +128,19 @@ struct SettingSheetView: View {
 
     private func settingCard<Content: View>(
         title: String,
-        icon: String,
+        icon: String? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 13, weight: .black, design: .monospaced))
-                .foregroundStyle(Color.cyberCyan)
+            if let icon {
+                Label(title, systemImage: icon)
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.cyberCyan)
+            } else {
+                Text(title)
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.cyberCyan)
+            }
 
             content()
         }
@@ -151,13 +157,15 @@ struct SettingSheetView: View {
     }
 
     private func ruleRow(title: String, desc: String, titleColor: Color = .cyberEmerald) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(titleColor)
             Text(desc)
                 .font(.system(size: 12))
-                .foregroundStyle(Color.white.opacity(0.75))
+                .lineSpacing(3)
+                .foregroundStyle(Color.white.opacity(0.78))
+                .padding(.leading, 12)
         }
     }
 }

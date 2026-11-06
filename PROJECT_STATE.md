@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 16:52 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.8`（バージョン表示のタイトル右上限定化・モード選択文言修正・世界ランキング1〜100位＆自分順位専用UI化）
+最終更新日時: 2026-11-06 17:19 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.9`（全21キャラクターのネイティブ背景透過PNG画像差し替え反映 ＆ 設定画面BATTLE RULES表記更新）
 
 ---
 
@@ -60,6 +60,9 @@
 
 ## 3. 更新履歴 (JST)
 
+- **2026-11-06 17:19 (`v1.0.9`)**
+  - **全21キャラ分の差し替え済みネイティブ背景透過PNG反映:** `素材/Characters/` 配下の全21キャラクター（主人公 `reo` ＋ 敵20名）の通常・喜び・苦痛（計63枚）を、オーナー差し替え済みのネイティブ透過PNG（`RGBA`）から直接リサイズ・トリミングして [`Assets.xcassets/Characters`](BangBangBeam/Assets.xcassets/Characters) に反映。
+  - **設定画面 `BATTLE RULES` の表記刷新（アイコン削除）:** [`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) の `BATTLE RULES` セクションからアイコン・絵文字を削除し、指定文面（〇3ライフ体力制 / 〇チャージ / 〇ビーム / 〇バリア / 〇必殺技 / 〇お手付き）へ更新。
 - **2026-11-06 16:52 (`v1.0.8`)**
   - **バージョン表示のタイトル右上限定化:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) および [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) からバージョン表示を削除し、[`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) の右上のみに表示するよう統一。
   - **モード選択メニューの表記変更:** `KUMITE`（勝ち抜きサバイバル（ランキング対象））、`PRACTICE`（ルール学習）、`RANKING`（世界ランキング）、`SETTING`（各種設定）へサブタイトル文言を更新。
