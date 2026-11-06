@@ -202,7 +202,7 @@ struct TitleView: View {
     // MARK: - Mode Selection Menu
     private var modeMenuPanel: some View {
         VStack(spacing: 12) {
-            // ① KUMITE (メイン勝ち抜きモード)
+            // ① KUMITE (メイン勝ち抜きモード：中断記録があれば連勝数＆復活回数を引き継いで再開)
             modeButton(
                 title: "KUMITE",
                 subtitle: "勝ち抜きサバイバル（ランキング対象）",
@@ -211,7 +211,7 @@ struct TitleView: View {
                 secondary: .cyberEmerald
             ) {
                 isMenuExpanded = false
-                engine.startKumiteFromBeginning()
+                engine.startOrResumeKumite()
             }
 
             // ② RANKING (世界ランキング：自分の順位 ＆ 1〜100位)

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 19:09 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.11`（アイコン設定＆ランキングのヘッダー固定化・reo-icon3の50連勝解放化・設定画面からの練習導線化・KUMITE敗北時の動画広告復活［最大2回］実装）
+最終更新日時: 2026-11-06 20:00 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.12`（バトル間BGM継続再生・勝利後Title帰還時の連勝＆復活回数引き継ぎ・YOU WIN / YOU LOSE... リザルト刷新＆イラスト追加）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.11`（固定ヘッダー・`reo-icon3` 50連勝解放・設定画面「練習モードで1戦」・KUMITE動画広告復活［最大2回］）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.12`（次戦BGM継続・勝利後Title帰還からの連勝＆復活残り回数引き継ぎ・YOU WIN / YOU LOSE... リザルト表示＆イラスト配置）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -60,6 +60,11 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 20:00 (`v1.0.12`)**
+  - **次戦移行時のBGM継続再生化:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) の `advanceToNextKumiteStage()` で `playBattleBGM(forceNewRandom: false)` を呼ぶよう変更し、バトル後に次の試合へ進む際に BGM がリセット・曲変更されずシームレスに継続再生されるように修正。
+  - **勝利後リザルトからの Title 帰還時における連勝状況＆復活回数の維持・再開機能:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) に中断セーブ処理（`saveKumiteSession` / `startOrResumeKumite`、`UserDefaults` 永続化）を実装し、勝利後リザルト画面から Title へ戻った場合は次回 `KUMITE` 開始時に連勝記録と動画広告による復活残り回数がそのまま引き継がれるように対応（勝利リザルト画面にもその旨の案内文を記載）。
+  - **勝利・敗退リザルト画面の表記刷新 ＆ イラスト配置:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の勝利表記を `YOU WIN`（勝利理由と次戦説明文を削除し、`〇連勝` のシンプル表記へ変更）、敗退表記を `YOU LOSE...`（敗因理由を削除）に刷新。さらに `reo-huppy.png`（`result_reo_happy`）と `lose.png`（`result_reo_lose`）を組み込み、それぞれリザルト枠の下・左寄りに表示。
 
 - **2026-11-06 19:09 (`v1.0.11`)**
   - **アイコン設定画面のヘッダー＆メッセージ枠固定化 ＆ `reo-icon3` 50連勝解放化:** [`IconSettingView.swift`](BangBangBeam/Views/Settings/IconSettingView.swift) の現在のアイコン表示枠とその下のメッセージ枠（未解放ガイド等）を `ScrollView` 外の上部へ固定表示に変更。[`PlayerIconManager.swift`](BangBangBeam/Services/PlayerIconManager.swift) の初期解放を `reo` の `icon1・2` のみに変更し、`icon3` は KUMITE 50連勝達成で解放されるよう変更（旧保存データの移行処理込み）。

@@ -72,6 +72,9 @@ final class GameEngine {
     // MARK: - Persistence Keys
     private let initialPracticeDoneKey = "BangBangBeam.hasCompletedInitialPractice"
     private let tempoPresetKey = "BangBangBeam.tempoPreset"
+    private let savedKumiteActiveKey = "BangBangBeam.hasSavedKumiteSession"
+    private let savedKumiteStreakKey = "BangBangBeam.savedKumiteWinStreak"
+    private let savedKumiteRevivesKey = "BangBangBeam.savedKumiteRemainingRevives"
 
     // MARK: - Navigation & Mode
     var currentScreen: AppScreen = .title
@@ -106,6 +109,7 @@ final class GameEngine {
     // MARK: - KUMITE Progression State
     var winStreak: Int = 0
     var remainingRevives: Int = 2
+    var hasSavedKumiteSession: Bool = false
     var currentEnemy: CharacterProfile = CharacterProfile.kumiteRoster[0]
     var currentLoopNumber: Int = 1
     var currentStageInLoop: Int = 1
@@ -174,6 +178,13 @@ final class GameEngine {
             self.bpm = TempoPreset.standard.bpmValue
         }
 
+        if UserDefaults.standard.bool(forKey: savedKumiteActiveKey) {
+            self.hasSavedKumiteSession = true
+            self.winStreak = max(0, UserDefaults.standard.integer(forKey: savedKumiteStreakKey))
+            let savedRevives = UserDefaults.standard.integer(forKey: savedKumiteRevivesKey)
+            self.remainingRevives = min(maxRevivesPerRun, max(0, savedRevives))
+        }
+
         let completedTutorial = UserDefaults.standard.bool(forKey: initialPracticeDoneKey)
         if !completedTutorial {
             // 初回アプリ起動時は自動で PRACTICE（チュートリアル）モードを起動
@@ -205,10 +216,27 @@ final class GameEngine {
     }
 
     // MARK: - Navigation Transitions
-    /// KUMITE（勝ち抜きサバイバル）を Stage 1 (geek) から開始
+    /// タイトル等からKUMITEを開始（勝利リザルトから中断していた場合は連勝状況・復活残り回数を引き継いで再開）
+    func startOrResumeKumite() {
+        if hasSavedKumiteSession && winStreak > 0 {
+            markTutorialCompleted()
+            stopTimer()
+            gameMode = .kumite
+            loadEnemyForCurrentStreak()
+            setupMatchState(enemy: currentEnemy)
+            currentScreen = .kumiteBattle
+            SoundManager.shared.playBattleBGM(forceNewRandom: true)
+            startTimer()
+        } else {
+            startKumiteFromBeginning()
+        }
+    }
+
+    /// KUMITE（勝ち抜きサバイバル）を最初から（連勝0・復活残り2回）開始
     func startKumiteFromBeginning() {
         markTutorialCompleted()
         stopTimer()
+        clearSavedKumiteSession()
         gameMode = .kumite
         winStreak = 0
         remainingRevives = maxRevivesPerRun
@@ -223,6 +251,9 @@ final class GameEngine {
     func reviveCurrentKumiteMatch() {
         guard remainingRevives > 0 else { return }
         remainingRevives -= 1
+        if winStreak > 0 {
+            saveKumiteSession()
+        }
         stopTimer()
         setupMatchState(enemy: currentEnemy)
         currentScreen = .kumiteBattle
@@ -230,12 +261,12 @@ final class GameEngine {
         startTimer()
     }
 
-    /// KUMITEで敵撃破後、ReoのHP=3全回復・チャージ0リセットで次の敵へ進む
+    /// KUMITEで敵撃破後、BGMはリセットせずそのまま継続再生で次の敵へ進む
     func advanceToNextKumiteStage() {
         stopTimer()
         loadEnemyForCurrentStreak()
         setupMatchState(enemy: currentEnemy)
-        SoundManager.shared.playBattleBGM(forceNewRandom: true)
+        SoundManager.shared.playBattleBGM(forceNewRandom: false)
         startTimer()
     }
 
@@ -259,15 +290,38 @@ final class GameEngine {
         }
     }
 
-    /// タイトル画面へ戻る
+    /// タイトル画面へ戻る（勝利後リザルトからの帰還時は連勝数と復活回数を維持保存）
     func returnToTitle() {
         markTutorialCompleted()
         stopTimer()
+        if gameMode == .kumite {
+            if case .stageClear = outcome {
+                saveKumiteSession()
+            } else {
+                clearSavedKumiteSession()
+                winStreak = 0
+                remainingRevives = maxRevivesPerRun
+            }
+        }
         activeUltimate = nil
         isPracticeAutoPlay = false
         SoundManager.shared.setDucked(false)
         currentScreen = .title
         SoundManager.shared.playTitleBGM()
+    }
+
+    private func saveKumiteSession() {
+        hasSavedKumiteSession = true
+        UserDefaults.standard.set(true, forKey: savedKumiteActiveKey)
+        UserDefaults.standard.set(winStreak, forKey: savedKumiteStreakKey)
+        UserDefaults.standard.set(remainingRevives, forKey: savedKumiteRevivesKey)
+    }
+
+    private func clearSavedKumiteSession() {
+        hasSavedKumiteSession = false
+        UserDefaults.standard.set(false, forKey: savedKumiteActiveKey)
+        UserDefaults.standard.removeObject(forKey: savedKumiteStreakKey)
+        UserDefaults.standard.removeObject(forKey: savedKumiteRevivesKey)
     }
 
     // MARK: - Player Input
@@ -538,6 +592,7 @@ final class GameEngine {
 
         if playerWon {
             winStreak += 1
+            saveKumiteSession()
             PlayerIconManager.shared.recordKumiteVictory(
                 enemy: currentEnemy,
                 loopNumber: currentLoopNumber,
@@ -546,6 +601,7 @@ final class GameEngine {
             GameCenterManager.shared.recordWinStreak(winStreak)
             outcome = .stageClear(enemyName: currentEnemy.codeName, reason: reason)
         } else {
+            clearSavedKumiteSession()
             GameCenterManager.shared.recordWinStreak(winStreak)
             outcome = .gameOver(finalStreak: winStreak, reason: reason)
         }

@@ -306,7 +306,7 @@ struct PracticeTutorialView: View {
 
                     Button {
                         HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
-                        engine.startKumiteFromBeginning()
+                        engine.startOrResumeKumite()
                     } label: {
                         Text("🔥 KUMITE開始")
                             .font(.system(size: 15, weight: .black, design: .rounded))
