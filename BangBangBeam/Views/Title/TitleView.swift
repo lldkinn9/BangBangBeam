@@ -133,7 +133,10 @@ struct TitleView: View {
             RankingInfoSheetView()
         }
         .onAppear {
+            isMenuExpanded = false
             SoundManager.shared.playTitleBGM()
+            HapticManager.warmUp(enabled: engine.isHapticsEnabled)
+            AssetPrewarmer.warmUpForInitialLaunch(startingStreak: engine.winStreak)
             withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
                 isPulsing = true
             }
@@ -214,7 +217,6 @@ struct TitleView: View {
                     ? "\(engine.winStreak)連勝中"
                     : nil
             ) {
-                isMenuExpanded = false
                 engine.startOrResumeKumite()
             }
 

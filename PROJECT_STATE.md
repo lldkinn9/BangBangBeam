@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 22:09 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.21`（設定画面へのBGM・SE個別音量スライダー実装 ＆ SE音源音圧最適化）
+最終更新日時: 2026-11-06 22:26 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.22`（KUMITE 1戦目開始時のプリロード＆遷移・タイマー安定化対策）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.21`（設定画面のBGM・SE個別音量設定 ＆ OFF時の完全無音連動）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.22`（KUMITE 1戦目開始時のスムーズな動作・リズム安定化）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,13 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-06 22:26 (`v1.0.22`)**
+  - **KUMITE 1戦目の動作安定化（BGM・画像・触覚の事前準備 ＆ 画面遷移・リズムタイマー改善）:**
+    1. [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift): 全BGMトラック（約3.2〜3.8MB）の `AVAudioPlayer` を起動時に事前準備（`preloadBGMTracks`）し、1戦目開始時のディスク読み込み＆MP3デコーダ初期化ラグを解消。
+    2. [`AssetPrewarmer.swift`](BangBangBeam/Services/AssetPrewarmer.swift)（新規）: 手イラスト4種・Reo立ち絵・現在／次戦の敵立ち絵PNGを `byPreparingForDisplay()` でバックグラウンド事前デコードし、1戦目1ターン目の初回描画カクつきを解消。
+    3. [`CyberTheme.swift`](BangBangBeam/Views/Components/CyberTheme.swift): `HapticManager` のジェネレータを共有再利用＋事前ウォームアップ化し、Taptic Engine 初回起動時のメインスレッド詰まりを防止。
+    4. [`BangBangBeamApp.swift`](BangBangBeam/App/BangBangBeamApp.swift) / [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift): バナー枠の `safeAreaInset` をタイトル画面のみに限定して遷移中の再レイアウトを無くし、リズムタイマーを `RunLoop.common` 登録＋画面フェード完了後の開始に変更。
 
 - **2026-11-06 22:09 (`v1.0.21`)**
   - **設定画面に BGM 音量・SE（効果音）音量の個別スライダー実装 ＆ SE音圧の最適化:** [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) に `bgmVolume`（初期値 45%）および `seVolume`（初期値 90%）の `UserDefaults` 永続化・リアルタイム反映処理を実装し、[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) の `AUDIO & HAPTICS` セクションに 0%〜100%（5%刻み）の音量スライダーを追加（サウンド設定が OFF の場合はスライダー値にかかわらず BGM・SE ともに一切音が出ない仕様を維持）。あわせてバンドル内の `button.mp3` / `cutin.mp3` の音圧バランスも歪みなく最適化。

@@ -3,7 +3,7 @@ import AVFoundation
 import Observation
 
 /// BGM再生トラック種別
-enum BGMTrack: String {
+enum BGMTrack: String, CaseIterable {
     case title = "bgm_title"
     case battle1 = "bgm_battle_1"
     case battle2 = "bgm_battle_2"
@@ -96,6 +96,7 @@ final class SoundManager {
     private var desiredContext: BGMContext? = nil
     private var currentTrack: BGMTrack? = nil
     private var audioPlayer: AVAudioPlayer? = nil
+    private var bgmPlayers: [BGMTrack: AVAudioPlayer] = [:]
     private var isDucked: Bool = false
 
     private var effectiveBGMVolume: Float {
@@ -131,6 +132,7 @@ final class SoundManager {
 
         configureAudioSession()
         preloadSoundEffects()
+        preloadBGMTracks()
     }
 
     private func configureAudioSession() {
@@ -139,6 +141,20 @@ final class SoundManager {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             // シミュレータ等でオーディオセッション競合が起きた場合もクラッシュさせない
+        }
+    }
+
+    /// 1戦目開始時のディスクI/O＆MP3デコーダ初期化ラグを防ぐため、全BGMプレイヤーを事前準備
+    private func preloadBGMTracks() {
+        for track in BGMTrack.allCases where bgmPlayers[track] == nil {
+            guard let url = resolveBundleURL(name: track.rawValue, ext: "mp3"),
+                  let player = try? AVAudioPlayer(contentsOf: url) else {
+                continue
+            }
+            player.numberOfLoops = -1
+            player.volume = effectiveBGMVolume
+            player.prepareToPlay()
+            bgmPlayers[track] = player
         }
     }
 
@@ -264,29 +280,40 @@ final class SoundManager {
     }
 
     func stopBGM() {
-        audioPlayer?.stop()
+        audioPlayer?.pause()
+        audioPlayer?.currentTime = 0
         audioPlayer = nil
         currentTrack = nil
     }
 
     private func startTrack(_ track: BGMTrack) {
-        guard isBGMEnabled,
-              let url = resolveBundleURL(name: track.rawValue, ext: "mp3") else {
+        guard isBGMEnabled else { return }
+
+        if let active = audioPlayer, active !== bgmPlayers[track] {
+            active.pause()
+            active.currentTime = 0
+        }
+
+        if bgmPlayers[track] == nil,
+           let url = resolveBundleURL(name: track.rawValue, ext: "mp3"),
+           let created = try? AVAudioPlayer(contentsOf: url) {
+            created.numberOfLoops = -1
+            created.prepareToPlay()
+            bgmPlayers[track] = created
+        }
+
+        guard let player = bgmPlayers[track] else {
+            self.audioPlayer = nil
+            self.currentTrack = nil
             return
         }
 
-        do {
-            let player = try AVAudioPlayer(contentsOf: url)
-            player.numberOfLoops = -1 // 無限ループ
-            player.volume = effectiveBGMVolume
-            player.prepareToPlay()
-            player.play()
-            self.audioPlayer = player
-            self.currentTrack = track
-        } catch {
-            self.audioPlayer = nil
-            self.currentTrack = nil
-        }
+        player.numberOfLoops = -1
+        player.currentTime = 0
+        player.volume = effectiveBGMVolume
+        player.play()
+        self.audioPlayer = player
+        self.currentTrack = track
     }
 
     /// フラット配置・Resources/BGM・Resources/SEサブフォルダ配置のどちらでも確実にバンドルURLを解決する

@@ -158,13 +158,14 @@ final class GameEngine {
 
     // MARK: - Timer
     private var rhythmTimer: Timer? = nil
+    private var pendingTimerTask: Task<Void, Never>? = nil
 
     var beatInterval: TimeInterval {
         60.0 / max(50.0, min(bpm, 160.0))
     }
 
     private var isAutoLoopRunning: Bool {
-        rhythmTimer != nil
+        rhythmTimer != nil || pendingTimerTask != nil
     }
 
     // MARK: - Initialization & First Launch Check
@@ -197,10 +198,12 @@ final class GameEngine {
         }
     }
 
-    /// 起動完了時のオーディオ・サービス初期化フック
+    /// 起動完了時のオーディオ・サービス・画像キャッシュ初期化フック
     func onAppAppear() {
         GameCenterManager.shared.authenticateLocalPlayer()
         AdManager.shared.startSDKAndRequestATT()
+        HapticManager.warmUp(enabled: isHapticsEnabled)
+        AssetPrewarmer.warmUpForInitialLaunch(startingStreak: winStreak)
 
         switch currentScreen {
         case .title:
@@ -219,14 +222,16 @@ final class GameEngine {
     /// タイトル等からKUMITEを開始（勝利リザルトから中断していた場合は連勝状況・復活残り回数を引き継いで再開）
     func startOrResumeKumite() {
         if hasSavedKumiteSession && winStreak > 0 {
+            let needsTransitionSettle = (currentScreen != .kumiteBattle)
             markTutorialCompleted()
             stopTimer()
+            HapticManager.warmUp(enabled: isHapticsEnabled)
             gameMode = .kumite
             loadEnemyForCurrentStreak()
             setupMatchState(enemy: currentEnemy)
             currentScreen = .kumiteBattle
             SoundManager.shared.playBattleBGM(forceNewRandom: true)
-            startTimer()
+            startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
         } else {
             startKumiteFromBeginning()
         }
@@ -234,8 +239,10 @@ final class GameEngine {
 
     /// KUMITE（勝ち抜きサバイバル）を最初から（連勝0・復活残り2回）開始
     func startKumiteFromBeginning() {
+        let needsTransitionSettle = (currentScreen != .kumiteBattle)
         markTutorialCompleted()
         stopTimer()
+        HapticManager.warmUp(enabled: isHapticsEnabled)
         clearSavedKumiteSession()
         gameMode = .kumite
         winStreak = 0
@@ -244,7 +251,7 @@ final class GameEngine {
         setupMatchState(enemy: currentEnemy)
         currentScreen = .kumiteBattle
         SoundManager.shared.playBattleBGM(forceNewRandom: true)
-        startTimer()
+        startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
     }
 
     /// 動画広告（リワード広告）視聴完了後、現在の連勝記録を維持したまま負けたバトルをやり直す（1挑戦につき最大2回）
@@ -345,6 +352,7 @@ final class GameEngine {
         currentLoopNumber = info.loopNumber
         currentStageInLoop = info.stageInLoop
         totalStagesInCurrentLoop = info.totalStagesInLoop
+        AssetPrewarmer.warmUpUpcomingEnemies(currentStreak: winStreak)
     }
 
     private func setupMatchState(enemy: CharacterProfile) {
@@ -368,22 +376,41 @@ final class GameEngine {
             : "VS \(enemy.codeName) — 1・2拍目の間にコマンドを予約せよ！"
     }
 
-    private func startTimer() {
+    private func startTimer(initialDelay: TimeInterval = 0.0) {
         stopTimer()
+        if initialDelay > 0 {
+            pendingTimerTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(initialDelay))
+                guard !Task.isCancelled, let self else { return }
+                self.pendingTimerTask = nil
+                guard !self.outcome.isFinished, self.activeUltimate == nil else { return }
+                self.scheduleCommonRunLoopTimer()
+            }
+        } else {
+            scheduleCommonRunLoopTimer()
+        }
+    }
+
+    private func scheduleCommonRunLoopTimer() {
         let interval = beatInterval
-        rhythmTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.advanceBeat()
             }
         }
+        timer.tolerance = min(0.02, interval * 0.04)
+        RunLoop.main.add(timer, forMode: .common)
+        rhythmTimer = timer
     }
 
     private func restartTimer() {
-        guard rhythmTimer != nil else { return }
+        guard isAutoLoopRunning else { return }
         startTimer()
     }
 
     func stopTimer() {
+        pendingTimerTask?.cancel()
+        pendingTimerTask = nil
         rhythmTimer?.invalidate()
         rhythmTimer = nil
     }

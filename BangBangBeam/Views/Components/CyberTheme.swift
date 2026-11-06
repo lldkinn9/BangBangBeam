@@ -23,39 +23,48 @@ extension Color {
     static let cyberDanger = Color(red: 0xEF / 255.0, green: 0x44 / 255.0, blue: 0x44 / 255.0)
 }
 
-// MARK: - Haptic Feedback Manager
+// MARK: - Haptic Feedback Manager（共有ジェネレータ再利用＋事前ウォームアップで1戦目初拍のIPC遅延を防止）
 @MainActor
 enum HapticManager {
+    private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private static let heavyGenerator = UIImpactFeedbackGenerator(style: .heavy)
+    private static let rigidGenerator = UIImpactFeedbackGenerator(style: .rigid)
+
+    /// 1戦目開始前などにTaptic Engineを事前準備し、初回拍でのメインスレッド詰まりを防ぐ
+    static func warmUp(enabled: Bool = true) {
+        guard enabled else { return }
+        lightGenerator.prepare()
+        mediumGenerator.prepare()
+        heavyGenerator.prepare()
+        rigidGenerator.prepare()
+    }
+
     /// 1・2拍目「バン！」: Light Impact
     static func playLight(enabled: Bool = true) {
         guard enabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        lightGenerator.impactOccurred()
+        lightGenerator.prepare()
     }
 
     /// コマンド選択時: Medium Impact
     static func playMedium(enabled: Bool = true) {
         guard enabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        mediumGenerator.impactOccurred()
+        mediumGenerator.prepare()
     }
 
     /// 3拍目「ビーム！」激突解決時: Heavy Impact
     static func playHeavy(enabled: Bool = true) {
         guard enabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: .heavy)
-        generator.prepare()
-        generator.impactOccurred()
+        heavyGenerator.impactOccurred()
+        heavyGenerator.prepare()
     }
 
     /// お手つき自滅時: Rigid Impact
     static func playRigid(enabled: Bool = true) {
         guard enabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: .rigid)
-        generator.prepare()
-        generator.impactOccurred()
+        rigidGenerator.impactOccurred()
+        rigidGenerator.prepare()
     }
 }
-

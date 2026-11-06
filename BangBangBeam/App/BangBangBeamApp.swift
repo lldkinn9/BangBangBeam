@@ -12,7 +12,7 @@ struct BangBangBeamApp: App {
     }
 }
 
-/// アプリ全体の画面遷移・非プレイ画面の共通バナー広告・インタースティシャル広告オーバーレイを統括するルートビュー
+/// アプリ全体の画面遷移・非プレイ画面の共通バナー広告・リワード広告フォールバックを統括するルートビュー
 struct RootContainerView: View {
     @Bindable var engine: GameEngine
     @Bindable private var adManager = AdManager.shared
@@ -25,25 +25,22 @@ struct RootContainerView: View {
             Group {
                 switch engine.currentScreen {
                 case .title:
+                    // バナーのsafeAreaInsetをTitleView側のみに限定し、BattleView遷移中の画面高さ再レイアウト負荷をゼロにする
                     TitleView(engine: engine)
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            if engine.currentScreen.showsBottomBannerAd {
+                                AdBannerFooterView()
+                            }
+                        }
                         .transition(.opacity)
 
                 case .kumiteBattle:
                     BattleView(engine: engine)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .opacity
-                        ))
+                        .transition(.opacity)
 
                 case .practiceTutorial:
                     PracticeTutorialView(engine: engine)
                         .transition(.opacity)
-                }
-            }
-            // プレイ画面以外（タイトル・モード選択、今後追加する非プレイ画面すべて）の最下部にバナー広告を表示
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if engine.currentScreen.showsBottomBannerAd {
-                    AdBannerFooterView()
                 }
             }
 
@@ -61,7 +58,7 @@ struct RootContainerView: View {
                 .zIndex(50)
             }
         }
-        .animation(.easeInOut(duration: 0.30), value: engine.currentScreen)
+        .animation(.easeOut(duration: 0.20), value: engine.currentScreen)
         .onAppear {
             engine.onAppAppear()
         }
