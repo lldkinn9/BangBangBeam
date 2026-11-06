@@ -1,6 +1,6 @@
 {
   "name": "bang-bang-beam",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "private": true,
   "description": "Bang Bang Beam - Cyberpunk Rhythm Hand-Clap Battle Game for iOS 17+ / SwiftUI",
   "scripts": {

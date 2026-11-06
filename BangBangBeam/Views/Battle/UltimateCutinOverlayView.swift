@@ -1,12 +1,13 @@
 import SwiftUI
 import AVFoundation
 
-/// 4チャージ一撃必殺発動時の「目元カットイン → 必殺アニメーション動画 (mp4)」演出ビュー
+/// 4チャージ一撃必殺発動時の「目元カットイン → 必殺アニメーション動画 (音声付きmp4)」演出ビュー
 struct UltimateCutinOverlayView: View {
     let character: CharacterProfile
     let isPlayer: Bool
     let onComplete: () -> Void
 
+    @Bindable private var soundManager = SoundManager.shared
     @State private var showCutinBanner: Bool = false
     @State private var phase: Phase = .cutin
     @State private var hasCompleted: Bool = false
@@ -16,6 +17,12 @@ struct UltimateCutinOverlayView: View {
         case video
     }
 
+    /// サウンドON時はSE音量設定を適用し、OFF時は動画音声も完全ミュートにする
+    private var effectiveVideoVolume: Float {
+        guard soundManager.isBGMEnabled else { return 0.0 }
+        return Float(min(1.0, max(0.0, soundManager.seVolume)))
+    }
+
     var body: some View {
         let videoURL = SoundManager.shared.resolveBundleURL(name: character.ultimateVideoName, ext: "mp4")
 
@@ -23,11 +30,12 @@ struct UltimateCutinOverlayView: View {
             Color.black.opacity(phase == .video ? 0.96 : 0.84)
                 .ignoresSafeArea()
 
-            // カットイン中から裏でデコーダをプリロードしておき、phase == .video 移行と同時に即座に無音再生開始（BGM継続）
+            // カットイン中から裏でデコーダをプリロードしておき、phase == .video 移行と同時に音声付きで再生開始
             if let url = videoURL {
                 SeamlessVideoPlayerView(
                     url: url,
-                    isPlaying: phase == .video
+                    isPlaying: phase == .video,
+                    audioVolume: effectiveVideoVolume
                 ) {
                     finishOnce()
                 }
@@ -47,6 +55,7 @@ struct UltimateCutinOverlayView: View {
                     Spacer()
                     Button {
                         SoundManager.shared.stopCutinSE()
+                        SoundManager.shared.setDucked(false)
                         finishOnce()
                     } label: {
                         Text("SKIP ▶▶")
@@ -67,6 +76,7 @@ struct UltimateCutinOverlayView: View {
             }
         }
         .task {
+            SoundManager.shared.setDucked(true)
             SoundManager.shared.playCutinSE()
             withAnimation(.spring(response: 0.28, dampingFraction: 0.74)) {
                 showCutinBanner = true
@@ -84,6 +94,7 @@ struct UltimateCutinOverlayView: View {
         }
         .onDisappear {
             SoundManager.shared.stopCutinSE()
+            SoundManager.shared.setDucked(false)
         }
     }
 
@@ -131,14 +142,16 @@ struct UltimateCutinOverlayView: View {
     private func finishOnce() {
         guard !hasCompleted else { return }
         hasCompleted = true
+        SoundManager.shared.setDucked(false)
         onComplete()
     }
 }
 
-/// コントロールバーを表示せず全画面で必殺mp4動画 (H.264 avc1・完全無音) を再生し、BGMを妨げず終了時にコールバックを呼ぶプレイヤー
+/// コントロールバーを表示せず全画面で必殺mp4動画 (H.264 avc1 + AAC音声) を再生し、終了時にコールバックを呼ぶプレイヤー
 private struct SeamlessVideoPlayerView: UIViewRepresentable {
     let url: URL
     let isPlaying: Bool
+    let audioVolume: Float
     let onEnded: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -153,8 +166,10 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
         let asset = AVURLAsset(url: url)
         let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
-        player.isMuted = true
-        player.volume = 0.0
+        player.allowsExternalPlayback = false
+        let shouldMute = (!isPlaying || audioVolume <= 0.001)
+        player.isMuted = shouldMute
+        player.volume = shouldMute ? 0.0 : audioVolume
         player.actionAtItemEnd = .pause
 
         view.playerLayer.player = player
@@ -162,16 +177,17 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
 
         context.coordinator.setup(item: item, player: player)
         if isPlaying {
-            context.coordinator.startPlaybackIfNeeded()
+            context.coordinator.startPlaybackIfNeeded(volume: audioVolume)
         }
         return view
     }
 
     func updateUIView(_ uiView: PlayerContainerUIView, context: Context) {
-        uiView.playerLayer.player?.isMuted = true
-        uiView.playerLayer.player?.volume = 0.0
+        let shouldMute = (!isPlaying || audioVolume <= 0.001)
+        uiView.playerLayer.player?.isMuted = shouldMute
+        uiView.playerLayer.player?.volume = shouldMute ? 0.0 : audioVolume
         if isPlaying {
-            context.coordinator.startPlaybackIfNeeded()
+            context.coordinator.startPlaybackIfNeeded(volume: audioVolume)
         }
     }
 
@@ -216,19 +232,28 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
             }
         }
 
-        func startPlaybackIfNeeded() {
+        func startPlaybackIfNeeded(volume: Float) {
             guard !didStartPlayback, let player else { return }
             if player.currentItem?.status == .failed {
                 onEnded()
                 return
             }
             didStartPlayback = true
+            let shouldMute = (volume <= 0.001)
+            player.isMuted = shouldMute
+            player.volume = shouldMute ? 0.0 : volume
             player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
             player.play()
 
-            // 動画尺（約10.03秒）を最後まで再生した上で、万一終了通知が届かない場合のみ安全回収（13.5秒）
-            fallbackTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(13500))
+            // 動画尺を自動取得した上で、万一終了通知が届かない場合のみ安全回収するフォールバック
+            fallbackTask = Task { @MainActor [weak self, weak player] in
+                var waitSeconds: Double = 16.0
+                if let asset = player?.currentItem?.asset,
+                   let dur = try? await asset.load(.duration),
+                   dur.isNumeric && dur.seconds > 0.5 {
+                    waitSeconds = dur.seconds + 3.0
+                }
+                try? await Task.sleep(for: .seconds(waitSeconds))
                 if !Task.isCancelled {
                     self?.onEnded()
                 }
