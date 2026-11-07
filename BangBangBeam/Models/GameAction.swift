@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// バトル中に選択可能な4種類のコマンド（製品版仕様：4チャージで一撃必殺メガビーム）
+/// バトル中に選択可能なコマンド（通常3コマンド CHARGE / BEAM / BARRIER ＋ 4チャージ解放 ULTIMATE）
 enum GameAction: String, CaseIterable, Identifiable, Sendable {
     case charge
     case beam
@@ -9,23 +9,26 @@ enum GameAction: String, CaseIterable, Identifiable, Sendable {
 
     nonisolated var id: String { rawValue }
 
+    /// 通常時に横並びで表示する3つの基本コマンド
+    static let standardCommands: [GameAction] = [.charge, .beam, .barrier]
+
     /// 日本語コマンド名
     var label: String {
         switch self {
         case .charge:   return "チャージ"
         case .beam:     return "ビーム"
         case .barrier:  return "バリア"
-        case .megaBeam: return "必殺ビーム"
+        case .megaBeam: return "ULTIMATE"
         }
     }
 
-    /// 英語サブタイトル
+    /// ボタン表示用の英語コマンド名
     var codeName: String {
         switch self {
         case .charge:   return "CHARGE"
         case .beam:     return "BEAM"
         case .barrier:  return "BARRIER"
-        case .megaBeam: return "MEGA BEAM"
+        case .megaBeam: return "ULTIMATE"
         }
     }
 
@@ -39,7 +42,7 @@ enum GameAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 消費チャージ数（必殺ビームは4チャージで一撃必殺）
+    /// 消費チャージ数（ULTIMATEは4チャージで一撃必殺）
     var cost: Int {
         switch self {
         case .charge:   return 0
@@ -56,6 +59,16 @@ enum GameAction: String, CaseIterable, Identifiable, Sendable {
         case .beam:     return 0
         case .barrier:  return 0
         case .megaBeam: return 0
+        }
+    }
+
+    /// 横並び3ボタン用のコンパクト効果表記
+    var shortBadge: String {
+        switch self {
+        case .charge:   return "気力 +1"
+        case .beam:     return "消費 1"
+        case .barrier:  return "防御"
+        case .megaBeam: return "一撃必殺"
         }
     }
 

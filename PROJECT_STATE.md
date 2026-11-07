@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-07 10:42 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.25`（全21キャラクター刷新版必殺アニメーション `.mp4` 反映 ＆ 音声再生対応の安定化）
+最終更新日時: 2026-11-07 11:02 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.26`（戦闘画面UI大幅刷新：1本赤タイムバー ＆ 横並び3ボタン CHARGE / BEAM / BARRIER ＆ 4チャージ金色 ULTIMATE 即時発動）
 
 ---
 
@@ -28,7 +28,7 @@
 ### 1.2 バトルシステム・演出
 - **体力（HP = 3）＆ 被弾チャージ減少:** 通常ビーム命中時、被弾側は **HP -1** かつ **蓄積チャージ -1**。3回被弾で敗退。
 - **お手つき（無防備）仕様:** 気力不足でビーム／必殺ビームを選んで3拍目を迎えると **不発（無防備状態 `.fumble`）** となり、チャージ増加もガードもなく相手のビームが直撃する。
-- **4チャージ一撃必殺（必殺ビーム）:** 4回チャージで解放。発動時は **目元カットイン演出 (`char_<id>_cutin`) → 必殺アニメーション動画 (`ult_<id>.mp4`・音声付き)** を再生し、バリア・残りHPを貫通して一撃決着。
+- **1本赤タイムバー ＆ 横並び3コマンド／4チャージ金色 `ULTIMATE` 即時発動:** 3拍のリズムは中央上部の **1本の赤いタイムバー** が右から左へ滑らかに消えていく描写で表現。画面最下部のコマンドは横並び3つの **`CHARGE` / `BEAM` / `BARRIER`** とし、4回チャージが溜まると3ボタンが統合されて金色に発光する横長1つの **`ULTIMATE`** ボタンへ変化。タップした瞬間にリズム待機なしで **目元カットイン演出 (`char_<id>_cutin`) → 必殺アニメーション動画 (`ult_<id>.mp4`・音声付き)** が即時発動し、バリア・残りHPを貫通して一撃決着。
 - **ビジュアル＆BGM・SE (`SoundManager`):**
   - 全21キャラの背景透過立ち絵（通常・喜び・苦痛）＆カットイン画像、手イラスト4種（手拍子・チャージ・バリア・ビーム）、音声付き必殺動画21本を組み込み済み。
   - 非バトル画面で `Neon Overdrive`、バトル画面で `Seamless Looping Cyberpunk BGM` / `Cyber Velocity` をランダム選出しループ再生（設定画面およびリザルト画面でサウンド ON/OFF 切替、設定画面で BGM / SE 個別音量調整可能）。
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.25`（全21キャラクターの刷新版必殺アニメーション `.mp4` ＆ 音声再生対応）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.26`（1本の赤いタイムバー・横並び3ボタン `CHARGE / BEAM / BARRIER`・4チャージ金色発光 `ULTIMATE` 即時発動）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-07 11:02 (`v1.0.26`)**
+  - **戦闘画面UIの大幅刷新（1本の赤いタイムバー ＆ 横並び3ボタン `CHARGE / BEAM / BARRIER` ＆ 4チャージ金色発光 `ULTIMATE` 即時発動）:**
+    1. [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift): 従来の独立3分割（Beat 1, 2, 3）インジケータを廃止し、1本の赤いタイムバーが右から左へ60fpsで滑らかに消えていく `RhythmTimeBarView` を実装。
+    2. [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`GameAction.swift`](BangBangBeam/Models/GameAction.swift): 最下部のコマンド表示を2×2の4ボタンから、横並び3つの `CHARGE` / `BEAM` / `BARRIER`（`BattleCommandDeckView`）へ刷新。
+    3. チャージが4回溜まると3つのボタンが金色に発光する横長1つの `ULTIMATE` ボタン（`UltimateReadyButton`）へ変化し、押した瞬間にリズム待機なしで即座にカットイン演出→必殺技アニメーション（音声付き `.mp4`）へ突入する仕様（`triggerPlayerUltimateImmediately()`）を実装。[`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) の練習画面・説明文も新UIへ統一。
 
 - **2026-11-07 10:42 (`v1.0.25`)**
   - **全21キャラクターの刷新版必殺アニメーション `.mp4` 一括反映 ＆ 動画音声再生の安定化:** `素材/Characters/<各キャラ>/<キャラ>-anime.mp4` に差し替えられた最新21本（2026-11-07 更新分）を、元の AAC ステレオ音声トラック（48kHz / 2ch）を無劣化コピー維持したまま iOS `AVPlayer` 最適化済みの H.264 (`avc1`, `yuv420p`, `+faststart`) として [`BangBangBeam/Resources/Videos/`](BangBangBeam/Resources/Videos) の `ult_<id>.mp4` へ一括反映。あわせて [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) と [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) にて、プリロード段階からの音声パイプライン準備（冒頭音欠け防止）・`AVAudioSession` アクティブ維持・SE音量スライダーおよびサウンドON/OFF設定連動・再生中のBGM一時ダッキングを整備し、ワークスペース全体へ同期。

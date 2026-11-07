@@ -24,29 +24,29 @@ struct PracticeTutorialView: View {
     private let lessons: [LessonItem] = [
         LessonItem(
             badge: "STEP 1 / 5",
-            title: "3拍子のリズムに乗ろう！",
-            body: "バンバンビームは「パン！(1拍目) → パン！(2拍目) → アクション！(3拍目)」の3拍子リズムバトルです。\n\n1拍目・2拍目の手拍子の間に、次の3拍目で出すコマンドボタンをタップして予約しましょう！",
+            title: "赤いバーが消える前に選ぼう！",
+            body: "バンバンビームは「バン！ → バン！ → アクション！」のリズムで進むサイバー読み合いバトルです。\n\n中央の【赤いタイムバー】が右から左へ消え切る前に、画面下の3つのボタン（CHARGE / BEAM / BARRIER）をタップして行動を選びましょう！",
             handAsset: "hand_clap",
-            highlightTip: "💡 コツ：焦らず1・2拍目の間にボタンを1回タップするだけで予約できます。"
+            highlightTip: "💡 コツ：赤いバーが消えた瞬間に両者のアクションが同時発動します！"
         ),
         LessonItem(
             badge: "STEP 2 / 5",
-            title: "⚡️チャージ と 💥通常ビーム",
-            body: "最初は気力（チャージ）が 0 です。まずは「⚡️チャージ」で気力を溜めましょう。\n\n気力を 1 消費して「💥ビーム」を撃ち、無防備な相手に命中すると【相手のHP -1】さらに【相手が溜めていたチャージも -1】削ることができます！",
+            title: "⚡️CHARGE と 💥BEAM",
+            body: "最初は気力（チャージ）が 0 です。まずは「CHARGE」で気力を溜めましょう。\n\n気力を 1 消費して「BEAM」を撃ち、無防備な相手に命中すると【相手のHP -1】さらに【相手が溜めていたチャージも -1】削ることができます！",
             handAsset: "hand_beam",
             highlightTip: "💡 体力は3ライフ制！通常ビームを3回当てれば撃破勝利です。"
         ),
         LessonItem(
             badge: "STEP 3 / 5",
-            title: "🛡️バリア と 💦お手つき無防備",
-            body: "相手に気力がある時は「🛡️バリア（消費0）」で通常ビームをノーダメージで防げます！\n\n⚠️注意：気力が足りないのにビーム等を押して3拍目を迎えると「お手つき（不発）」となり、チャージも増えずガードもない【完全無防備状態】になります！",
+            title: "🛡️BARRIER と 💦お手つき無防備",
+            body: "相手に気力がある時は「BARRIER（消費0）」で通常ビームをノーダメージで防げます！\n\n⚠️注意：気力が 0 なのに BEAM を選んだままバーが消えると「お手つき（不発）」となり、チャージも増えずガードもない【完全無防備状態】になります！",
             handAsset: "hand_barrier",
             highlightTip: "💡 お手つき中に相手のビームが来ると直撃ダメージを受けます。残りの気力をよく見よう！"
         ),
         LessonItem(
             badge: "STEP 4 / 5",
-            title: "🌟 4チャージで一撃必殺！！",
-            body: "気力を【4回チャージ】すると、超必殺技「🌟必殺ビーム」が解放されます！\n\n通常のバリアすら粉砕し、相手の残りHPに関係なくカットイン＆必殺アニメと共に【一撃必殺】で勝利が決まります！",
+            title: "🌟 4チャージで金色 ULTIMATE！！",
+            body: "気力を【4回チャージ】すると、下のボタンが金色に輝く1本の「ULTIMATE」ボタンに変化します！\n\n押した瞬間にカットイン＆必殺アニメが発動し、相手のバリアや残りHPを貫通して【一撃必殺】で勝利が決まります！",
             handAsset: "hand_charge",
             highlightTip: "👇 下の「必殺演出をプレビュー」ボタンで実際の迫力を体験できます！"
         ),
@@ -55,7 +55,7 @@ struct PracticeTutorialView: View {
             title: "準備完了！KUMITEへ挑め！",
             body: "メインモード「KUMITE」では、主人公 Reo となって個性豊かな敵たちと順番に勝ち抜き戦を行います。\n\n敵を1人倒すごとにHPは3に全回復！連勝記録を伸ばして世界ランキング頂点を目指しましょう！",
             handAsset: "hand_beam",
-            highlightTip: "🔥 上の「🎯 フリー実戦」タブで1拍ずつ手動練習することもできます！"
+            highlightTip: "🔥 上の「🎯 フリー実戦」タブで実際のボタン操作を練習することもできます！"
         )
     ]
 
@@ -330,12 +330,7 @@ struct PracticeTutorialView: View {
 
     // MARK: - Tab 2: Interactive Sparring Sandbox (1拍ずつ手動進行 / AUTO練習)
     private var freeSparringBody: some View {
-        let columns = [
-            GridItem(.flexible(), spacing: 10),
-            GridItem(.flexible(), spacing: 10)
-        ]
-
-        return VStack(spacing: 8) {
+        VStack(spacing: 8) {
             // 練習相手ステータスバー
             HStack {
                 Text("練習相手: GEEK")
@@ -350,8 +345,11 @@ struct PracticeTutorialView: View {
             .background(Color.cyberPanel.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
             .padding(.horizontal, 14)
 
-            // 中央リズム＆手イラスト確認パネル
-            VStack(spacing: 6) {
+            // 中央リズム＆赤いタイムバー＆手イラスト確認パネル
+            VStack(spacing: 8) {
+                RhythmTimeBarView(engine: engine)
+                    .padding(.horizontal, 8)
+
                 if engine.beat == 1 || engine.beat == 2 {
                     Image("hand_clap")
                         .resizable()
@@ -383,7 +381,7 @@ struct PracticeTutorialView: View {
 
                 Text(engine.statusDetailText)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.cyberEmerald)
+                    .foregroundStyle(engine.playerCharge >= engine.maxCharge ? Color.cyberAmber : Color.cyberEmerald)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
@@ -448,7 +446,7 @@ struct PracticeTutorialView: View {
 
             Spacer(minLength: 0)
 
-            // プレイヤーコマンドパネル
+            // プレイヤーコマンドパネル（本番バトルと同一の横並び3ボタン ⇄ 金色 ULTIMATE 1ボタン）
             VStack(spacing: 8) {
                 HStack {
                     Text("REO")
@@ -456,20 +454,10 @@ struct PracticeTutorialView: View {
                         .foregroundStyle(.white)
                     HealthBarView(currentHP: engine.playerHP, maxHP: engine.maxHP, accentColor: .cyberEmerald)
                     Spacer()
-                    EnergyOrbView(label: "気力", currentCharge: engine.playerCharge, maxCharge: engine.maxCharge, accentColor: .cyberEmerald)
+                    EnergyOrbView(label: "CHARGE", currentCharge: engine.playerCharge, maxCharge: engine.maxCharge, accentColor: .cyberEmerald)
                 }
 
-                LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(GameAction.allCases) { action in
-                        BattleCommandButton(
-                            action: action,
-                            isSelected: engine.selectedAction == action,
-                            playerCharge: engine.playerCharge
-                        ) {
-                            engine.selectCommand(action)
-                        }
-                    }
-                }
+                BattleCommandDeckView(engine: engine)
             }
             .padding(12)
             .background(Color.cyberPanel.opacity(0.92), in: RoundedRectangle(cornerRadius: 14))

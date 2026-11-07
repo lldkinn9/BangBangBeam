@@ -65,7 +65,7 @@ enum TempoPreset: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// 製品版ゲームエンジン（KUMITE 11人勝ち抜き・HP3制・被弾チャージ-1・お手つき無防備・4チャージ一撃必殺）
+/// 製品版ゲームエンジン（KUMITE 勝ち抜き・HP3制・被弾チャージ-1・お手つき無防備・4チャージ即時ULTIMATE発動）
 @Observable
 @MainActor
 final class GameEngine {
@@ -125,6 +125,9 @@ final class GameEngine {
     var beat: Int = 0
     var turnCount: Int = 1
 
+    /// 赤いタイムバーが右から左へ消えていく入力受付区間（1拍目開始〜3拍目突入までの 2拍分）の開始時刻
+    var turnWindowStartDate: Date? = nil
+
     var playerHP: Int = 3
     var cpuHP: Int = 3
 
@@ -134,7 +137,7 @@ final class GameEngine {
     var playerExpression: CharacterExpression = .normal
     var cpuExpression: CharacterExpression = .normal
 
-    /// プレイヤーが次の3拍目に向けて予約しているコマンド
+    /// プレイヤーが次のアクションに向けて予約している通常コマンド（CHARGE / BEAM / BARRIER）
     var selectedAction: GameAction = .charge
 
     /// 直近の3拍目で確定・公開された実効アクション
@@ -142,7 +145,7 @@ final class GameEngine {
     var revealedCpuMove: ResolvedMove? = nil
 
     var calloutText: String = "せっせっせーの..."
-    var statusDetailText: String = "リズムに合わせてコマンドを選択！"
+    var statusDetailText: String = "赤いバーが消える前にコマンドを選択！"
 
     var outcome: BattleOutcome = .ongoing
 
@@ -167,6 +170,16 @@ final class GameEngine {
 
     var beatInterval: TimeInterval {
         60.0 / max(50.0, min(bpm, 160.0))
+    }
+
+    /// 1ターンあたりのコマンド受付時間（1拍目開始から3拍目発動までの2拍分）
+    var inputWindowDuration: TimeInterval {
+        beatInterval * 2.0
+    }
+
+    /// 自動リズムタイマーが稼働中かどうか（タイムバーの連続アニメーション判定用）
+    var isRhythmRunning: Bool {
+        rhythmTimer != nil
     }
 
     private var isAutoLoopRunning: Bool {
@@ -376,11 +389,28 @@ final class GameEngine {
     }
 
     // MARK: - Player Input
-    /// チャージ不足のボタンもタップ可能（3拍目で無防備のお手つき状態になる）
+    /// 通常3コマンド（CHARGE / BEAM / BARRIER）の予約選択（チャージ不足のBEAMも選択可能で、発動時に無防備のお手つきになる）
     func selectCommand(_ action: GameAction) {
         guard !outcome.isFinished, activeUltimate == nil else { return }
+        guard action != .megaBeam else {
+            triggerPlayerUltimateImmediately()
+            return
+        }
         selectedAction = action
         HapticManager.playMedium(enabled: isHapticsEnabled)
+    }
+
+    /// 4チャージ到達時に出現する金色「ULTIMATE」ボタンを押した瞬間に、リズム待機なしで即座にカットイン→必殺アニメーションを発動する
+    func triggerPlayerUltimateImmediately() {
+        guard !outcome.isFinished, activeUltimate == nil, playerCharge >= maxCharge else { return }
+        stopTimer()
+        playerCharge = 0
+        selectedAction = .charge
+        revealedPlayerMove = .valid(.megaBeam)
+        calloutText = "🌟 ULTIMATE!!"
+        statusDetailText = "REO 一撃必殺発動！！"
+        HapticManager.playHeavy(enabled: isHapticsEnabled)
+        triggerUltimateSequence(character: .reo, isPlayer: true)
     }
 
     /// 手動で1拍進める（PRACTICE用）
@@ -403,6 +433,7 @@ final class GameEngine {
         currentEnemy = enemy
         beat = 0
         turnCount = 1
+        turnWindowStartDate = nil
         playerHP = maxHP
         cpuHP = maxHP
         playerCharge = 0
@@ -416,8 +447,8 @@ final class GameEngine {
         outcome = .ongoing
         calloutText = "せっせっせーの..."
         statusDetailText = gameMode == .practice
-            ? "1・2拍目でコマンドを選び、3拍目でアクション発動！"
-            : "VS \(enemy.codeName) — 1・2拍目の間にコマンドを予約せよ！"
+            ? "赤いバーが消える前にコマンドを選び、アクション発動！"
+            : "VS \(enemy.codeName) — 赤いバーが消える前にコマンドを選べ！"
     }
 
     private func startTimer(initialDelay: TimeInterval = 0.0) {
@@ -437,6 +468,14 @@ final class GameEngine {
 
     private func scheduleCommonRunLoopTimer() {
         let interval = beatInterval
+        if beat == 1 {
+            turnWindowStartDate = Date()
+        } else if beat == 2 {
+            turnWindowStartDate = Date().addingTimeInterval(-interval)
+        } else {
+            turnWindowStartDate = nil
+        }
+
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.advanceBeat()
@@ -457,6 +496,7 @@ final class GameEngine {
         pendingTimerTask = nil
         rhythmTimer?.invalidate()
         rhythmTimer = nil
+        turnWindowStartDate = nil
     }
 
     private func advanceBeat() {
@@ -471,22 +511,35 @@ final class GameEngine {
                 turnCount += 1
             }
             beat = 1
+            if isRhythmRunning {
+                turnWindowStartDate = Date()
+            } else {
+                turnWindowStartDate = nil
+            }
             revealedPlayerMove = nil
             revealedCpuMove = nil
             playerExpression = .normal
             cpuExpression = .normal
             calloutText = "💥 バン！"
-            statusDetailText = "👏 リズム 1 / 3 — コマンド受付中"
+            statusDetailText = playerCharge >= maxCharge
+                ? "🌟 ULTIMATE ボタンを押して一撃必殺を放て！"
+                : "赤いバーが消える前にコマンドを選択！"
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 1:
             beat = 2
+            if isRhythmRunning && turnWindowStartDate == nil {
+                turnWindowStartDate = Date().addingTimeInterval(-beatInterval)
+            }
             calloutText = "💥 バン！"
-            statusDetailText = "👏 リズム 2 / 3 — 次でアクション激突！"
+            statusDetailText = playerCharge >= maxCharge
+                ? "🌟 今すぐ ULTIMATE ボタンをタップ！！"
+                : "まもなくアクション激突！"
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 2:
             beat = 3
+            turnWindowStartDate = nil
             calloutText = "⚡️ アクション！"
             resolveClash()
 
@@ -516,15 +569,15 @@ final class GameEngine {
         revealedPlayerMove = pMove
         revealedCpuMove = cMove
 
-        // 3. 4チャージ一撃必殺（メガビーム）判定
+        // 3. 4チャージ一撃必殺判定
         let playerUlt = (pMove == .valid(.megaBeam))
         let cpuUlt = (cMove == .valid(.megaBeam))
 
         if playerUlt && cpuUlt {
             HapticManager.playHeavy(enabled: isHapticsEnabled)
             calloutText = "🌟⚡️ 超激突相殺！！"
-            statusDetailText = "両者の4チャージ必殺ビームが空間ごと相殺した！！"
-            resetSelectionIfUnaffordable()
+            statusDetailText = "両者の4チャージ必殺技が空間ごと相殺した！！"
+            resetSelectionIfNeeded()
             return
         } else if playerUlt {
             HapticManager.playHeavy(enabled: isHapticsEnabled)
@@ -613,15 +666,18 @@ final class GameEngine {
                 notes.append("\(currentEnemy.codeName) バリア")
             }
 
-            calloutText = playerCharge >= maxCharge ? "🌟 必殺READY!!" : "⚡️ 読み合い継続"
-            statusDetailText = notes.joined(separator: " / ")
+            calloutText = playerCharge >= maxCharge ? "🌟 ULTIMATE READY!!" : "⚡️ 読み合い継続"
+            statusDetailText = playerCharge >= maxCharge
+                ? "🌟 金色の ULTIMATE ボタンをタップして一撃必殺！！"
+                : notes.joined(separator: " / ")
         }
 
-        resetSelectionIfUnaffordable()
+        resetSelectionIfNeeded()
     }
 
-    private func resetSelectionIfUnaffordable() {
-        if !outcome.isFinished && playerCharge < selectedAction.cost {
+    private func resetSelectionIfNeeded() {
+        guard !outcome.isFinished else { return }
+        if playerCharge >= maxCharge || playerCharge < selectedAction.cost {
             selectedAction = .charge
         }
     }
@@ -642,13 +698,13 @@ final class GameEngine {
             playerExpression = .fun
             cpuExpression = .sad
             calloutText = "🌟 一撃必殺 K.O.!!"
-            finishMatch(playerWon: true, reason: "4チャージ超必殺ビーム炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！")
+            finishMatch(playerWon: true, reason: "4チャージ ULTIMATE 炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！")
         } else {
             playerHP = 0
             playerExpression = .sad
             cpuExpression = .fun
             calloutText = "💥 一撃必殺 K.O..."
-            finishMatch(playerWon: false, reason: "\(currentEnemy.codeName) の一撃必殺ビームに敗れた...")
+            finishMatch(playerWon: false, reason: "\(currentEnemy.codeName) の一撃必殺に敗れた...")
         }
     }
 
