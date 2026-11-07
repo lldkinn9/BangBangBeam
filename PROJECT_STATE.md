@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-06 23:14 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.24`（敗退後の復活残りあり時におけるタイトル帰還時の連勝保持 ＆ 再開確認ポップアップ実装）
+最終更新日時: 2026-11-07 10:42 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.25`（全21キャラクター刷新版必殺アニメーション `.mp4` 反映 ＆ 音声再生対応の安定化）
 
 ---
 
@@ -28,10 +28,10 @@
 ### 1.2 バトルシステム・演出
 - **体力（HP = 3）＆ 被弾チャージ減少:** 通常ビーム命中時、被弾側は **HP -1** かつ **蓄積チャージ -1**。3回被弾で敗退。
 - **お手つき（無防備）仕様:** 気力不足でビーム／必殺ビームを選んで3拍目を迎えると **不発（無防備状態 `.fumble`）** となり、チャージ増加もガードもなく相手のビームが直撃する。
-- **4チャージ一撃必殺（必殺ビーム）:** 4回チャージで解放。発動時は **目元カットイン演出 (`char_<id>_cutin`) → 必殺アニメーション動画 (`ult_<id>.mp4`)** を再生し、バリア・残りHPを貫通して一撃決着。
-- **ビジュアル＆BGM (`SoundManager`):**
-  - 全12キャラの背景透過立ち絵（通常・喜び・苦痛）＆カットイン画像、手イラスト4種（手拍子・チャージ・バリア・ビーム）、必殺動画12本を組み込み済み。
-  - 非バトル画面で `Neon Overdrive`、バトル画面で `Seamless Looping Cyberpunk BGM` / `Cyber Velocity` をランダム選出しループ再生（設定画面で BGM ON/OFF 切替可能）。
+- **4チャージ一撃必殺（必殺ビーム）:** 4回チャージで解放。発動時は **目元カットイン演出 (`char_<id>_cutin`) → 必殺アニメーション動画 (`ult_<id>.mp4`・音声付き)** を再生し、バリア・残りHPを貫通して一撃決着。
+- **ビジュアル＆BGM・SE (`SoundManager`):**
+  - 全21キャラの背景透過立ち絵（通常・喜び・苦痛）＆カットイン画像、手イラスト4種（手拍子・チャージ・バリア・ビーム）、音声付き必殺動画21本を組み込み済み。
+  - 非バトル画面で `Neon Overdrive`、バトル画面で `Seamless Looping Cyberpunk BGM` / `Cyber Velocity` をランダム選出しループ再生（設定画面およびリザルト画面でサウンド ON/OFF 切替、設定画面で BGM / SE 個別音量調整可能）。
 
 ### 1.3 収益化（Google AdMob 基盤 `AdManager`：バナー広告 ＋ 復活リワード動画広告）
 - **バナー広告 (`AdBannerFooterView`):** プレイ画面（`BattleView` / `PracticeTutorialView`）以外の全画面（タイトル・モード選択・設定・アイコン設定・ランキングシート）の最下部に常設配置。
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.24`（敗退後の復活残りあり時におけるタイトル帰還での連勝保持 ＆ 次回KUMITE押下時の確認ポップアップ）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.25`（全21キャラクターの刷新版必殺アニメーション `.mp4` ＆ 音声再生対応）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-07 10:42 (`v1.0.25`)**
+  - **全21キャラクターの刷新版必殺アニメーション `.mp4` 一括反映 ＆ 動画音声再生の安定化:** `素材/Characters/<各キャラ>/<キャラ>-anime.mp4` に差し替えられた最新21本（2026-11-07 更新分）を、元の AAC ステレオ音声トラック（48kHz / 2ch）を無劣化コピー維持したまま iOS `AVPlayer` 最適化済みの H.264 (`avc1`, `yuv420p`, `+faststart`) として [`BangBangBeam/Resources/Videos/`](BangBangBeam/Resources/Videos) の `ult_<id>.mp4` へ一括反映。あわせて [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) と [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) にて、プリロード段階からの音声パイプライン準備（冒頭音欠け防止）・`AVAudioSession` アクティブ維持・SE音量スライダーおよびサウンドON/OFF設定連動・再生中のBGM一時ダッキングを整備し、ワークスペース全体へ同期。
 
 - **2026-11-06 23:14 (`v1.0.24`)**
   - **敗退後のタイトル帰還時における連勝保持（復活回数が残っている場合限定）＆ 再開確認ポップアップ実装:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) にて、KUMITE 敗退後（1連勝以上）でも「動画広告を見て復活」の残り回数が 1回以上残っている場合に限り、タイトル画面へ戻っても連勝数・復活残り回数・敗退保留状態を `UserDefaults` に保持する仕様を実装（復活回数が残っていない場合や0連勝時はリセット）。また、敗退保留状態から次回「KUMITE」を押した際に [`BangBangBeamApp.swift`](BangBangBeam/App/BangBangBeamApp.swift) の `PendingRevivePromptOverlayView` 確認ポップアップを表示し、「動画広告を見て復活（連勝継続）」か「最初から挑戦（0連勝）」を選択できるように対応。[`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) の敗退画面にも復活残りあり時の保持案内文を追加。

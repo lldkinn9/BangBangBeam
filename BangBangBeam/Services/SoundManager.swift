@@ -34,11 +34,12 @@ final class SoundManager {
     private let bgmVolumeKey = "BangBangBeam.bgmVolume"
     private let seVolumeKey = "BangBangBeam.seVolume"
 
-    /// サウンド（BGMおよび全SE効果音）のON/OFF設定。OFF時は音量スライダーの値にかかわらずBGM・全SEを完全無音化する。
+    /// サウンド（BGMおよび全SE効果音・必殺動画音声）のON/OFF設定。OFF時は音量スライダーの値にかかわらず完全無音化する。
     var isBGMEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isBGMEnabled, forKey: bgmEnabledKey)
             if isBGMEnabled {
+                ensureAudioSessionActive()
                 if let target = desiredContext {
                     switch target {
                     case .title:
@@ -69,7 +70,7 @@ final class SoundManager {
         }
     }
 
-    /// SE（効果音）音量（0.0 〜 1.0、初期値 0.90 = 90%）
+    /// SE（効果音・必殺アニメーション音声）音量（0.0 〜 1.0、初期値 0.90 = 90%）
     var seVolume: Double {
         didSet {
             let clamped = min(1.0, max(0.0, seVolume))
@@ -130,12 +131,13 @@ final class SoundManager {
             self.seVolume = min(1.0, max(0.0, UserDefaults.standard.double(forKey: seVolumeKey)))
         }
 
-        configureAudioSession()
+        ensureAudioSessionActive()
         preloadSoundEffects()
         preloadBGMTracks()
     }
 
-    private func configureAudioSession() {
+    /// 広告視聴後やバックグラウンド復帰後でもBGM・SE・必殺動画音声が確実に同時再生されるようオーディオセッションを維持
+    func ensureAudioSessionActive() {
         do {
             try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
@@ -192,6 +194,8 @@ final class SoundManager {
 
         let vol = Float(min(1.0, max(0.0, seVolume)))
         guard vol > 0.001 else { return }
+
+        ensureAudioSessionActive()
 
         var pool = sePlayerPools[effect] ?? []
         if pool.isEmpty {
@@ -272,9 +276,12 @@ final class SoundManager {
         startTrack(chosen)
     }
 
-    /// 必殺動画演出中の一時音量ダッキング
+    /// 必殺動画演出中の一時音量ダッキング（動画の音声を明瞭に聴かせる）
     func setDucked(_ ducked: Bool) {
         isDucked = ducked
+        if ducked && isBGMEnabled {
+            ensureAudioSessionActive()
+        }
         guard isBGMEnabled, let player = audioPlayer else { return }
         player.volume = effectiveBGMVolume
     }
@@ -288,6 +295,7 @@ final class SoundManager {
 
     private func startTrack(_ track: BGMTrack) {
         guard isBGMEnabled else { return }
+        ensureAudioSessionActive()
 
         if let active = audioPlayer, active !== bgmPlayers[track] {
             active.pause()

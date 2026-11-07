@@ -17,7 +17,7 @@ struct UltimateCutinOverlayView: View {
         case video
     }
 
-    /// サウンドON時はSE音量設定を適用し、OFF時は動画音声も完全ミュートにする
+    /// サウンドON時はSE音量設定を適用してmp4音声を再生し、OFF時は完全ミュートにする
     private var effectiveVideoVolume: Float {
         guard soundManager.isBGMEnabled else { return 0.0 }
         return Float(min(1.0, max(0.0, soundManager.seVolume)))
@@ -30,7 +30,7 @@ struct UltimateCutinOverlayView: View {
             Color.black.opacity(phase == .video ? 0.96 : 0.84)
                 .ignoresSafeArea()
 
-            // カットイン中から裏でデコーダをプリロードしておき、phase == .video 移行と同時に音声付きで再生開始
+            // カットイン中から映像・音声デコーダをプリロードしておき、phase == .video 移行と同時に音声付きで即座に再生開始
             if let url = videoURL {
                 SeamlessVideoPlayerView(
                     url: url,
@@ -76,6 +76,7 @@ struct UltimateCutinOverlayView: View {
             }
         }
         .task {
+            SoundManager.shared.ensureAudioSessionActive()
             SoundManager.shared.setDucked(true)
             SoundManager.shared.playCutinSE()
             withAnimation(.spring(response: 0.28, dampingFraction: 0.74)) {
@@ -167,10 +168,13 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
         let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
         player.allowsExternalPlayback = false
-        let shouldMute = (!isPlaying || audioVolume <= 0.001)
+        player.automaticallyWaitsToMinimizeStalling = false
+        player.actionAtItemEnd = .pause
+
+        // 停止中（rate == 0）は音が出ないため、プリロード段階から音声パイプラインも有効状態で準備し冒頭音欠けを防ぐ
+        let shouldMute = (audioVolume <= 0.001)
         player.isMuted = shouldMute
         player.volume = shouldMute ? 0.0 : audioVolume
-        player.actionAtItemEnd = .pause
 
         view.playerLayer.player = player
         view.playerLayer.videoGravity = .resizeAspectFill
@@ -183,7 +187,7 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PlayerContainerUIView, context: Context) {
-        let shouldMute = (!isPlaying || audioVolume <= 0.001)
+        let shouldMute = (audioVolume <= 0.001)
         uiView.playerLayer.player?.isMuted = shouldMute
         uiView.playerLayer.player?.volume = shouldMute ? 0.0 : audioVolume
         if isPlaying {
@@ -239,15 +243,24 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
                 return
             }
             didStartPlayback = true
+            SoundManager.shared.ensureAudioSessionActive()
+
             let shouldMute = (volume <= 0.001)
             player.isMuted = shouldMute
             player.volume = shouldMute ? 0.0 : volume
-            player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
-            player.play()
+
+            let currentSeconds = player.currentTime().seconds
+            if currentSeconds.isFinite && currentSeconds > 0.05 {
+                player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak player] _ in
+                    player?.play()
+                }
+            } else {
+                player.play()
+            }
 
             // 動画尺を自動取得した上で、万一終了通知が届かない場合のみ安全回収するフォールバック
             fallbackTask = Task { @MainActor [weak self, weak player] in
-                var waitSeconds: Double = 16.0
+                var waitSeconds: Double = 15.0
                 if let asset = player?.currentItem?.asset,
                    let dur = try? await asset.load(.duration),
                    dur.isNumeric && dur.seconds > 0.5 {
