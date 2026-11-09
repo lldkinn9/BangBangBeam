@@ -35,7 +35,7 @@ struct HealthBarView: View {
     }
 }
 
-/// チャージ（0〜4個）を縦型バッテリーセルで可視化し、4つ溜まった時点で全セルが黄色く発光＋電気エフェクトが走るコンポーネント
+/// チャージ（0〜4個）を縦型バッテリーセルで可視化し、4つ溜まった時点で全セルが黄色く発光するコンポーネント
 struct EnergyOrbView: View {
     let label: String
     let currentCharge: Int
@@ -57,33 +57,25 @@ struct EnergyOrbView: View {
                     .foregroundStyle(Color.white.opacity(0.68))
             }
 
-            ZStack {
-                HStack(spacing: 7) {
-                    ForEach(0..<maxCharge, id: \.self) { index in
-                        let isFilled = index < currentCharge
-                        BatteryCellView(
-                            isFilled: isFilled,
-                            isUltReady: isUltReady,
-                            isPulsing: isUltPulsing,
-                            accentColor: accentColor,
-                            cellWidth: cellWidth,
-                            cellHeight: cellHeight
-                        )
-                    }
-                }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 3)
-
-                // 4チャージ到達時：全4セルの周囲に走る稲妻・電気エフェクトアニメーション
-                if isUltReady {
-                    ElectricChargeEffectOverlay()
-                        .allowsHitTesting(false)
+            HStack(spacing: 7) {
+                ForEach(0..<maxCharge, id: \.self) { index in
+                    let isFilled = index < currentCharge
+                    BatteryCellView(
+                        isFilled: isFilled,
+                        isUltReady: isUltReady,
+                        isPulsing: isUltPulsing,
+                        accentColor: accentColor,
+                        cellWidth: cellWidth,
+                        cellHeight: cellHeight
+                    )
                 }
             }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
         }
         .onChange(of: isUltReady, initial: true) { _, ready in
             if ready {
-                withAnimation(.easeInOut(duration: 0.45).repeatForever(autoreverses: true)) {
+                withAnimation(.easeInOut(duration: 0.65).repeatForever(autoreverses: true)) {
                     isUltPulsing = true
                 }
             } else {
@@ -93,7 +85,7 @@ struct EnergyOrbView: View {
     }
 }
 
-/// 1つ分の縦型サイバーバッテリーセル描画
+/// 1つ分の縦型サイバーバッテリーセル描画（4チャージ時は黄色く発光）
 private struct BatteryCellView: View {
     let isFilled: Bool
     let isUltReady: Bool
@@ -130,7 +122,7 @@ private struct BatteryCellView: View {
                                     ? [
                                         Color.white,
                                         Color(red: 1.0, green: 0.94, blue: 0.35),
-                                        Color(red: 1.0, green: 0.76, blue: 0.08)
+                                        Color(red: 1.0, green: 0.78, blue: 0.10)
                                     ]
                                     : [
                                         Color.white.opacity(0.92),
@@ -154,68 +146,12 @@ private struct BatteryCellView: View {
             }
             .frame(width: cellWidth, height: cellHeight)
         }
-        .scaleEffect(isUltReady ? (isPulsing ? 1.06 : 0.98) : 1.0)
+        .scaleEffect(isUltReady ? (isPulsing ? 1.04 : 0.99) : 1.0)
         .shadow(
             color: isFilled
-                ? (isUltReady ? Color(red: 1.0, green: 0.86, blue: 0.15).opacity(0.95) : activeColor.opacity(0.8))
+                ? (isUltReady ? Color(red: 1.0, green: 0.86, blue: 0.15).opacity(isPulsing ? 0.95 : 0.70) : activeColor.opacity(0.8))
                 : .clear,
-            radius: isFilled ? (isUltReady ? (isPulsing ? 11 : 6) : 6) : 0
+            radius: isFilled ? (isUltReady ? (isPulsing ? 10 : 6) : 6) : 0
         )
-    }
-}
-
-/// 4つ溜まったバッテリーゲージ全体にバチバチと走る黄色・白の放電稲妻アニメーション
-private struct ElectricChargeEffectOverlay: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
-            let tick = Int(timeline.date.timeIntervalSinceReferenceDate * 20.0)
-
-            Canvas { context, size in
-                let w = size.width
-                let h = size.height
-                guard w > 10, h > 10 else { return }
-
-                // 3本のランダム風シード稲妻アークを描画
-                for boltIndex in 0..<3 {
-                    var path = Path()
-                    let seed = (tick &* 31 &+ boltIndex &* 97)
-                    let startY = h * CGFloat(0.2 + Double((seed + 13) % 60) / 100.0)
-                    path.move(to: CGPoint(x: 2, y: startY))
-
-                    let segments = 6
-                    for seg in 1...segments {
-                        let x = (w - 4) * CGFloat(seg) / CGFloat(segments) + 2
-                        let hash = abs((seed &* (seg + 3) &* 1103515245 + 12345) % 100)
-                        let yOffset = (CGFloat(hash) / 100.0 - 0.5) * (h * 0.85)
-                        let y = min(h - 1, max(1, (h * 0.5) + yOffset))
-                        path.addLine(to: CGPoint(x: x, y: y))
-                    }
-
-                    // 外側の黄色い発光アーク
-                    context.stroke(
-                        path,
-                        with: .color(Color(red: 1.0, green: 0.88, blue: 0.12).opacity(0.85)),
-                        lineWidth: boltIndex == 0 ? 2.6 : 1.8
-                    )
-                    // 中心の白い電撃コア
-                    context.stroke(
-                        path,
-                        with: .color(Color.white.opacity(0.95)),
-                        lineWidth: boltIndex == 0 ? 1.2 : 0.8
-                    )
-                }
-
-                // スパーク粒子
-                for spark in 0..<5 {
-                    let sHash = abs((tick &* 73 &+ spark &* 151) % 1000)
-                    let sx = CGFloat(sHash % 100) / 100.0 * w
-                    let sy = CGFloat((sHash / 10) % 100) / 100.0 * h
-                    let r: CGFloat = (spark % 2 == 0) ? 2.2 : 1.5
-                    let rect = CGRect(x: sx - r, y: sy - r, width: r * 2, height: r * 2)
-                    context.fill(Path(ellipseIn: rect), with: .color(Color(red: 1.0, green: 0.95, blue: 0.5)))
-                }
-            }
-            .shadow(color: Color(red: 1.0, green: 0.85, blue: 0.1), radius: 6)
-        }
     }
 }

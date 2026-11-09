@@ -13,9 +13,14 @@ struct BattleView: View {
     var body: some View {
         let isUltReady = engine.playerCharge >= engine.maxCharge
 
-        GeometryReader { geo in
-            let w = max(geo.size.width, 1)
-            let h = max(geo.size.height, 1)
+        ZStack {
+            // iPhone最上部のステータスバー領域（時計・電波・バッテリー残量）の背面のみ黒で塗りつぶし、バトル画面UI本体はその下に配置
+            Color.black
+                .ignoresSafeArea()
+
+            GeometryReader { geo in
+                let w = max(geo.size.width, 1)
+                let h = max(geo.size.height, 1)
 
             ZStack {
                 Color.black
@@ -138,8 +143,9 @@ struct BattleView: View {
             }
             .frame(width: w, height: h)
             .clipped()
+            }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.22), value: engine.outcome)
         .animation(.easeInOut(duration: 0.22), value: engine.preBattlePhase)
         .sheet(isPresented: $isShowingRankingFallback) {

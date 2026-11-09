@@ -43,6 +43,7 @@ struct RootContainerView: View {
                         .transition(.opacity)
                 }
             }
+            .padding(.top, 4)
 
             // 敗退後に復活回数を残してタイトルへ戻った状態から「KUMITE」を押した際の確認ポップアップ
             if engine.isShowingPendingRevivePrompt {

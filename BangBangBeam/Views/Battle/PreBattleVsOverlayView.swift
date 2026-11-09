@@ -25,9 +25,14 @@ struct PreBattleVsOverlayView: View {
     private let neonCyan = Color(red: 0.20, green: 0.95, blue: 1.00)
 
     var body: some View {
-        GeometryReader { geo in
-            let screenW = max(geo.size.width, 1)
-            let screenH = max(geo.size.height, 1)
+        ZStack {
+            // iPhone最上部のステータスバー領域（時計・電波・バッテリー残量）の背面のみ黒で塗りつぶし、UI本体はその下に配置
+            Color.black
+                .ignoresSafeArea()
+
+            GeometryReader { geo in
+                let screenW = max(geo.size.width, 1)
+                let screenH = max(geo.size.height, 1)
 
             // どの機種（9:19.5の最新iPhone〜iPad）でも左右のネーム枠が1pxも見切れないよう画面幅・画面高に100%フィット
             let canvasW = screenW
@@ -207,8 +212,9 @@ struct PreBattleVsOverlayView: View {
                 .frame(width: screenW, height: screenH)
                 .clipped()
             }
+            }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .ignoresSafeArea()
         .task {
             isCharacterInserted = false
             isStartButtonVisible = false

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 18:56 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.30`（VS画面SEの重厚サイバー化・戦闘画面への指定背景テンプレート＆3コマンドボタン素材組み込み）
+最終更新日時: 2026-11-09 19:19 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.31`（VS画面SEのクリア＆スタイリッシュ化・4チャージ時の電撃エフェクト廃止＆黄色発光のみ化・iPhone最上部ステータスバー非干渉レイアウト対応）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.30`（VS画面の重厚サイバーSE `vs_appear.mp3` ＆ 戦闘画面の指定背景素材 `battle_screen_bg` ＋ 3コマンドボタン素材組み込みUI）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.31`（VS画面のスタイリッシュSE `vs_appear.mp3`・4チャージ時の黄色発光のみ化・iPhone最上部ステータスバー非干渉レイアウト）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 19:19 (`v1.0.31`)**
+  - **VS画面SEのスタイリッシュ化・4チャージ電撃エフェクト廃止（黄色発光のみ化）・iPhone最上部ステータスバー非干渉レイアウト調整:**
+    1. **VS画面キャラ登場SEのクリア＆スタイリッシュ化 ([`vs_appear.mp3`](BangBangBeam/Resources/SE/vs_appear.mp3)):** ノイズ成分やiPhoneスピーカーで歪む超低域を完全排除（`highpass=120Hz`・ノイズ生成器ゼロ）し、純粋な倍音シンセによるステレオピッチグライド＋クリスタルFMダブルロック音＋近未来Dm9ネオンシンセコード（`146Hz〜880Hz`）のスタイリッシュな0.95秒SEへ刷新。
+    2. **4チャージ時のバッテリーゲージ電撃エフェクト廃止・黄色発光のみ化 ([`EnergyOrbView.swift`](BangBangBeam/Views/Battle/EnergyOrbView.swift)):** `ElectricChargeEffectOverlay`（稲妻・スパーク描画）を削除し、チャージが4つ溜まった際は全4セルが黄色く発光するシンプルな表現に変更。
+    3. **iPhone最上部のステータスバー（時計・充電残量・電波表示）への非干渉化 ([`BangBangBeamApp.swift`](BangBangBeam/App/BangBangBeamApp.swift) / [`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):** 最上部ステータスバーの背面のみ黒背景（`ignoresSafeArea()`）で維持しつつ、各画面のメイン `GeometryReader` / コンテナは上部セーフエリア（`safeAreaInsets.top`）を尊重してステータスバーの下から描画されるよう変更（`ignoresSafeArea(edges: .bottom)` ＋ 上部余白 `4pt`）。
 
 - **2026-11-09 18:56 (`v1.0.30`)**
   - **VS画面SEの重厚サイバーパンク化 ＆ 戦闘画面への指定背景テンプレート・3コマンドボタン素材の完全組み込み:**
