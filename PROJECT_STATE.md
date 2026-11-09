@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 22:29 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.36`（ボイスSE 5種 `nice.wav` / `good.wav` / `bad.wav` / `you win.wav` / `you lose.wav` の組み込み＆各表示と同時の再生実装）
+最終更新日時: 2026-11-09 22:37 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.37`（体力1時の自キャラ名称 `REO (YOU)` の白文字くっきり前面表示化 ＆ 敵エリア右上の STAGE・連勝表示撤去）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.36`（ボイスSE 5種 `nice.wav` / `good.wav` / `bad.wav` / `you win.wav` / `you lose.wav` の同時再生・3拍の手拍子火花・勝敗英字白枠・体力1時の `sad.png` ＆赤ネオン背景）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.37`（体力1時の自キャラ名称 `REO (YOU)` の白文字くっきり前面表示化 ＆ 敵エリア右上の STAGE・連勝表示撤去）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,11 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 22:37 (`v1.0.37`)**
+  - **体力1時の自キャラ名称 `REO (YOU)` の白文字前面表示化 ＆ 敵エリア右上のSTAGE・連勝表示撤去 ([`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`battle_screen_bg.imageset`](BangBangBeam/Assets.xcassets/UI/battle_screen_bg.imageset)):**
+    1. **自キャラ名称 `REO (YOU)` をピンチ時も白くはっきり表示:** 背景画像 `battle_screen_bg` を文字なしのクリーンな状態にし、`REO` / `(YOU)` を敵名称と同じく赤ネオン背景レイヤーより前面の `playerHudContents` 内で白文字＋ネオングロー（通常時はシアン発光、体力1時は赤ネオン発光）として描画するよう変更。
+    2. **敵エリア右上の STAGE 表示および連勝アイコン・数字の削除:** `enemyHudContents` から `STAGE X/Y` と `🔥連勝数` の表示を削除し、敵キャラクター名のみをすっきり表示するよう変更。
 
 - **2026-11-09 22:29 (`v1.0.36`)**
   - **ボイスSE 5種（`nice.wav` / `good.wav` / `bad.wav` / `you win.wav` / `you lose.wav`）の組み込み＆各表示と同時の再生実装 ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):**

@@ -278,36 +278,14 @@ struct BattleView: View {
     private func enemyHudContents(w: CGFloat, h: CGFloat, isLowHP: Bool) -> some View {
         let hudAccent = isLowHP ? dangerNeonRed : enemyNeonMagenta
         return VStack(alignment: .leading, spacing: h * 0.008) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(engine.currentEnemy.codeName)
-                    .font(.system(size: min(w * 0.060, h * 0.026), weight: .black, design: .rounded))
-                    .tracking(1.5)
-                    .foregroundStyle(.white)
-                    .shadow(color: hudAccent, radius: 7)
-                    .shadow(color: hudAccent, radius: 14)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-
-                Spacer(minLength: 4)
-
-                // ステージ＆連勝表示
-                HStack(spacing: 5) {
-                    if engine.currentLoopNumber > 1 {
-                        Text("L\(engine.currentLoopNumber)")
-                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.cyberAmber, in: Capsule())
-                    }
-                    Text("STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.80))
-                    Text("🔥\(engine.winStreak)")
-                        .font(.system(size: 9.5, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color.cyberEmerald)
-                }
-            }
+            Text(engine.currentEnemy.codeName)
+                .font(.system(size: min(w * 0.060, h * 0.026), weight: .black, design: .rounded))
+                .tracking(1.5)
+                .foregroundStyle(.white)
+                .shadow(color: hudAccent, radius: 7)
+                .shadow(color: hudAccent, radius: 14)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
 
             HealthBarView(
                 currentHP: engine.cpuHP,
@@ -330,30 +308,53 @@ struct BattleView: View {
         .position(x: w * 0.692, y: h * 0.104)
     }
 
-    // MARK: - Bottom-Left Player HUD Box Contents (`REO (YOU)` の右隣にハート3つ＋バッテリー4つ)
+    // MARK: - Bottom-Left Player HUD Box Contents (`REO (YOU)` ＋ 右隣にハート3つ＋バッテリー4つ)
     private func playerHudContents(w: CGFloat, h: CGFloat, isLowHP: Bool) -> some View {
         let hpAccent: Color = isLowHP ? dangerNeonRed : .cyberEmerald
-        return VStack(alignment: .trailing, spacing: h * 0.010) {
-            HealthBarView(
-                currentHP: engine.playerHP,
-                maxHP: engine.maxHP,
-                accentColor: hpAccent,
-                heartSize: min(w * 0.050, h * 0.023)
-            )
+        let nameGlowColor: Color = isLowHP ? dangerNeonRed : Color.cyberCyan
+        return ZStack {
+            // 左側：`REO` / `(YOU)` 名称表示（ピンチ時も赤背景の上に白くくっきり表示）
+            VStack(alignment: .leading, spacing: 2) {
+                Text("REO")
+                    .font(.system(size: min(w * 0.062, h * 0.027), weight: .black, design: .rounded))
+                    .tracking(1.5)
+                    .foregroundStyle(.white)
+                    .shadow(color: nameGlowColor, radius: 7)
+                    .shadow(color: nameGlowColor, radius: 14)
 
-            EnergyOrbView(
-                label: "",
-                currentCharge: engine.playerCharge,
-                maxCharge: engine.maxCharge,
-                accentColor: .cyberEmerald,
-                showLabel: false,
-                cellWidth: min(w * 0.034, 17),
-                cellHeight: min(h * 0.029, 27)
-            )
-            .padding(.trailing, w * 0.035)
+                Text("(YOU)")
+                    .font(.system(size: min(w * 0.052, h * 0.022), weight: .black, design: .rounded))
+                    .tracking(1.2)
+                    .foregroundStyle(.white)
+                    .shadow(color: nameGlowColor, radius: 7)
+                    .shadow(color: nameGlowColor, radius: 14)
+            }
+            .frame(width: w * 0.24, alignment: .leading)
+            .position(x: w * 0.195, y: h * 0.885)
+
+            // 右側：ハート3つ＋バッテリー4つ
+            VStack(alignment: .trailing, spacing: h * 0.010) {
+                HealthBarView(
+                    currentHP: engine.playerHP,
+                    maxHP: engine.maxHP,
+                    accentColor: hpAccent,
+                    heartSize: min(w * 0.050, h * 0.023)
+                )
+
+                EnergyOrbView(
+                    label: "",
+                    currentCharge: engine.playerCharge,
+                    maxCharge: engine.maxCharge,
+                    accentColor: .cyberEmerald,
+                    showLabel: false,
+                    cellWidth: min(w * 0.034, 17),
+                    cellHeight: min(h * 0.029, 27)
+                )
+                .padding(.trailing, w * 0.035)
+            }
+            .frame(width: w * 0.28, alignment: .trailing)
+            .position(x: w * 0.440, y: h * 0.896)
         }
-        .frame(width: w * 0.28, alignment: .trailing)
-        .position(x: w * 0.440, y: h * 0.896)
     }
 
     // MARK: - Left of Reo's Face: Clash Result Callout (Good!! / Nice!! / Charge / Bad) with Crisp White Outline
