@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 20:24 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.32`（出した手の画面横いっぱい上下2段帯表示化・手の下のテキスト全撤去・手表示中の3拍時間バー非表示化）
+最終更新日時: 2026-11-09 20:31 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.33`（`PracticeTutorialView.swift` の `ResolvedMove` 型およびカラー指定修正・出した手の画面横いっぱい上下2段帯表示化・手の下のテキスト全撤去・手表示中の3拍時間バー非表示化）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.32`（出した手の画面横いっぱい上下2段帯表示・手の下のテキスト撤去・手表示中の3拍時間バー非表示）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.33`（出した手の画面横いっぱい上下2段帯表示・手の下のテキスト撤去・手表示中の3拍時間バー非表示）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,9 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 20:31 (`v1.0.33`)**
+  - **Xcode ビルドエラー修正 ([`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift)):** `practiceHandBand` の引数型を正しくは `ResolvedMove`（旧表記 `BattleMove` を修正）に、相手側アクセントカラー指定を `Color(red: 1.0, green: 0.16, blue: 0.88)`（未定義の `Color.cyberMagenta` を修正）に修正。
 
 - **2026-11-09 20:24 (`v1.0.32`)**
   - **バトル画面における出した手の画面横いっぱい上下2段帯表示化・手の下の文字撤去・手表示中の3拍時間バー非表示化 ([`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift)):**

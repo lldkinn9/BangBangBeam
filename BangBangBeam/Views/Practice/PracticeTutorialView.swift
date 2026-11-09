@@ -455,8 +455,8 @@ struct PracticeTutorialView: View {
     }
 
     @ViewBuilder
-    private func practiceHandBand(title: String, move: BattleMove, isPlayer: Bool) -> some View {
-        let accentColor: Color = isPlayer ? Color.cyberCyan : Color.cyberMagenta
+    private func practiceHandBand(title: String, move: ResolvedMove, isPlayer: Bool) -> some View {
+        let accentColor: Color = isPlayer ? Color.cyberCyan : Color(red: 1.0, green: 0.16, blue: 0.88)
         ZStack {
             Rectangle()
                 .fill(Color.black.opacity(0.75))
