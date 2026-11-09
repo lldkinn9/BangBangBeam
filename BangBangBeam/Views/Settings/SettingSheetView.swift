@@ -231,12 +231,12 @@ struct SettingSheetView: View {
                                 HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                                 dismiss()
                                 Task { @MainActor in
-                                    engine.startPracticeMode(openSparringTab: true)
+                                    engine.startPracticeMode()
                                 }
                             } label: {
-                                Text("練習モードで1戦")
-                                    .font(.system(size: 16, weight: .black, design: .rounded))
-                                    .tracking(1.5)
+                                Text("実践画面でルールを学ぶ (PRACTICE)")
+                                    .font(.system(size: 15, weight: .black, design: .rounded))
+                                    .tracking(1.0)
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 50)

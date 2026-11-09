@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 22:50 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.38`（`nice.wav` / `good.wav` / `bad.wav` 機能削除・3拍目の手出しタイミングで `cutin.mp3` 再生・必殺技カットインSEを `cutin3.mp3` に変更）
+最終更新日時: 2026-11-10 07:05 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.39`（Practiceモード改修：旧UI＆「フリー実戦」を廃止し、実際の最新バトル画面UI上でサイバー吹き出しによりルールを視覚的に学べる「ルール学習」専用仕様へ刷新）
 
 ---
 
@@ -13,9 +13,9 @@
 - **GitHub リポジトリ:** `https://github.com/lldkinn9/BangBangBeam.git`
 
 ### 1.1 ゲームモード & 初回起動導線
-1. **初回起動時フロー (`PracticeTutorialView`):**
-   - 初回アプリ起動時は自動的に **PRACTICE（チュートリアル）モード** を起動（`UserDefaults` 管理）。
-   - 専用UIにて「📘 ルール学習（全5ステップ・必殺プレビュー付き）」と「🎯 フリー実戦（1拍手動進行 / AUTO練習）」を切り替え可能。
+1. **初回起動時 ＆ 設定画面からの PRACTICEモード (`PracticeTutorialView`):**
+   - 初回アプリ起動時（`UserDefaults` 管理）および設定画面（「実践画面でルールを学ぶ (PRACTICE)」ボタン）から起動。
+   - 「フリー実戦」タブを廃止し、**実際の最新バトル画面UI**（`battle_screen_bg`・左上GEEK・右上GEEKステータス・右下REO・左下REOステータス・中央タイムバー/手拍子/上下横帯・斜め3コマンドボタン/金色ULTIMATEボタン・ピンチ赤ネオン演出）の上で、しっぽ付きサイバー吹き出し＆注目箇所ハイライト枠によって全6ステップで直感的にルールを学べる仕様。
 2. **KUMITEモード（メイン：全20敵キャラ対応 勝ち抜きサバイバル）:**
    - プレイヤーは主人公 **`Reo` 固定**。
    - **1周目（1〜11人目）:** 基本敵11名が登場（`geek` → `boarder` → `JK` → `engineer` → `alice` → `defective` → `spy` → `Ninja` → `pirate` → `skin` → `oldman`）。
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.38`（`nice.wav` / `good.wav` / `bad.wav` 削除・3拍目の手出しタイミングで `cutin.mp3` 再生・必殺技カットインSEを `cutin3.mp3` に変更）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.39`（Practiceモードの新バトル画面UI化・「フリー実戦」廃止・吹き出しルール学習化）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,11 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 07:05 (`v1.0.39`)**
+  - **Practiceモード改修：旧UI＆「フリー実戦」を廃止し、実際の最新バトル画面UI上で吹き出し説明によりルールを学べる「ルール学習」専用仕様に刷新 ([`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift)):**
+    1. **「フリー実戦」の廃止と「ルール学習」への一本化:** セグメントタブおよび旧レイアウトの「🎯 フリー実戦」を削除し、初回起動時・設定画面からの遷移ともに「ルール学習」のみが直接開くよう統一（[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) の遷移ボタンも「実践画面でルールを学ぶ (PRACTICE)」に更新）。
+    2. **実際の最新バトル画面UI上で吹き出し解説を表示:** [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) と同一の新バトル画面UI（`battle_screen_bg`、左上GEEK立ち絵、右上GEEKステータス、右下REO立ち絵、左下`REO (YOU)`ステータス、中央の赤い時間バー・手拍子火花演出・上下2段の横帯手表示、Reo顔左の白枠付き英字判定 `Charge / Nice!! / Good!! / Bad`、斜め3コマンドボタン `CHARGE / BEAM / BARRIER`、4チャージ金色 `ULTIMATE` ボタン、残り体力1ピンチ時の赤ネオン演出）を背面にそのまま描画し、各ステップ（全6ステップ）に合わせて盤面状態が切り替わりながら、ポインターしっぽ付きのサイバー吹き出しとハイライト枠でルールを学べるよう実装。
 
 - **2026-11-09 22:50 (`v1.0.38`)**
   - **`nice.wav` / `good.wav` / `bad.wav` 機能削除・3拍目（手出し）で `cutin.mp3` 再生・必殺技カットインSEを `cutin3.mp3` に変更 ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`cutin3.mp3`](BangBangBeam/Resources/SE/cutin3.mp3)):**
