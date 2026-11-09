@@ -13,12 +13,15 @@ enum BGMTrack: String, CaseIterable {
 enum SoundEffect: String, CaseIterable {
     case button = "button"
     case cutin = "cutin"
+    case vsAppear = "vs_appear"
 
     var poolSize: Int {
         switch self {
         case .button:
             return 4
         case .cutin:
+            return 2
+        case .vsAppear:
             return 2
         }
     }
@@ -224,6 +227,11 @@ final class SoundManager {
     /// 必殺技カットイン演出時の効果音（cutin.mp3）を再生
     func playCutinSE() {
         playSE(.cutin)
+    }
+
+    /// 対戦直前VS画面でキャラクター＆名称が登場する瞬間の効果音（vs_appear.mp3）を再生
+    func playVsAppearSE() {
+        playSE(.vsAppear)
     }
 
     /// 特定の効果音（SE）の再生を停止

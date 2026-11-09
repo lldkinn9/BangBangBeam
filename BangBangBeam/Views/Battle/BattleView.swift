@@ -71,7 +71,11 @@ struct BattleView: View {
                 PreBattleVsOverlayView(
                     enemy: engine.currentEnemy,
                     stageLabel: "STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)",
-                    winStreak: engine.winStreak
+                    winStreak: engine.winStreak,
+                    isHapticsEnabled: engine.isHapticsEnabled,
+                    onStartTapped: {
+                        engine.confirmVsScreenStart()
+                    }
                 )
                 .transition(.opacity)
                 .zIndex(8)

@@ -462,26 +462,22 @@ final class GameEngine {
             : "VS \(enemy.codeName) — 赤いバーが消える前にコマンドを選べ！"
     }
 
-    /// KUMITE戦闘開始前の演出シーケンス：1. 事前VS画面 → 2. ゲーム画面に切替＋「Ready」 → 3.「Go!!」 → 4. 3拍開始
+    /// KUMITE戦闘開始前の演出シーケンス：1. 事前VS画面で待機（「START」押下でバトル画面へ遷移）
     private func startPreBattleIntroThenRhythm(needsTransitionSettle: Bool) {
         stopTimer()
         preBattlePhase = .vsScreen
+        HapticManager.playLight(enabled: isHapticsEnabled)
+    }
+
+    /// 事前VS画面の「START」ボタン押下時：2. ゲーム画面に切替＋「Ready」 → 3.「Go!!」 → 4. 3拍開始
+    func confirmVsScreenStart() {
+        guard preBattlePhase == .vsScreen, !outcome.isFinished, activeUltimate == nil else { return }
+        stopTimer()
+        SoundManager.shared.playButtonSE()
+        HapticManager.playHeavy(enabled: isHapticsEnabled)
 
         pendingTimerTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            if needsTransitionSettle {
-                try? await Task.sleep(for: .milliseconds(160))
-            }
-            guard !Task.isCancelled else { return }
-
-            // 1. 事前画面（VS画面）表示：まず1枚目（背景のみ）→ 0.42秒後に2枚目（キャラ＆名称挿入）へアニメーション切替
-            HapticManager.playLight(enabled: self.isHapticsEnabled)
-            try? await Task.sleep(for: .milliseconds(420))
-            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
-
-            HapticManager.playHeavy(enabled: self.isHapticsEnabled)
-            try? await Task.sleep(for: .milliseconds(1480))
-            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
 
             // 2. ゲーム画面に切替 ＆「Ready」表示
             self.preBattlePhase = .ready

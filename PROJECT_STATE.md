@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 18:09 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.28`（対戦直前のVS画面に指定背景素材を組み込み・1枚目→2枚目のキャラ＆名称挿入アニメーション実装）
+最終更新日時: 2026-11-09 18:34 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.29`（対戦直前VS画面の名前切れ修正・キャラ登場SE導入・STARTボタン待機遷移・サイバー揺れ＆放電演出実装）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.28`（対戦直前のVS画面：指定背景素材 `vs_screen_bg` の表示 → キャラ立ち絵＆名称が挿入される2段階アニメーション）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.29`（対戦直前VS画面：全機種対応の名前表示調整・キャラ登場SE `vs_appear.mp3`・1秒後 `START` ボタン表示＆押下遷移・待機中の画面揺れ＆サイバー放電演出）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,13 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 18:34 (`v1.0.29`)**
+  - **対戦直前VS画面の4点改善（機種別名前見切れ修正・キャラ登場SE導入・「START」ボタン待機化・サイバー揺れ＆放電演出追加）:**
+    1. **全機種での名前見切れ修正 ([`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift)):** 9:19.5の縦長iPhoneでも左右のネーム枠が見切れないよう `canvasW = screenW`, `canvasH = screenH` の100%画面フィット座標に変更し、左上マゼンタ枠の敵名称（`enemy.codeName`）および右下シアン枠の `REO` / `(YOU)` を枠内中央に余白付きで収めるよう調整。
+    2. **キャラ＆名称登場タイミングの専用SE導入 ([`vs_appear.mp3`](BangBangBeam/Resources/SE/vs_appear.mp3) / [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift)):** サイバーパンクな重低音インパクト＋斜め放電スラッシュ＋ネオンコードチャイムを合成した `vs_appear.mp3` を生成し、`SoundEffect.vsAppear`（`playVsAppearSE()`）として登録。BGM OFF時の完全無音化および設定画面のSE音量スライダーにも完全連動。
+    3. **キャラ表示1秒後の「START」ボタン表示＆押下によるバトル開始 ([`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):** 自動遷移を廃止し、キャラ＆名称が表示されてから1.0秒後に中央「`VS`」の直下へサイバー「`START`」ボタンを表示。タップ時に `button.mp3` を鳴らしてバトル画面（`Ready` → `Go!!` → 3拍開始）へ進むよう変更。
+    4. **待機画面の画面揺れ＆サイバーチックなライブ演出 ([`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift)):** キャラ登場瞬間のインパクト・カメラシェイクに加え、待機中の常時サイバーカメラ浮遊揺れ、両キャラの呼吸フローティング、斜め境界のリアルタイム稲妻放電、中央 `VS` から飛び散る28個のネオンスパーク粒子、ホログラム走査線＆周期的グリッチスライスを30fps `TimelineView` で実装。
 
 - **2026-11-09 18:09 (`v1.0.28`)**
   - **対戦直前のVS画面への指定背景素材組み込み ＆ 1枚目→2枚目キャラ・名称挿入アニメーション実装:**
