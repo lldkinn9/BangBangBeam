@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 22:16 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.35`（3拍の手拍子にネオングリーン＆シアン火花追加・勝敗英字判定の白枠追加・体力1時の `sad.png` 常時表示＆背景の赤ネオンカラー化）
+最終更新日時: 2026-11-09 22:29 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.36`（ボイスSE 5種 `nice.wav` / `good.wav` / `bad.wav` / `you win.wav` / `you lose.wav` の組み込み＆各表示と同時の再生実装）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.35`（3拍の手拍子にネオングリーン＆シアン火花追加・勝敗英字判定の白枠追加・体力1時の `sad.png` 常時表示＆背景の赤ネオンカラー化）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.36`（ボイスSE 5種 `nice.wav` / `good.wav` / `bad.wav` / `you win.wav` / `you lose.wav` の同時再生・3拍の手拍子火花・勝敗英字白枠・体力1時の `sad.png` ＆赤ネオン背景）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,16 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 22:29 (`v1.0.36`)**
+  - **ボイスSE 5種（`nice.wav` / `good.wav` / `bad.wav` / `you win.wav` / `you lose.wav`）の組み込み＆各表示と同時の再生実装 ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):**
+    1. **ボイスSE 5種の最適化＆バンドル組み込み:** `素材/SE/voice` に格納された `nice.wav`、`good.wav`、`bad.wav`、`you win.wav`、`you lose.wav` について、表示と同時に発声されるよう冒頭無音区間を除去＆音圧均一化して `BangBangBeam/Resources/SE/` に組み込み、[`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) のプリロード再生プールに登録（BGM OFF時の完全消音および設定画面のSE音量スライダーにも完全連動）。
+    2. **各表示タイミングと同時のボイス再生 ([`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):**
+       - バトル時 `Nice!!` 表示と同時に `nice.wav`（`playVoiceNiceSE()`）を再生
+       - バトル時 `Good!!` 表示と同時に `good.wav`（`playVoiceGoodSE()`）を再生
+       - バトル時 `Bad` 表示と同時に `bad.wav`（`playVoiceBadSE()`）を再生
+       - バトル結果確定時 `YOU WIN` 表示と同時に `you win.wav`（`playVoiceYouWinSE()`）を再生
+       - バトル結果確定時 `YOU LOSE...` 表示と同時に `you lose.wav`（`playVoiceYouLoseSE()`）を再生
 
 - **2026-11-09 22:16 (`v1.0.35`)**
   - **3拍の手拍子へのネオングリーン＆シアン火花追加・勝敗英字判定の白枠付与・体力1時の `sad.png` 常時表示＆背景赤ネオンカラー化:**

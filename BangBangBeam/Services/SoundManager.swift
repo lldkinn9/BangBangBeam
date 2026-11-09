@@ -9,11 +9,34 @@ enum BGMTrack: String, CaseIterable {
     case battle2 = "bgm_battle_2"
 }
 
-/// SE（効果音）種別（今後追加されるSEもこのenumに追加するだけで一括でBGM ON/OFF設定・SE音量設定に従う）
+/// SE（効果音・ボイス）種別（今後追加されるSEもこのenumに追加するだけで一括でBGM ON/OFF設定・SE音量設定に従う）
 enum SoundEffect: String, CaseIterable {
     case button = "button"
     case cutin = "cutin"
     case superClap = "super clap"
+    case voiceNice = "nice"
+    case voiceGood = "good"
+    case voiceBad = "bad"
+    case voiceYouWin = "you win"
+    case voiceYouLose = "you lose"
+
+    var fileExtension: String {
+        switch self {
+        case .button, .cutin, .superClap:
+            return "mp3"
+        case .voiceNice, .voiceGood, .voiceBad, .voiceYouWin, .voiceYouLose:
+            return "wav"
+        }
+    }
+
+    var fileTypeHint: String {
+        switch self {
+        case .button, .cutin, .superClap:
+            return AVFileType.mp3.rawValue
+        case .voiceNice, .voiceGood, .voiceBad, .voiceYouWin, .voiceYouLose:
+            return AVFileType.wav.rawValue
+        }
+    }
 
     var poolSize: Int {
         switch self {
@@ -23,6 +46,10 @@ enum SoundEffect: String, CaseIterable {
             return 3
         case .superClap:
             return 4
+        case .voiceNice, .voiceGood, .voiceBad:
+            return 3
+        case .voiceYouWin, .voiceYouLose:
+            return 2
         }
     }
 }
@@ -171,7 +198,7 @@ final class SoundManager {
     }
 
     private func buildPlayerPool(effect: SoundEffect) -> [AVAudioPlayer] {
-        guard let url = resolveBundleURL(name: effect.rawValue, ext: "mp3"),
+        guard let url = resolveBundleURL(name: effect.rawValue, ext: effect.fileExtension),
               let data = try? Data(contentsOf: url) else {
             return []
         }
@@ -180,7 +207,7 @@ final class SoundManager {
         var pool: [AVAudioPlayer] = []
         pool.reserveCapacity(effect.poolSize)
         for _ in 0..<effect.poolSize {
-            if let player = try? AVAudioPlayer(data: data, fileTypeHint: AVFileType.mp3.rawValue) {
+            if let player = try? AVAudioPlayer(data: data, fileTypeHint: effect.fileTypeHint) {
                 player.numberOfLoops = 0
                 player.volume = initialVol
                 player.prepareToPlay()
@@ -237,6 +264,31 @@ final class SoundManager {
     /// バトル時1拍目・2拍目の手拍子効果音（super clap.mp3）を再生
     func playSuperClapSE() {
         playSE(.superClap)
+    }
+
+    /// バトル時「Nice!!」表示と同時のボイス（nice.wav）を再生
+    func playVoiceNiceSE() {
+        playSE(.voiceNice)
+    }
+
+    /// バトル時「Good!!」表示と同時のボイス（good.wav）を再生
+    func playVoiceGoodSE() {
+        playSE(.voiceGood)
+    }
+
+    /// バトル時「Bad」表示と同時のボイス（bad.wav）を再生
+    func playVoiceBadSE() {
+        playSE(.voiceBad)
+    }
+
+    /// バトル結果確定時「YOU WIN」表示と同時のボイス（you win.wav）を再生
+    func playVoiceYouWinSE() {
+        playSE(.voiceYouWin)
+    }
+
+    /// バトル結果確定時「YOU LOSE...」表示と同時のボイス（you lose.wav）を再生
+    func playVoiceYouLoseSE() {
+        playSE(.voiceYouLose)
     }
 
     /// 特定の効果音（SE）の再生を停止
