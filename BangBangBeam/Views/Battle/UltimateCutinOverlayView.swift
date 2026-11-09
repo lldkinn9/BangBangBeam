@@ -160,6 +160,9 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> PlayerContainerUIView {
+        // 必殺動画のAVPlayer初期化前にも必ず `.ambient` カテゴリを適用し、iPhoneの消音モード時は確実に無音化する
+        SoundManager.shared.ensureAudioSessionActive()
+
         let view = PlayerContainerUIView()
         view.backgroundColor = .clear
         view.clipsToBounds = true
@@ -169,9 +172,11 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
         let player = AVPlayer(playerItem: item)
         player.allowsExternalPlayback = false
         player.automaticallyWaitsToMinimizeStalling = false
+        player.audiovisualBackgroundPlaybackPolicy = .pauses
+        player.preventsDisplaySleepDuringVideoPlayback = false
         player.actionAtItemEnd = .pause
 
-        // 停止中（rate == 0）は音が出ないため、プリロード段階から音声パイプラインも有効状態で準備し冒頭音欠けを防ぐ
+        // 停止中（rate == 0）は音が出ないため、プリロード段階から音声パイプラインも準備（ゲーム内BGM OFF時は完全ミュート、ON時はiPhone消音モードに連動）
         let shouldMute = (audioVolume <= 0.001)
         player.isMuted = shouldMute
         player.volume = shouldMute ? 0.0 : audioVolume
@@ -187,6 +192,7 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PlayerContainerUIView, context: Context) {
+        SoundManager.shared.ensureAudioSessionActive()
         let shouldMute = (audioVolume <= 0.001)
         uiView.playerLayer.player?.isMuted = shouldMute
         uiView.playerLayer.player?.volume = shouldMute ? 0.0 : audioVolume
@@ -252,9 +258,13 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
             let currentSeconds = player.currentTime().seconds
             if currentSeconds.isFinite && currentSeconds > 0.05 {
                 player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak player] _ in
-                    player?.play()
+                    Task { @MainActor in
+                        SoundManager.shared.ensureAudioSessionActive()
+                        player?.play()
+                    }
                 }
             } else {
+                SoundManager.shared.ensureAudioSessionActive()
                 player.play()
             }
 

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 07:05 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.39`（Practiceモード改修：旧UI＆「フリー実戦」を廃止し、実際の最新バトル画面UI上でサイバー吹き出しによりルールを視覚的に学べる「ルール学習」専用仕様へ刷新）
+最終更新日時: 2026-11-10 08:23 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.40`（iPhone消音モード時の必殺技動画音声の完全消音化 ＆ Practiceモード旧フリー実戦コード完全撤去・吹き出し配置調整）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.39`（Practiceモードの新バトル画面UI化・「フリー実戦」廃止・吹き出しルール学習化）の動作確認
+- [ ] Mac側でローカル変更がないことを確認した上で `git pull origin main`＆クリーンビルドを実行し、実機で `v1.0.40`（本番UIのPractice吹き出しルール学習・iPhone消音モード時の必殺技動画無音化）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,16 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 08:23 (`v1.0.40`)**
+  - **iPhone消音モード時の必殺技動画BGM消音対応 ＆ Practiceモード旧フリー実戦ロジック完全除去・吹き出し配置ブラッシュアップ ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`AdManager.swift`](BangBangBeam/Services/AdManager.swift) / [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift)):**
+    1. **iPhone消音モード（マナーモード）時に必殺技動画（`AVPlayer`）の音声が鳴ってしまう問題を修正:**
+       - [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) の `ensureAudioSessionActive()` で `.ambient` カテゴリに `options: [.mixWithOthers]` を明示指定していたことで iOS の `OSStatus -50` (`badParam`) エラーが発生し `.ambient` 設定が反映されていなかった不具合を修正（オプション無しの `.ambient` 設定へ変更、併せて不要な毎フレーム再設定を省きメインスレッド負荷警告も解消）。
+       - [`AdManager.swift`](BangBangBeam/Services/AdManager.swift) で `MobileAds.shared.audioVideoManager.isAudioSessionApplicationManaged = true` を設定し、AdMob SDK による `AVAudioSession` カテゴリの書き換えを抑止。
+       - [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) の `SeamlessVideoPlayerView` で再生直前にも `.ambient` セッションを保証するよう強化し、iPhone本体の消音モードON時は通常BGM・SEと同様に必殺技動画音声も確実に消音されるよう対応。
+    2. **Practiceモード旧フリー実戦コードの完全撤去＆吹き出しレイアウト最適化:**
+       - [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`GameMode.swift`](BangBangBeam/Models/GameMode.swift) に残っていた旧フリー実戦用プロパティ（`startPracticeOnSparringTab` / `isPracticeAutoPlay` / `resetPracticeSparring` / `stepBeatManually`）を完全に削除し、どの導線から起動しても本番UIの吹き出しルール学習のみが開くよう徹底。
+       - [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) の STEP 3 / STEP 6 の吹き出し位置およびハイライト枠を最適化し、解説対象のステータスや金色 `ULTIMATE` ボタンと一切重ならないよう調整。
 
 - **2026-11-10 07:05 (`v1.0.39`)**
   - **Practiceモード改修：旧UI＆「フリー実戦」を廃止し、実際の最新バトル画面UI上で吹き出し説明によりルールを学べる「ルール学習」専用仕様に刷新 ([`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift)):**

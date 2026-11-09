@@ -127,6 +127,7 @@ final class SoundManager {
     private var audioPlayer: AVAudioPlayer? = nil
     private var bgmPlayers: [BGMTrack: AVAudioPlayer] = [:]
     private var isDucked: Bool = false
+    private var isAudioSessionConfigured: Bool = false
 
     private var effectiveBGMVolume: Float {
         let base = Float(min(1.0, max(0.0, bgmVolume)))
@@ -159,18 +160,73 @@ final class SoundManager {
             self.seVolume = min(1.0, max(0.0, UserDefaults.standard.double(forKey: seVolumeKey)))
         }
 
-        ensureAudioSessionActive()
+        ensureAudioSessionActive(forceSetActive: true)
+        registerAudioSessionNotifications()
         preloadSoundEffects()
         preloadBGMTracks()
     }
 
-    /// 広告視聴後やバックグラウンド復帰後でもBGM・SE・必殺動画音声が確実に同時再生されるようオーディオセッションを維持
-    func ensureAudioSessionActive() {
+    /// iPhone本体の消音モード（マナーモード）に必ず従う `.ambient` カテゴリを維持する
+    /// - Note: `.ambient` に対して `options: [.mixWithOthers]` を明示指定すると iOS で `OSStatus -50` (badParam) エラーとなり設定が反映されないため、オプション無しで `.ambient` を設定する（`.ambient` は標準で他アプリ音声とのミックスかつ消音スイッチ連動となる）。
+    func ensureAudioSessionActive(forceSetActive: Bool = false) {
+        let session = AVAudioSession.sharedInstance()
+        let needsCategoryUpdate = (session.category != .ambient || session.mode != .default)
+
+        guard needsCategoryUpdate || !isAudioSessionConfigured || forceSetActive else {
+            return
+        }
+
         do {
-            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-            try AVAudioSession.sharedInstance().setActive(true)
+            if needsCategoryUpdate {
+                try session.setCategory(.ambient, mode: .default)
+            }
+            if !isAudioSessionConfigured || forceSetActive {
+                try session.setActive(true)
+            }
+            isAudioSessionConfigured = true
         } catch {
-            // シミュレータ等でオーディオセッション競合が起きた場合もクラッシュさせない
+            // 万一モード指定等で競合した場合も最低限 `.ambient` カテゴリを適用して消音モードを遵守させる
+            try? session.setCategory(.ambient)
+        }
+    }
+
+    /// 着信・Siri割り込み復帰やメディアサービスリセット時にも `.ambient`（消音モード連動）を再適用し、BGM復帰を行う
+    private func registerAudioSessionNotifications() {
+        NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] notification in
+            let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let typeValue,
+                   let type = AVAudioSession.InterruptionType(rawValue: typeValue),
+                   type == .ended {
+                    self.isAudioSessionConfigured = false
+                    self.ensureAudioSessionActive(forceSetActive: true)
+                    if self.isBGMEnabled, let target = self.desiredContext {
+                        switch target {
+                        case .title:
+                            self.playTitleBGM()
+                        case .battle:
+                            self.playBattleBGM(forceNewRandom: false)
+                        }
+                    }
+                }
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isAudioSessionConfigured = false
+                self.ensureAudioSessionActive(forceSetActive: true)
+            }
         }
     }
 

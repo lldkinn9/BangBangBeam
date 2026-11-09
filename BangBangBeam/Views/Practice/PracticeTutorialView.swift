@@ -94,7 +94,7 @@ struct PracticeTutorialView: View {
             revealedPlayerMove: .valid(.charge),
             callout: .chargeSuccess
         ),
-        // STEP 3: BEAM（攻撃命中・Nice!!）
+        // STEP 3: BEAM（攻撃命中・Nice!!）— 上部の敵ダメージ（GEEK ハート2/3）と中央のBEAM横帯・左下Nice!!がすべてはっきり見えるようREOの頭上に吹き出しを配置
         PracticeLessonScenario(
             badge: "STEP 3 / 6",
             speaker: "REO // RULE GUIDE",
@@ -102,8 +102,8 @@ struct PracticeTutorialView: View {
             message: "バッテリーを 1 消費して紫の【BEAM】を発射！\n相手がチャージ中（またはお手つき無防備）なら直撃して「Nice!!」！【相手のハート -1】さらに【相手のバッテリーも -1】削れます！",
             subTip: "💡 体力は3ハート制！ビーム同士がぶつかった場合は相殺となりダメージはありません。",
             accentColor: Color(red: 1.0, green: 0.90, blue: 0.14),
-            bubbleCenterYRatio: 0.205,
-            tailDirection: .down(xRatio: 0.50),
+            bubbleCenterYRatio: 0.642,
+            tailDirection: .down(xRatio: 0.78),
             cpuHP: 2,
             cpuCharge: 0,
             cpuExpression: .sad,
@@ -166,7 +166,7 @@ struct PracticeTutorialView: View {
             revealedPlayerMove: .fumble(attempted: .beam),
             callout: .badHit
         ),
-        // STEP 6: 4チャージ到達・金色 ULTIMATE 一撃必殺！
+        // STEP 6: 4チャージ到達・金色 ULTIMATE 一撃必殺！— 上部の敵ピンチ状態も下部の金色ULTIMATEボタン＆4バッテリーもすべて見える中央に吹き出しを配置
         PracticeLessonScenario(
             badge: "STEP 6 / 6",
             speaker: "REO // RULE GUIDE",
@@ -174,7 +174,7 @@ struct PracticeTutorialView: View {
             message: "バッテリーを【4つ満タン】まで溜めると、下の3ボタンが黄金に輝く【ULTIMATE】ボタンに合体変化します！\nタップした瞬間にド派手なカットイン＆必殺技が発動し、相手のバリアや残りハートを貫通して一撃で勝利となります！",
             subTip: "👇 下の金色「ULTIMATE」ボタン（またはプレビューボタン）をタップして必殺演出を体験しよう！",
             accentColor: .cyberAmber,
-            bubbleCenterYRatio: 0.340,
+            bubbleCenterYRatio: 0.425,
             tailDirection: .down(xRatio: 0.50),
             cpuHP: 1,
             cpuCharge: 1,
@@ -183,8 +183,8 @@ struct PracticeTutorialView: View {
             playerCharge: 4,
             playerExpression: .fun,
             selectedAction: .charge,
-            showTimeBar: true,
-            timeBarFraction: 0.85,
+            showTimeBar: false,
+            timeBarFraction: 0.0,
             showClappingHands: false,
             revealedCpuMove: nil,
             revealedPlayerMove: nil,
@@ -384,7 +384,6 @@ struct PracticeTutorialView: View {
         }
         .animation(.easeInOut(duration: 0.24), value: lessonStep)
         .onAppear {
-            engine.isPracticeAutoPlay = false
             engine.stopTimer()
             lessonStep = 0
             playStepTransitionSE(for: 0)
@@ -694,14 +693,12 @@ struct PracticeTutorialView: View {
                     .position(x: w * 0.440, y: h * 0.896)
             }
         case 2:
-            // BEAM ボタンと Nice!! ＆ 敵ステータスをハイライト
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(accent, lineWidth: 2.5)
-                    .shadow(color: accent, radius: 10)
-                    .frame(width: w * 0.32, height: 106)
-                    .position(x: w * 0.50, y: h * 0.646)
-            }
+            // ダメージ＆チャージ減少した敵ステータス枠をハイライト
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(accent, style: StrokeStyle(lineWidth: 2.4, dash: [7, 4]))
+                .shadow(color: accent, radius: 10)
+                .frame(width: w * 0.52, height: h * 0.145)
+                .position(x: w * 0.692, y: h * 0.112)
         case 3:
             // BARRIER ボタンをハイライト
             RoundedRectangle(cornerRadius: 14)

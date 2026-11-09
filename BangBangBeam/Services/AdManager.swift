@@ -61,7 +61,10 @@ final class AdManager: NSObject {
     /// アプリ起動時の AdMob SDK 初期化 & ATT トラッキング許可リクエスト
     func startSDKAndRequestATT() {
         #if canImport(GoogleMobileAds)
+        // AdMob SDK が勝手に AVAudioSession カテゴリを書き換えて消音モードを貫通させないようアプリ側管理に固定
+        MobileAds.shared.audioVideoManager.isAudioSessionApplicationManaged = true
         MobileAds.shared.start(completionHandler: nil)
+        SoundManager.shared.ensureAudioSessionActive()
         loadRewardedAd()
         #endif
 
@@ -181,6 +184,7 @@ final class AdManager: NSObject {
 extension AdManager: FullScreenContentDelegate {
     nonisolated func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         Task { @MainActor in
+            SoundManager.shared.ensureAudioSessionActive(forceSetActive: true)
             SoundManager.shared.setDucked(false)
             self.rewardedAd = nil
             let earned = self.didEarnRewardInCurrentSession
@@ -196,6 +200,7 @@ extension AdManager: FullScreenContentDelegate {
 
     nonisolated func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         Task { @MainActor in
+            SoundManager.shared.ensureAudioSessionActive(forceSetActive: true)
             SoundManager.shared.setDucked(false)
             self.rewardedAd = nil
             self.pendingRewardHandler = nil

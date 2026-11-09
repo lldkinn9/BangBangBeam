@@ -21,7 +21,7 @@ enum GameMode: String, CaseIterable, Identifiable, Sendable {
         case .kumite:
             return "1vs1 CPU対戦（勝負制）"
         case .practice:
-            return "1拍ずつ手動で進められる練習モード"
+            return "実践画面で学ぶルールガイド"
         }
     }
 }

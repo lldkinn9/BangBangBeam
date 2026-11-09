@@ -127,7 +127,6 @@ final class GameEngine {
     var currentScreen: AppScreen = .title
     var gameMode: GameMode = .kumite
     var isFirstLaunchTutorial: Bool = false
-    var startPracticeOnSparringTab: Bool = false
 
     // MARK: - Constants & Settings
     let maxHP: Int = 3
@@ -203,18 +202,6 @@ final class GameEngine {
 
     /// 4チャージ一撃必殺発動中のカットイン＆動画演出状態
     var activeUltimate: UltimatePresentation? = nil
-
-    /// PRACTICEモードのフリー練習タブ用自動再生フラグ
-    var isPracticeAutoPlay: Bool = false {
-        didSet {
-            guard currentScreen == .practiceTutorial, !outcome.isFinished, activeUltimate == nil else { return }
-            if isPracticeAutoPlay {
-                startTimer()
-            } else {
-                stopTimer()
-            }
-        }
-    }
 
     // MARK: - Timer
     private var rhythmTimer: Timer? = nil
@@ -376,26 +363,14 @@ final class GameEngine {
         startPreBattleIntroThenRhythm(needsTransitionSettle: false)
     }
 
-    /// PRACTICE（ルール学習＆練習専用UI）を開始
-    func startPracticeMode(openSparringTab: Bool = false) {
+    /// PRACTICE（本番バトルUI上の吹き出しルール学習）を開始
+    func startPracticeMode() {
         stopTimer()
         gameMode = .practice
-        startPracticeOnSparringTab = openSparringTab
-        isPracticeAutoPlay = false
         setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
         preBattlePhase = .none
         currentScreen = .practiceTutorial
         SoundManager.shared.playBattleBGM(forceNewRandom: true)
-    }
-
-    /// PRACTICE内のフリー実戦リセット
-    func resetPracticeSparring() {
-        stopTimer()
-        setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
-        preBattlePhase = .none
-        if isPracticeAutoPlay {
-            startTimer()
-        }
     }
 
     /// タイトル画面へ戻る（勝利後、または敗退後でも復活回数が残っている場合に限り連勝数と復活回数を維持保存）
@@ -415,7 +390,6 @@ final class GameEngine {
             }
         }
         activeUltimate = nil
-        isPracticeAutoPlay = false
         SoundManager.shared.setDucked(false)
         currentScreen = .title
         SoundManager.shared.playTitleBGM()
@@ -463,13 +437,6 @@ final class GameEngine {
         statusDetailText = "REO 一撃必殺発動！！"
         HapticManager.playHeavy(enabled: isHapticsEnabled)
         triggerUltimateSequence(character: .reo, isPlayer: true)
-    }
-
-    /// 手動で1拍進める（PRACTICE用）
-    func stepBeatManually() {
-        guard !outcome.isFinished, activeUltimate == nil else { return }
-        preBattlePhase = .none
-        advanceBeat()
     }
 
     // MARK: - Match Setup & Pre-Battle Intro Sequence
