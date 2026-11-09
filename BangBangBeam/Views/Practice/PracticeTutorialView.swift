@@ -347,25 +347,24 @@ struct PracticeTutorialView: View {
 
             // 中央リズム＆赤いタイムバー＆手イラスト確認パネル
             VStack(spacing: 8) {
-                RhythmTimeBarView(engine: engine)
-                    .padding(.horizontal, 8)
+                let isShowingHands = (engine.beat == 3 && engine.revealedPlayerMove != nil && engine.revealedCpuMove != nil)
+
+                if !isShowingHands {
+                    RhythmTimeBarView(engine: engine)
+                        .padding(.horizontal, 8)
+                }
 
                 if engine.beat == 1 || engine.beat == 2 {
                     Image("hand_clap")
                         .resizable()
                         .scaledToFit()
                         .frame(height: 92)
-                } else if engine.beat == 3, let pMove = engine.revealedPlayerMove {
-                    if let hAsset = pMove.handAssetName {
-                        Image(hAsset)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 92)
-                    } else {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(Color.cyberDanger)
-                            .frame(height: 92)
+                } else if isShowingHands,
+                          let pMove = engine.revealedPlayerMove,
+                          let cMove = engine.revealedCpuMove {
+                    VStack(spacing: 6) {
+                        practiceHandBand(title: "GEEK", move: cMove, isPlayer: false)
+                        practiceHandBand(title: "YOU", move: pMove, isPlayer: true)
                     }
                 } else {
                     Image("hand_clap")
@@ -374,19 +373,9 @@ struct PracticeTutorialView: View {
                         .frame(height: 82)
                         .opacity(0.5)
                 }
-
-                Text(engine.calloutText)
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-
-                Text(engine.statusDetailText)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(engine.playerCharge >= engine.maxCharge ? Color.cyberAmber : Color.cyberEmerald)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
             }
             .frame(maxWidth: .infinity)
-            .padding(10)
+            .padding(.vertical, 10)
             .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal, 14)
 
@@ -462,6 +451,45 @@ struct PracticeTutorialView: View {
             .padding(12)
             .background(Color.cyberPanel.opacity(0.92), in: RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal, 14)
+        }
+    }
+
+    @ViewBuilder
+    private func practiceHandBand(title: String, move: BattleMove, isPlayer: Bool) -> some View {
+        let accentColor: Color = isPlayer ? Color.cyberCyan : Color.cyberMagenta
+        ZStack {
+            Rectangle()
+                .fill(Color.black.opacity(0.75))
+            if let assetName = move.handAssetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 60)
+                    .scaleEffect(x: isPlayer ? 1.0 : -1.0, y: 1.0)
+            } else {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 28, weight: .black))
+                    .foregroundStyle(Color.cyberDanger)
+            }
+            HStack {
+                if isPlayer { Spacer() }
+                Text(title)
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                    .foregroundStyle(accentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.70), in: Capsule())
+                if !isPlayer { Spacer() }
+            }
+            .padding(.horizontal, 10)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 66)
+        .overlay(alignment: .top) {
+            Rectangle().fill(accentColor.opacity(0.85)).frame(height: 1.5)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(accentColor.opacity(0.85)).frame(height: 1.5)
         }
     }
 }

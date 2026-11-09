@@ -98,9 +98,9 @@ struct BattleView: View {
                 // MARK: 5. 左下シアン枠内：3緑ハート・4緑バッテリー（4チャージで黄色発光＋電撃アニメーション）
                 playerHudContents(w: w, h: h)
 
-                // MARK: 6. 中央3Dグリッドアリーナ：1本の赤いタイムバー ＆ Ready/Go!!/手イラスト激突
+                // MARK: 6. 中央3Dグリッドアリーナ：1本の赤いタイムバー ＆ Ready/Go!!/上下2段の横帯手イラスト表示
                 handsArenaStage(w: w, h: h)
-                    .frame(width: w * 0.94)
+                    .frame(width: w)
                     .position(x: w * 0.50, y: h * 0.432)
 
                 // MARK: 7. 斜め3コマンドボタン（CHARGE / BEAM / BARRIER ⇄ 4チャージ金色 ULTIMATE）
@@ -233,12 +233,21 @@ struct BattleView: View {
         .position(x: w * 0.440, y: h * 0.896)
     }
 
-    // MARK: - Center: Red Time Bar & Hand Clash / Ready-Go Arena
+    // MARK: - Center: Red Time Bar & Hand Clash (Full-Width Vertical Bands) / Ready-Go Arena
     private func handsArenaStage(w: CGFloat, h: CGFloat) -> some View {
-        VStack(spacing: h * 0.010) {
-            // 1本の時間の赤いバー（右から左へ消えていく描写）
-            RhythmTimeBarView(engine: engine)
-                .padding(.horizontal, 10)
+        let isShowingRevealedHands = (
+            engine.preBattlePhase == .none &&
+            engine.beat == 3 &&
+            engine.revealedPlayerMove != nil &&
+            engine.revealedCpuMove != nil
+        )
+
+        return VStack(spacing: h * 0.012) {
+            // お互いの手を表示している間（3拍目）は3拍の赤い時間バーを非表示にする
+            if !isShowingRevealedHands {
+                RhythmTimeBarView(engine: engine)
+                    .padding(.horizontal, w * 0.06)
+            }
 
             ZStack {
                 if engine.preBattlePhase == .ready {
@@ -268,107 +277,164 @@ struct BattleView: View {
                         .shadow(color: Color.cyberDanger, radius: 28)
                         .transition(.scale(scale: 1.25).combined(with: .opacity))
                 } else if engine.beat == 1 || engine.beat == 2 {
-                    // 1・2拍目：手拍子イラスト
-                    VStack(spacing: 4) {
-                        Image("hand_clap")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: min(h * 0.115, 98))
-                            .shadow(color: Color.cyberCyan.opacity(0.85), radius: 14)
-                            .scaleEffect(engine.beat == 2 ? 1.08 : 0.98)
-                            .animation(.spring(response: 0.2, dampingFraction: 0.55), value: engine.beat)
-
-                        Text(engine.calloutText)
-                            .font(.system(size: 22, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .shadow(color: Color.cyberCyan, radius: 10)
-                    }
+                    // 1・2拍目：手拍子イラストのみ表示（「バン！」等の下部文字は非表示）
+                    Image("hand_clap")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: min(h * 0.125, 108))
+                        .shadow(color: Color.cyberCyan.opacity(0.85), radius: 14)
+                        .scaleEffect(engine.beat == 2 ? 1.08 : 0.98)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.55), value: engine.beat)
                 } else if engine.beat == 3,
                           let pMove = engine.revealedPlayerMove,
                           let cMove = engine.revealedCpuMove {
-                    // 3拍目：両者の手イラスト激突表示
-                    VStack(spacing: 4) {
-                        HStack(spacing: 12) {
-                            handMoveCard(owner: "REO", move: pMove)
-                            Text("VS")
-                                .font(.system(size: 15, weight: .black, design: .monospaced))
-                                .italic()
-                                .foregroundStyle(Color.cyberCyan)
-                                .shadow(color: Color.cyberCyan, radius: 8)
-                            handMoveCard(owner: engine.currentEnemy.codeName, move: cMove)
-                        }
+                    // 3拍目：画面横いっぱいの帯状に上下2段で表示（上段＝相手の手、下段＝自分の手）
+                    VStack(spacing: h * 0.010) {
+                        handMoveHorizontalBand(
+                            owner: engine.currentEnemy.codeName,
+                            move: cMove,
+                            isEnemy: true,
+                            w: w,
+                            h: h
+                        )
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
 
-                        Text(engine.calloutText)
-                            .font(.system(size: 19, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .shadow(color: Color.cyberEmerald, radius: 10)
+                        handMoveHorizontalBand(
+                            owner: "REO",
+                            move: pMove,
+                            isEnemy: false,
+                            w: w,
+                            h: h
+                        )
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 } else {
-                    VStack(spacing: 4) {
-                        Image("hand_clap")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: min(h * 0.10, 84))
-                            .opacity(0.55)
-
-                        Text(engine.calloutText)
-                            .font(.system(size: 22, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .shadow(color: Color.cyberCyan, radius: 10)
-                    }
+                    Image("hand_clap")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: min(h * 0.11, 92))
+                        .opacity(0.55)
                 }
             }
-            .frame(height: min(h * 0.16, 132))
-            .animation(.spring(response: 0.24, dampingFraction: 0.72), value: engine.preBattlePhase)
-
-            Text(engine.statusDetailText)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(engine.playerCharge >= engine.maxCharge ? Color.cyberAmber : Color.cyberCyan)
-                .shadow(color: .black, radius: 4)
-                .multilineTextAlignment(.center)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .padding(.horizontal, 8)
+            .frame(height: isShowingRevealedHands ? min(h * 0.245, 206) : min(h * 0.16, 134))
+            .animation(.spring(response: 0.24, dampingFraction: 0.76), value: engine.preBattlePhase)
+            .animation(.spring(response: 0.22, dampingFraction: 0.78), value: engine.beat)
         }
     }
 
-    private func handMoveCard(owner: String, move: ResolvedMove) -> some View {
-        VStack(spacing: 3) {
-            Text(owner)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.75))
+    /// 3拍目に出した手を画面横いっぱいのサイバー帯として上下に表示するコンポーネント
+    private func handMoveHorizontalBand(
+        owner: String,
+        move: ResolvedMove,
+        isEnemy: Bool,
+        w: CGFloat,
+        h: CGFloat
+    ) -> some View {
+        let bandColor: Color = isEnemy ? enemyNeonMagenta : Color.cyberCyan
+        let bandHeight: CGFloat = min(h * 0.112, 92)
 
+        return ZStack {
+            // 横いっぱいの半透明サイバー帯背景
+            LinearGradient(
+                colors: isEnemy
+                    ? [
+                        Color.black.opacity(0.45),
+                        Color(red: 0.28, green: 0.04, blue: 0.34).opacity(0.82),
+                        move.accentColor.opacity(0.32),
+                        Color.black.opacity(0.45)
+                    ]
+                    : [
+                        Color.black.opacity(0.45),
+                        move.accentColor.opacity(0.32),
+                        Color(red: 0.03, green: 0.24, blue: 0.32).opacity(0.82),
+                        Color.black.opacity(0.45)
+                    ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+
+            // 上下の横いっぱいネオン境界ライン
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                bandColor.opacity(0.25),
+                                bandColor,
+                                Color.white.opacity(0.9),
+                                bandColor,
+                                bandColor.opacity(0.25)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 1.8)
+                    .shadow(color: bandColor, radius: 6)
+
+                Spacer(minLength: 0)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                bandColor.opacity(0.25),
+                                move.accentColor,
+                                bandColor,
+                                bandColor.opacity(0.25)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 1.8)
+                    .shadow(color: bandColor, radius: 6)
+            }
+
+            // 帯内のオーナー名ラベル（上段＝左端、下段＝右端）
+            HStack {
+                if isEnemy {
+                    Text(owner)
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .shadow(color: bandColor, radius: 6)
+                        .padding(.leading, 14)
+                    Spacer()
+                } else {
+                    Spacer()
+                    Text(owner)
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .shadow(color: bandColor, radius: 6)
+                        .padding(.trailing, 14)
+                }
+            }
+
+            // 中央：出した手のイラスト（お手つき時は NO GUARD アイコン）
             if let asset = move.handAssetName {
                 Image(asset)
                     .resizable()
+                    .interpolation(.high)
                     .scaledToFit()
-                    .frame(width: 100, height: 66)
-                    .shadow(color: move.accentColor.opacity(0.85), radius: 8)
+                    .frame(height: bandHeight * 0.90)
+                    .scaleEffect(x: isEnemy ? -1.0 : 1.0, y: 1.0)
+                    .shadow(color: move.accentColor.opacity(0.9), radius: 10)
             } else {
-                VStack(spacing: 2) {
+                HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(Color.cyberDanger)
                     Text("NO GUARD")
-                        .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                        .font(.system(size: 13, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.cyberDanger)
                 }
-                .frame(width: 100, height: 66)
+                .shadow(color: Color.cyberDanger.opacity(0.8), radius: 8)
             }
-
-            Text(move.displayLabel)
-                .font(.system(size: 10.5, weight: .bold))
-                .foregroundStyle(move.accentColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(move.accentColor.opacity(0.5), lineWidth: 1)
-        )
+        .frame(width: w, height: bandHeight)
+        .clipped()
     }
 
     // MARK: - KUMITE Result Overlay (YOU WIN / YOU LOSE...)
