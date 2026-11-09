@@ -1,23 +1,34 @@
 import SwiftUI
 
-/// 製品版バトルアリーナ画面（1本赤タイムバー・横並び3コマンド CHARGE / BEAM / BARRIER・4チャージ金色発光 ULTIMATE 即時発動対応）
+/// 製品版バトルアリーナ画面（新サイバーHUDデザイン・事前VS画面＆Ready/Go!!導入・4チャージ電撃バッテリー・斜め3ボタン＆金色ULTIMATE対応）
 struct BattleView: View {
     @Bindable var engine: GameEngine
     @Bindable private var adManager = AdManager.shared
     @Bindable private var soundManager = SoundManager.shared
     @State private var isShowingRankingFallback: Bool = false
 
+    private let enemyNeonMagenta = Color(red: 0.94, green: 0.20, blue: 0.84)
+    private let enemyNeonPurple = Color(red: 0.68, green: 0.22, blue: 0.96)
+
     var body: some View {
         let isUltReady = engine.playerCharge >= engine.maxCharge
 
         ZStack {
-            // MARK: 背景グラデーション
+            // MARK: 1. サイバー都市＆3Dパースペクティブグリッド背景
             LinearGradient(
-                colors: [Color.cyberBlack, Color.cyberPanel, Color.cyberBlack],
+                colors: [
+                    Color(red: 0.04, green: 0.05, blue: 0.12),
+                    Color(red: 0.06, green: 0.10, blue: 0.20),
+                    Color(red: 0.03, green: 0.05, blue: 0.10)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
+
+            BattlePerspectiveGridView(gridColor: Color.cyberCyan.opacity(0.24))
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             if isUltReady {
                 RadialGradient(
@@ -26,45 +37,47 @@ struct BattleView: View {
                         Color.cyberAmber.opacity(0.05),
                         Color.clear
                     ],
-                    center: .bottom,
-                    startRadius: 20,
-                    endRadius: 380
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            } else if engine.beat == 3 {
-                RadialGradient(
-                    colors: [
-                        Color.cyberCyan.opacity(0.24),
-                        Color.cyberEmerald.opacity(0.08),
-                        Color.clear
-                    ],
                     center: .center,
-                    startRadius: 10,
-                    endRadius: 340
+                    startRadius: 20,
+                    endRadius: 360
                 )
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
             }
 
-            // MARK: メイン3段レイアウト
-            VStack(spacing: 8) {
-                headerBar
+            // MARK: 2. メイン4段構成（上部:敵HUD → 中央:リズム＆手激突 → 中下:斜め3コマンド/ULTIMATE → 下部:REO HUD）
+            VStack(spacing: 4) {
+                enemyFighterHUD
 
-                enemyFighterCard
-
-                Spacer(minLength: 2)
+                Spacer(minLength: 0)
 
                 handsArenaStage
 
                 Spacer(minLength: 2)
 
-                playerControlCard
-            }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 10)
+                // 画面下部 REO HUD の直上に配置されたコマンドデッキ（CHARGE / BEAM / BARRIER ⇄ 金色 ULTIMATE）
+                BattleCommandDeckView(engine: engine)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 2)
 
-            // MARK: 4チャージ一撃必殺 カットイン＆必殺動画オーバーレイ
+                playerFighterHUD
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 2)
+            .padding(.bottom, 4)
+
+            // MARK: 3. 戦闘開始前の「事前画面（VS画面）」オーバーレイ
+            if engine.preBattlePhase == .vsScreen {
+                PreBattleVsOverlayView(
+                    enemy: engine.currentEnemy,
+                    stageLabel: "STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)",
+                    winStreak: engine.winStreak
+                )
+                .transition(.opacity)
+                .zIndex(8)
+            }
+
+            // MARK: 4. 4チャージ一撃必殺 カットイン＆必殺動画オーバーレイ
             if let ult = engine.activeUltimate {
                 UltimateCutinOverlayView(
                     character: ult.character,
@@ -75,7 +88,7 @@ struct BattleView: View {
                 .zIndex(10)
             }
 
-            // MARK: 勝敗・次ステージ遷移リザルトオーバーレイ
+            // MARK: 5. 勝敗・次ステージ遷移リザルトオーバーレイ
             if engine.outcome.isFinished && engine.activeUltimate == nil {
                 kumiteResultOverlay
                     .transition(.opacity.combined(with: .scale(scale: 0.94)))
@@ -83,127 +96,173 @@ struct BattleView: View {
             }
         }
         .animation(.easeInOut(duration: 0.22), value: engine.outcome)
+        .animation(.easeInOut(duration: 0.22), value: engine.preBattlePhase)
         .sheet(isPresented: $isShowingRankingFallback) {
             RankingInfoSheetView()
         }
     }
 
-    // MARK: - 1. Header Bar（バトル中はタイトルへ戻れない仕様）
-    private var headerBar: some View {
-        VStack(spacing: 1) {
-            HStack(spacing: 6) {
-                if engine.currentLoopNumber > 1 {
-                    Text("LOOP \(engine.currentLoopNumber)")
-                        .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Color.cyberAmber, in: Capsule())
-                }
-                Text("STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)")
-                    .font(.system(size: 13, weight: .black, design: .monospaced))
-                    .foregroundStyle(.white)
-            }
-
-            Text("🔥 WIN STREAK: \(engine.winStreak)")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.cyberEmerald)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 2)
-    }
-
-    // MARK: - 2. Enemy Fighter Card (立ち絵 + HP3 + チャージ0〜4)
-    private var enemyFighterCard: some View {
-        HStack(spacing: 12) {
-            // 敵キャラクター透過立ち絵ポートレート
-            ZStack(alignment: .bottom) {
-                CyberShape(cutSize: 10)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.cyberDanger.opacity(0.24), Color.black.opacity(0.65)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-
-                Image(engine.currentEnemy.standingAsset(for: engine.cpuExpression))
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 78, height: 92)
-                    .padding(.top, 4)
-
-                CyberShape(cutSize: 10)
-                    .strokeBorder(Color.cyberDanger.opacity(0.55), lineWidth: 1.2)
-            }
-            .frame(width: 84, height: 96)
-            .clipShape(CyberShape(cutSize: 10))
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(engine.currentEnemy.codeName)
-                        .font(.system(size: 17, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-
-                    Spacer()
-
-                    HealthBarView(
-                        currentHP: engine.cpuHP,
-                        maxHP: engine.maxHP,
-                        accentColor: .cyberDanger
-                    )
-                }
-
-                HStack {
-                    EnergyOrbView(
-                        label: "CHARGE",
-                        currentCharge: engine.cpuCharge,
-                        maxCharge: engine.maxCharge,
-                        accentColor: .cyberCyan
-                    )
-                    Spacer()
-                    if engine.cpuCharge >= engine.maxCharge {
-                        Text("⚠️ ULTIMATE READY")
-                            .font(.system(size: 9, weight: .black, design: .monospaced))
-                            .foregroundStyle(Color.cyberAmber)
+    // MARK: - Top: Enemy Fighter HUD (左上: 大型キャラ立ち絵[表情変化] ＋ 右上: マゼンタサイバーHUD枠)
+    private var enemyFighterHUD: some View {
+        ZStack(alignment: .topLeading) {
+            // 右側：マゼンタ発光サイバーHUDボックス
+            VStack(alignment: .trailing, spacing: 3) {
+                // 上部ステージ・連勝マイクロバー
+                HStack(spacing: 8) {
+                    if engine.currentLoopNumber > 1 {
+                        Text("LOOP \(engine.currentLoopNumber)")
+                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.cyberAmber, in: Capsule())
                     }
+                    Text("STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)")
+                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.85))
+                    Text("🔥\(engine.winStreak)連勝")
+                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.cyberEmerald)
                 }
-            }
-        }
-        .padding(10)
-        .background(
-            CyberShape(cutSize: 14)
-                .fill(Color.cyberPanel.opacity(0.88))
-                .overlay(
+                .padding(.trailing, 8)
+
+                ZStack(alignment: .leading) {
                     CyberShape(cutSize: 14)
-                        .strokeBorder(Color.cyberDanger.opacity(0.4), lineWidth: 1.2)
-                )
-        )
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.20, green: 0.04, blue: 0.26).opacity(0.92),
+                                    Color(red: 0.10, green: 0.02, blue: 0.16).opacity(0.88)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
+                    CyberShape(cutSize: 14)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [enemyNeonMagenta, enemyNeonPurple, enemyNeonMagenta.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2.0
+                        )
+
+                    VStack(alignment: .leading, spacing: 7) {
+                        HStack {
+                            Text(engine.currentEnemy.codeName)
+                                .font(.system(size: 22, weight: .black, design: .rounded))
+                                .tracking(1.5)
+                                .foregroundStyle(.white)
+                                .shadow(color: enemyNeonMagenta, radius: 8)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.65)
+
+                            Spacer()
+
+                            Text("////// 05-B")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(enemyNeonMagenta.opacity(0.7))
+                        }
+
+                        HealthBarView(
+                            currentHP: engine.cpuHP,
+                            maxHP: engine.maxHP,
+                            accentColor: enemyNeonMagenta,
+                            heartSize: 18
+                        )
+
+                        EnergyOrbView(
+                            label: "",
+                            currentCharge: engine.cpuCharge,
+                            maxCharge: engine.maxCharge,
+                            accentColor: .cyberCyan,
+                            showLabel: false,
+                            cellWidth: 16,
+                            cellHeight: 24
+                        )
+                    }
+                    .padding(.leading, 36)
+                    .padding(.trailing, 14)
+                    .padding(.vertical, 10)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.leading, 102)
+                .shadow(color: enemyNeonMagenta.opacity(0.48), radius: 12)
+
+                // 下部サイバー装飾ライン
+                HStack(spacing: 6) {
+                    Capsule()
+                        .fill(enemyNeonMagenta.opacity(0.55))
+                        .frame(width: 48, height: 3)
+                    Capsule()
+                        .fill(enemyNeonPurple.opacity(0.35))
+                        .frame(width: 24, height: 3)
+                }
+                .padding(.trailing, 12)
+            }
+
+            // 左上：敵キャラクター大型立ち絵（勝敗・被弾で normal / fun / sad に表情変化）
+            Image(engine.currentEnemy.standingAsset(for: engine.cpuExpression))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 138, height: 156)
+                .shadow(color: enemyNeonMagenta.opacity(0.65), radius: 12)
+                .offset(x: -2, y: 2)
+                .scaleEffect(engine.cpuExpression == .fun ? 1.05 : (engine.cpuExpression == .sad ? 0.95 : 1.0))
+                .animation(.spring(response: 0.25, dampingFraction: 0.65), value: engine.cpuExpression)
+        }
+        .frame(height: 156)
     }
 
-    // MARK: - 3. Center Hands & Red Time Bar Stage
+    // MARK: - Center: Red Time Bar & Hand Clash / Ready-Go Arena
     private var handsArenaStage: some View {
-        VStack(spacing: 10) {
-            // 1本の赤いタイムバー（右から左へ滑らかに消えていく描写）
+        VStack(spacing: 8) {
+            // 1本の時間の赤いバー（右から左へ消えていく描写）
             RhythmTimeBarView(engine: engine)
-                .padding(.horizontal, 14)
-                .padding(.top, 2)
+                .padding(.horizontal, 12)
 
-            // 手イラスト演出エリア
             ZStack {
-                if engine.beat == 1 || engine.beat == 2 {
+                if engine.preBattlePhase == .ready {
+                    // 事前画面から切り替わった直後の「Ready」表示
+                    Text("Ready")
+                        .font(.system(size: 54, weight: .black, design: .rounded))
+                        .italic()
+                        .tracking(3)
+                        .foregroundStyle(.white)
+                        .shadow(color: Color.cyberCyan, radius: 14)
+                        .shadow(color: Color.cyberCyan, radius: 28)
+                        .transition(.scale(scale: 0.75).combined(with: .opacity))
+                } else if engine.preBattlePhase == .go {
+                    // 「Go!!」表示（この直後に3拍開始）
+                    Text("Go!!")
+                        .font(.system(size: 64, weight: .black, design: .rounded))
+                        .italic()
+                        .tracking(4)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, Color(red: 1.0, green: 0.92, blue: 0.35), Color.cyberAmber],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: Color.cyberAmber, radius: 16)
+                        .shadow(color: Color.cyberDanger, radius: 28)
+                        .transition(.scale(scale: 1.25).combined(with: .opacity))
+                } else if engine.beat == 1 || engine.beat == 2 {
                     // 1・2拍目：手拍子イラスト
                     VStack(spacing: 4) {
                         Image("hand_clap")
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 112)
-                            .shadow(color: Color.cyberCyan.opacity(0.8), radius: 14)
+                            .frame(height: 100)
+                            .shadow(color: Color.cyberCyan.opacity(0.85), radius: 14)
                             .scaleEffect(engine.beat == 2 ? 1.08 : 0.98)
                             .animation(.spring(response: 0.2, dampingFraction: 0.55), value: engine.beat)
 
                         Text(engine.calloutText)
-                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .font(.system(size: 24, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .shadow(color: Color.cyberCyan, radius: 10)
                     }
@@ -211,167 +270,196 @@ struct BattleView: View {
                           let pMove = engine.revealedPlayerMove,
                           let cMove = engine.revealedCpuMove {
                     // 3拍目：両者の手イラスト激突表示
-                    VStack(spacing: 6) {
+                    VStack(spacing: 4) {
                         HStack(spacing: 12) {
                             handMoveCard(owner: "REO", move: pMove)
                             Text("VS")
-                                .font(.system(size: 14, weight: .black, design: .monospaced))
+                                .font(.system(size: 15, weight: .black, design: .monospaced))
                                 .italic()
                                 .foregroundStyle(Color.cyberCyan)
+                                .shadow(color: Color.cyberCyan, radius: 8)
                             handMoveCard(owner: engine.currentEnemy.codeName, move: cMove)
                         }
 
                         Text(engine.calloutText)
-                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .font(.system(size: 20, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .shadow(color: Color.cyberEmerald, radius: 10)
                     }
                 } else {
-                    // 0拍目：導入
-                    VStack(spacing: 8) {
+                    VStack(spacing: 6) {
                         Image("hand_clap")
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 92)
+                            .frame(height: 86)
                             .opacity(0.55)
 
                         Text(engine.calloutText)
-                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .font(.system(size: 24, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .shadow(color: Color.cyberCyan, radius: 10)
                     }
                 }
             }
-            .frame(height: 148)
+            .frame(height: 132)
+            .animation(.spring(response: 0.24, dampingFraction: 0.72), value: engine.preBattlePhase)
 
             Text(engine.statusDetailText)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(engine.playerCharge >= engine.maxCharge ? Color.cyberAmber : Color.cyberEmerald)
+                .font(.system(size: 11.5, weight: .bold))
+                .foregroundStyle(engine.playerCharge >= engine.maxCharge ? Color.cyberAmber : Color.cyberCyan)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(
-            CyberShape(cutSize: 16)
-                .fill(Color.black.opacity(0.45))
-                .overlay(
-                    CyberShape(cutSize: 16)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [Color.cyberDanger.opacity(0.55), Color.cyberCyan.opacity(0.45)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.2
-                        )
-                )
-        )
+        .padding(.vertical, 4)
     }
 
     private func handMoveCard(owner: String, move: ResolvedMove) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             Text(owner)
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.65))
+                .foregroundStyle(Color.white.opacity(0.7))
 
             if let asset = move.handAssetName {
                 Image(asset)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 105, height: 74)
+                    .frame(width: 102, height: 68)
                     .shadow(color: move.accentColor.opacity(0.85), radius: 8)
             } else {
                 VStack(spacing: 2) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: 22))
                         .foregroundStyle(Color.cyberDanger)
                     Text("NO GUARD")
-                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                        .font(.system(size: 9.5, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.cyberDanger)
                 }
-                .frame(width: 105, height: 74)
+                .frame(width: 102, height: 68)
             }
 
             Text(move.displayLabel)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 10.5, weight: .bold))
                 .foregroundStyle(move.accentColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+        .background(Color.black.opacity(0.48), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(move.accentColor.opacity(0.45), lineWidth: 1)
+        )
     }
 
-    // MARK: - 4. Player (Reo) Status & Bottom Command Deck
-    private var playerControlCard: some View {
+    // MARK: - Bottom: Player (REO) HUD (左下: シアンサイバーHUD枠 ＋ 右下: 大型REO立ち絵[表情変化])
+    private var playerFighterHUD: some View {
         let isUltReady = engine.playerCharge >= engine.maxCharge
-        let cardAccent: Color = isUltReady ? .cyberAmber : .cyberEmerald
+        let hudBorderColor: Color = isUltReady ? .cyberAmber : .cyberCyan
 
-        return VStack(spacing: 10) {
-            // Reo ステータス行
-            HStack(spacing: 10) {
-                ZStack(alignment: .bottom) {
-                    CyberShape(cutSize: 8)
-                        .fill(cardAccent.opacity(0.2))
-
-                    Image(CharacterProfile.reo.standingAsset(for: engine.playerExpression))
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 54, height: 64)
-
-                    CyberShape(cutSize: 8)
-                        .strokeBorder(cardAccent.opacity(0.65), lineWidth: 1)
-                }
-                .frame(width: 58, height: 66)
-                .clipShape(CyberShape(cutSize: 8))
-
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack {
-                        Text("REO (YOU)")
-                            .font(.system(size: 14, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-
-                        Spacer()
-
-                        HealthBarView(
-                            currentHP: engine.playerHP,
-                            maxHP: engine.maxHP,
-                            accentColor: .cyberEmerald
-                        )
+        return ZStack(alignment: .bottomTrailing) {
+            // 左側：シアン／ティール発光サイバーHUDボックス
+            VStack(alignment: .leading, spacing: 3) {
+                // 上部サイバー装飾テレメトリライン
+                HStack(spacing: 5) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        Capsule()
+                            .fill(Color.cyberCyan.opacity(0.65))
+                            .frame(width: 7, height: 2.5)
                     }
+                    Text("SYS // REO-01")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.cyberCyan.opacity(0.65))
+                }
+                .padding(.leading, 8)
 
-                    HStack {
-                        EnergyOrbView(
-                            label: "CHARGE",
-                            currentCharge: engine.playerCharge,
-                            maxCharge: engine.maxCharge,
-                            accentColor: .cyberEmerald
+                ZStack(alignment: .leading) {
+                    CyberShape(cutSize: 14)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.02, green: 0.19, blue: 0.26).opacity(0.92),
+                                    Color(red: 0.01, green: 0.10, blue: 0.16).opacity(0.90)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
 
-                        Spacer()
+                    CyberShape(cutSize: 14)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [hudBorderColor, Color.cyberEmerald, hudBorderColor.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: isUltReady ? 2.2 : 2.0
+                        )
+
+                    HStack(alignment: .center, spacing: 12) {
+                        // 左列：REO / (YOU)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("REO")
+                                .font(.system(size: 24, weight: .black, design: .rounded))
+                                .tracking(1.5)
+                                .foregroundStyle(.white)
+                                .shadow(color: Color.cyberCyan, radius: 8)
+
+                            Text("(YOU)")
+                                .font(.system(size: 16, weight: .black, design: .rounded))
+                                .tracking(1)
+                                .foregroundStyle(.white)
+                                .shadow(color: Color.cyberCyan, radius: 6)
+                        }
+
+                        // 右列：ハート3つ（上段）＋ 縦型バッテリー4セル（下段）
+                        VStack(alignment: .leading, spacing: 8) {
+                            HealthBarView(
+                                currentHP: engine.playerHP,
+                                maxHP: engine.maxHP,
+                                accentColor: .cyberEmerald,
+                                heartSize: 18
+                            )
+
+                            EnergyOrbView(
+                                label: "",
+                                currentCharge: engine.playerCharge,
+                                maxCharge: engine.maxCharge,
+                                accentColor: .cyberEmerald,
+                                showLabel: false,
+                                cellWidth: 16,
+                                cellHeight: 24
+                            )
+                        }
+
+                        Spacer(minLength: 0)
                     }
+                    .padding(.leading, 16)
+                    .padding(.trailing, 34)
+                    .padding(.vertical, 12)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.trailing, 102)
+                .shadow(color: hudBorderColor.opacity(0.45), radius: 12)
             }
 
-            // 最下部コマンドデッキ（横並び3つ CHARGE / BEAM / BARRIER ⇄ 4チャージ時は金色発光横長1つ ULTIMATE）
-            BattleCommandDeckView(engine: engine)
+            // 右下：主人公 REO 大型立ち絵（勝敗・被弾で normal / fun / sad に表情変化）
+            Image(CharacterProfile.reo.standingAsset(for: engine.playerExpression))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 142, height: 162)
+                .shadow(color: Color.cyberCyan.opacity(0.65), radius: 12)
+                .offset(x: 4, y: 4)
+                .scaleEffect(engine.playerExpression == .fun ? 1.05 : (engine.playerExpression == .sad ? 0.95 : 1.0))
+                .animation(.spring(response: 0.25, dampingFraction: 0.65), value: engine.playerExpression)
         }
-        .padding(12)
-        .background(
-            CyberShape(cutSize: 14)
-                .fill(Color.cyberPanel.opacity(0.92))
-                .overlay(
-                    CyberShape(cutSize: 14)
-                        .strokeBorder(cardAccent.opacity(isUltReady ? 0.8 : 0.42), lineWidth: isUltReady ? 1.8 : 1.2)
-                )
-        )
-        .shadow(color: isUltReady ? Color.cyberAmber.opacity(0.28) : .clear, radius: 14)
+        .frame(height: 154)
     }
 
-    // MARK: - 5. KUMITE Result Overlay (YOU WIN / YOU LOSE...)
+    // MARK: - KUMITE Result Overlay (YOU WIN / YOU LOSE...)
     private var kumiteResultOverlay: some View {
         let isStageClear: Bool = {
             if case .stageClear = engine.outcome { return true }
@@ -714,6 +802,9 @@ struct RhythmTimeBarView: View {
     var engine: GameEngine
 
     private func remainingFraction(at now: Date) -> CGFloat {
+        if engine.preBattlePhase != .none {
+            return 1.0
+        }
         if engine.isRhythmRunning, let start = engine.turnWindowStartDate {
             let duration = max(0.2, engine.inputWindowDuration)
             let elapsed = max(0.0, now.timeIntervalSince(start))
@@ -736,7 +827,7 @@ struct RhythmTimeBarView: View {
     }
 
     var body: some View {
-        let shouldAnimateContinuously = engine.isRhythmRunning && engine.turnWindowStartDate != nil
+        let shouldAnimateContinuously = engine.isRhythmRunning && engine.turnWindowStartDate != nil && engine.preBattlePhase == .none
 
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !shouldAnimateContinuously)) { context in
             let fraction = remainingFraction(at: context.date)
@@ -748,13 +839,13 @@ struct RhythmTimeBarView: View {
                 ZStack(alignment: .leading) {
                     // ベースレール（消えた後の暗いトラック）
                     Capsule()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(Color.white.opacity(0.09))
                         .overlay(
                             Capsule()
                                 .strokeBorder(
                                     engine.beat == 3
-                                        ? Color.cyberDanger.opacity(0.7)
-                                        : Color.white.opacity(0.18),
+                                        ? Color.cyberDanger.opacity(0.75)
+                                        : Color.white.opacity(0.20),
                                     lineWidth: 1
                                 )
                         )
@@ -797,7 +888,7 @@ struct RhythmTimeBarView: View {
     }
 }
 
-// MARK: - 最下部コマンドデッキ（通常時: 横並び3つ CHARGE / BEAM / BARRIER ⇄ 4チャージ時: 金色発光 ULTIMATE 1ボタン）
+// MARK: - コマンドデッキ（通常時: 斜め3ボタン CHARGE / BEAM / BARRIER ⇄ 4チャージ時: 金色発光 ULTIMATE 1ボタン）
 struct BattleCommandDeckView: View {
     @Bindable var engine: GameEngine
 
@@ -811,7 +902,7 @@ struct BattleCommandDeckView: View {
                 }
                 .transition(.scale(scale: 0.95).combined(with: .opacity))
             } else {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(GameAction.standardCommands) { action in
                         BattleCommandButton(
                             action: action,
@@ -825,83 +916,164 @@ struct BattleCommandDeckView: View {
                 .transition(.opacity)
             }
         }
-        .frame(height: 64)
+        .frame(height: 76)
         .animation(.spring(response: 0.28, dampingFraction: 0.74), value: isUltReady)
     }
 }
 
-/// 横並び3列用のサイバーコマンド選択ボタン（CHARGE / BEAM / BARRIER）
+/// デザイン案準拠の斜めカット・サイバーコマンドボタン形状
+private struct SlantedCyberButtonShape: Shape {
+    var slantDrop: CGFloat = 11
+    var cornerCut: CGFloat = 9
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        let s = min(slantDrop, h * 0.25)
+        let c = min(cornerCut, min(w, h) * 0.2)
+
+        var path = Path()
+        // 左上（少し下がった位置から面取り開始）
+        path.move(to: CGPoint(x: 0, y: s + c))
+        path.addLine(to: CGPoint(x: c, y: s))
+        // 右上（斜め上へ上がる）
+        path.addLine(to: CGPoint(x: w - c, y: 0))
+        path.addLine(to: CGPoint(x: w, y: c))
+        // 右下（斜めラインと平行に上がる）
+        path.addLine(to: CGPoint(x: w, y: h - s - c))
+        path.addLine(to: CGPoint(x: w - c, y: h - s))
+        // 左下
+        path.addLine(to: CGPoint(x: c, y: h))
+        path.addLine(to: CGPoint(x: 0, y: h - c))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// 横並び3列用の斜めサイバーコマンド選択ボタン（CHARGE: 緑 / BEAM: 紫マゼンタ / BARRIER: シアン）
 struct BattleCommandButton: View {
     let action: GameAction
     let isSelected: Bool
     let playerCharge: Int
     let onTap: () -> Void
 
-    private var subCaption: String {
+    private var themeColor: Color {
         switch action {
-        case .charge:   return "+1 CHARGE"
-        case .beam:     return "COST 1"
-        case .barrier:  return "GUARD"
-        case .megaBeam: return "MAX"
+        case .charge:
+            return Color.cyberEmerald
+        case .beam:
+            return Color(red: 0.85, green: 0.26, blue: 0.98)
+        case .barrier:
+            return Color.cyberCyan
+        case .megaBeam:
+            return Color.cyberAmber
+        }
+    }
+
+    private var iconSymbolName: String {
+        switch action {
+        case .charge:
+            return "bolt.circle"
+        case .beam:
+            return "burst.fill"
+        case .barrier:
+            return "shield.fill"
+        case .megaBeam:
+            return "sparkles"
         }
     }
 
     var body: some View {
         let isAffordable = playerCharge >= action.cost
-        let borderColor: Color = {
-            if isSelected && !isAffordable {
-                return .cyberDanger
-            }
-            return isSelected ? action.accentColor : action.accentColor.opacity(isAffordable ? 0.62 : 0.28)
-        }()
+        let activeColor: Color = (isSelected && !isAffordable) ? .cyberDanger : themeColor
 
         Button(action: onTap) {
-            VStack(spacing: 5) {
-                Text(action.codeName)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .tracking(1.0)
-                    .foregroundStyle(isAffordable ? .white : Color.white.opacity(0.45))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-
-                if isSelected {
-                    Text(isAffordable ? "SELECTED" : "不発注意")
-                        .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundStyle(isAffordable ? .black : .white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(
-                            isAffordable ? action.accentColor : Color.cyberDanger,
-                            in: Capsule()
+            ZStack {
+                // 背面ダークプレート＋選択時ネオングロー充填
+                SlantedCyberButtonShape()
+                    .fill(
+                        LinearGradient(
+                            colors: isSelected
+                                ? [
+                                    activeColor.opacity(0.42),
+                                    activeColor.opacity(0.18),
+                                    Color(red: 0.04, green: 0.08, blue: 0.16).opacity(0.92)
+                                ]
+                                : [
+                                    activeColor.opacity(isAffordable ? 0.18 : 0.06),
+                                    Color(red: 0.04, green: 0.07, blue: 0.14).opacity(0.90)
+                                ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                } else {
-                    Text(subCaption)
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isAffordable ? action.accentColor.opacity(0.88) : Color.cyberDanger.opacity(0.8))
+                    )
+
+                // 外枠ネオンライン
+                SlantedCyberButtonShape()
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                isSelected ? Color.white : activeColor.opacity(isAffordable ? 0.95 : 0.42),
+                                activeColor.opacity(isAffordable ? 0.85 : 0.30)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: isSelected ? 2.6 : 1.8
+                    )
+
+                // 内側メカニック二重枠
+                SlantedCyberButtonShape()
+                    .inset(by: 4)
+                    .stroke(
+                        activeColor.opacity(isSelected ? 0.65 : 0.28),
+                        lineWidth: 0.9
+                    )
+
+                // 右上アイコン ＋ 中央斜めテキスト ＋ 選択インジケータ
+                VStack(spacing: 2) {
+                    HStack {
+                        Spacer()
+                        Image(systemName: iconSymbolName)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(isAffordable ? Color.white.opacity(0.92) : Color.white.opacity(0.38))
+                            .shadow(color: activeColor, radius: 5)
+                    }
+                    .padding(.trailing, 10)
+                    .padding(.top, 4)
+
+                    Text(action.codeName)
+                        .font(.system(size: 15.5, weight: .black, design: .rounded))
+                        .tracking(0.8)
+                        .foregroundStyle(isAffordable ? .white : Color.white.opacity(0.45))
+                        .shadow(color: activeColor.opacity(0.9), radius: isSelected ? 8 : 4)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-            }
-            .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity)
-            .frame(height: 64)
-            .background(
-                ZStack {
-                    CyberShape(cutSize: 10)
-                        .fill(
-                            isSelected
-                                ? (isAffordable ? action.accentColor.opacity(0.28) : Color.cyberDanger.opacity(0.24))
-                                : Color.black.opacity(0.52)
-                        )
+                        .minimumScaleFactor(0.68)
+                        .rotationEffect(.degrees(-5.5))
+                        .offset(y: -2)
 
-                    CyberShape(cutSize: 10)
-                        .strokeBorder(borderColor, lineWidth: isSelected ? 2.2 : 1.1)
+                    if isSelected {
+                        Text(isAffordable ? "READY" : "不発注意")
+                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                            .foregroundStyle(isAffordable ? .black : .white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(activeColor, in: Capsule())
+                            .rotationEffect(.degrees(-5.5))
+                    } else {
+                        Spacer(minLength: 8)
+                    }
                 }
-            )
+                .padding(.horizontal, 6)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 74)
+            .scaleEffect(isSelected ? 1.03 : 1.0)
             .shadow(
-                color: isSelected ? borderColor.opacity(0.68) : .clear,
-                radius: isSelected ? 8 : 0
+                color: activeColor.opacity(isSelected ? 0.82 : (isAffordable ? 0.42 : 0.12)),
+                radius: isSelected ? 12 : 6
             )
+            .animation(.spring(response: 0.22, dampingFraction: 0.7), value: isSelected)
         }
         .buttonStyle(.plain)
     }
@@ -916,7 +1088,7 @@ struct UltimateReadyButton: View {
         Button(action: onTap) {
             ZStack {
                 // 金色グラデーション本体
-                CyberShape(cutSize: 13)
+                CyberShape(cutSize: 14)
                     .fill(
                         LinearGradient(
                             colors: [
@@ -931,11 +1103,11 @@ struct UltimateReadyButton: View {
                     )
 
                 // 上部の光沢ハイライト
-                CyberShape(cutSize: 13)
+                CyberShape(cutSize: 14)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(isGlowing ? 0.48 : 0.22),
+                                Color.white.opacity(isGlowing ? 0.50 : 0.22),
                                 Color.clear
                             ],
                             startPoint: .top,
@@ -944,7 +1116,7 @@ struct UltimateReadyButton: View {
                     )
 
                 // 金白の発光エッジ枠
-                CyberShape(cutSize: 13)
+                CyberShape(cutSize: 14)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
@@ -955,14 +1127,14 @@ struct UltimateReadyButton: View {
                             startPoint: .leading,
                             endPoint: .trailing
                         ),
-                        lineWidth: 2.5
+                        lineWidth: 2.6
                     )
 
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 20, weight: .black))
                     Text("ULTIMATE")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .font(.system(size: 25, weight: .black, design: .rounded))
                         .italic()
                         .tracking(4)
                     Image(systemName: "bolt.fill")
@@ -970,10 +1142,10 @@ struct UltimateReadyButton: View {
                 }
                 .foregroundStyle(.white)
                 .shadow(color: Color(red: 0.45, green: 0.22, blue: 0.0), radius: 2, x: 0, y: 1.5)
-                .shadow(color: Color.white.opacity(0.75), radius: isGlowing ? 8 : 3)
+                .shadow(color: Color.white.opacity(0.8), radius: isGlowing ? 8 : 3)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 64)
+            .frame(height: 68)
             .scaleEffect(isGlowing ? 1.015 : 0.995)
             .shadow(
                 color: Color(red: 1.0, green: 0.85, blue: 0.22).opacity(isGlowing ? 0.95 : 0.62),
@@ -990,5 +1162,22 @@ struct UltimateReadyButton: View {
                 isGlowing = true
             }
         }
+    }
+}
+
+extension Shape {
+    fileprivate func inset(by amount: CGFloat) -> some Shape {
+        InsettableWrapperShape(base: self, insetAmount: amount)
+    }
+}
+
+private struct InsettableWrapperShape<Base: Shape>: Shape {
+    let base: Base
+    let insetAmount: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let insetRect = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        guard insetRect.width > 0, insetRect.height > 0 else { return Path() }
+        return base.path(in: insetRect)
     }
 }

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-07 11:02 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.26`（戦闘画面UI大幅刷新：1本赤タイムバー ＆ 横並び3ボタン CHARGE / BEAM / BARRIER ＆ 4チャージ金色 ULTIMATE 即時発動）
+最終更新日時: 2026-11-09 17:22 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.27`（ゲーム画面デザイン全面刷新・事前VS画面＋Ready/Go!!導入・4チャージ電撃バッテリーアニメーション実装）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.26`（1本の赤いタイムバー・横並び3ボタン `CHARGE / BEAM / BARRIER`・4チャージ金色発光 `ULTIMATE` 即時発動）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.27`（新バトル画面HUD・事前VS画面 → `Ready` → `Go!!` → 3拍開始・4チャージ黄色発光＆電撃アニメーション）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 17:22 (`v1.0.27`)**
+  - **ゲーム画面UIデザインの全面刷新 ＆ 事前VS画面＋「Ready」「Go!!」導入 ＆ 4チャージ電撃バッテリーアニメーション実装:**
+    1. **新バトル画面デザイン ([`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):** デザイン案に準拠し、左上に敵大型立ち絵＋右上にマゼンタ発光HUD（敵名・3ハート・4バッテリー）、中央に3Dパースペクティブグリッド＋1本赤タイムバー＋手激突演出、REO HUD直上に斜めカットの3コマンドボタン（緑 `CHARGE` / 紫マゼンタ `BEAM` / シアン `BARRIER`、4チャージ時は金色発光 `ULTIMATE`）、左下にシアン発光 `REO (YOU)` HUD＋右下にREO大型立ち絵を配置。出す手の勝敗・被弾による両キャラの表情変化（通常・喜び・ダメージ）も完全踏襲。
+    2. **チャージゲージ4セル黄色発光＆電気エフェクトアニメーション ([`EnergyOrbView.swift`](BangBangBeam/Views/Battle/EnergyOrbView.swift)):** チャージゲージを縦型4連バッテリーデザインに刷新し、4つ溜まった時点で全セルが黄色く発光するとともに、周囲にバチバチと稲妻・スパークが走る電気エフェクトアニメーション（`ElectricChargeEffectOverlay`）を実装。
+    3. **事前VS画面 → ゲーム画面切替 →「Ready」「Go!!」→ 3拍開始フロー ([`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):** 戦闘開始時にまず斜め稲妻分割の「事前画面（VS画面）」（対戦相手に応じて敵名・敵立ち絵が動的に変化）を表示し、その後ゲーム画面へ切り替わって中央に「`Ready`」→「`Go!!`」を表示してから3拍のリズムループが開始されるよう実装。
 
 - **2026-11-07 11:02 (`v1.0.26`)**
   - **戦闘画面UIの大幅刷新（1本の赤いタイムバー ＆ 横並び3ボタン `CHARGE / BEAM / BARRIER` ＆ 4チャージ金色発光 `ULTIMATE` 即時発動）:**

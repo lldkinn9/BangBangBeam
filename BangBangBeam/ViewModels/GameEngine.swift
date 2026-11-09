@@ -39,6 +39,14 @@ struct UltimatePresentation: Equatable, Sendable {
     }
 }
 
+/// 戦闘開始前の演出フェーズ（事前VS画面 → ゲーム画面へ切替 → Ready → Go!! → 3拍開始）
+enum PreBattleIntroPhase: Equatable, Sendable {
+    case vsScreen
+    case ready
+    case go
+    case none
+}
+
 /// リズム速度プリセット（標準 / 速め の2択）
 enum TempoPreset: String, CaseIterable, Identifiable, Sendable {
     case standard
@@ -65,7 +73,7 @@ enum TempoPreset: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// 製品版ゲームエンジン（KUMITE 勝ち抜き・HP3制・被弾チャージ-1・お手つき無防備・4チャージ即時ULTIMATE発動）
+/// 製品版ゲームエンジン（KUMITE 勝ち抜き・事前VS画面＋Ready/Go!!導入・HP3制・被弾チャージ-1・4チャージ即時ULTIMATE発動）
 @Observable
 @MainActor
 final class GameEngine {
@@ -99,7 +107,7 @@ final class GameEngine {
     /// テンポ実効BPM（標準: 88 BPM / 速め: 116 BPM）
     var bpm: Double = 88.0 {
         didSet {
-            if isAutoLoopRunning {
+            if rhythmTimer != nil {
                 restartTimer()
             }
         }
@@ -121,7 +129,10 @@ final class GameEngine {
     var totalStagesInCurrentLoop: Int = 11
 
     // MARK: - Battle Live State
-    /// 現在の拍（0: せっせっせーの..., 1: バン！, 2: バン！, 3: アクション激突）
+    /// 戦闘開始前の演出状態（.vsScreen → .ready → .go → .none）
+    var preBattlePhase: PreBattleIntroPhase = .none
+
+    /// 現在の拍（0: 開始待機, 1: バン！, 2: バン！, 3: アクション激突）
     var beat: Int = 0
     var turnCount: Int = 1
 
@@ -144,7 +155,7 @@ final class GameEngine {
     var revealedPlayerMove: ResolvedMove? = nil
     var revealedCpuMove: ResolvedMove? = nil
 
-    var calloutText: String = "せっせっせーの..."
+    var calloutText: String = "Ready"
     var statusDetailText: String = "赤いバーが消える前にコマンドを選択！"
 
     var outcome: BattleOutcome = .ongoing
@@ -180,10 +191,6 @@ final class GameEngine {
     /// 自動リズムタイマーが稼働中かどうか（タイムバーの連続アニメーション判定用）
     var isRhythmRunning: Bool {
         rhythmTimer != nil
-    }
-
-    private var isAutoLoopRunning: Bool {
-        rhythmTimer != nil || pendingTimerTask != nil
     }
 
     // MARK: - Initialization & First Launch Check
@@ -270,7 +277,7 @@ final class GameEngine {
             setupMatchState(enemy: currentEnemy)
             currentScreen = .kumiteBattle
             SoundManager.shared.playBattleBGM(forceNewRandom: true)
-            startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
+            startPreBattleIntroThenRhythm(needsTransitionSettle: needsTransitionSettle)
         } else {
             startKumiteFromBeginning()
         }
@@ -291,7 +298,7 @@ final class GameEngine {
         setupMatchState(enemy: currentEnemy)
         currentScreen = .kumiteBattle
         SoundManager.shared.playBattleBGM(forceNewRandom: true)
-        startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
+        startPreBattleIntroThenRhythm(needsTransitionSettle: needsTransitionSettle)
     }
 
     /// 動画広告（リワード広告）視聴完了後、現在の連勝記録を維持したまま負けたバトルをやり直す（敗退リザルト画面・タイトル再開確認ポップアップ共通）
@@ -316,16 +323,16 @@ final class GameEngine {
         } else {
             SoundManager.shared.playBattleBGM(forceNewRandom: false)
         }
-        startTimer(initialDelay: needsTransitionSettle ? 0.24 : 0.0)
+        startPreBattleIntroThenRhythm(needsTransitionSettle: needsTransitionSettle)
     }
 
-    /// KUMITEで敵撃破後、BGMはリセットせずそのまま継続再生で次の敵へ進む
+    /// KUMITEで敵撃破後、BGMはリセットせずそのまま継続再生で次の敵へ進む（事前VS画面 → Ready → Go!! → 3拍開始）
     func advanceToNextKumiteStage() {
         stopTimer()
         loadEnemyForCurrentStreak()
         setupMatchState(enemy: currentEnemy)
         SoundManager.shared.playBattleBGM(forceNewRandom: false)
-        startTimer()
+        startPreBattleIntroThenRhythm(needsTransitionSettle: false)
     }
 
     /// PRACTICE（ルール学習＆練習専用UI）を開始
@@ -335,6 +342,7 @@ final class GameEngine {
         startPracticeOnSparringTab = openSparringTab
         isPracticeAutoPlay = false
         setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
+        preBattlePhase = .none
         currentScreen = .practiceTutorial
         SoundManager.shared.playBattleBGM(forceNewRandom: true)
     }
@@ -343,6 +351,7 @@ final class GameEngine {
     func resetPracticeSparring() {
         stopTimer()
         setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
+        preBattlePhase = .none
         if isPracticeAutoPlay {
             startTimer()
         }
@@ -352,6 +361,7 @@ final class GameEngine {
     func returnToTitle() {
         markTutorialCompleted()
         stopTimer()
+        preBattlePhase = .none
         if gameMode == .kumite {
             if case .stageClear = outcome {
                 saveKumiteSession(isPendingRevive: false)
@@ -391,7 +401,7 @@ final class GameEngine {
     // MARK: - Player Input
     /// 通常3コマンド（CHARGE / BEAM / BARRIER）の予約選択（チャージ不足のBEAMも選択可能で、発動時に無防備のお手つきになる）
     func selectCommand(_ action: GameAction) {
-        guard !outcome.isFinished, activeUltimate == nil else { return }
+        guard !outcome.isFinished, activeUltimate == nil, preBattlePhase != .vsScreen else { return }
         guard action != .megaBeam else {
             triggerPlayerUltimateImmediately()
             return
@@ -402,7 +412,7 @@ final class GameEngine {
 
     /// 4チャージ到達時に出現する金色「ULTIMATE」ボタンを押した瞬間に、リズム待機なしで即座にカットイン→必殺アニメーションを発動する
     func triggerPlayerUltimateImmediately() {
-        guard !outcome.isFinished, activeUltimate == nil, playerCharge >= maxCharge else { return }
+        guard !outcome.isFinished, activeUltimate == nil, preBattlePhase == .none, playerCharge >= maxCharge else { return }
         stopTimer()
         playerCharge = 0
         selectedAction = .charge
@@ -416,10 +426,11 @@ final class GameEngine {
     /// 手動で1拍進める（PRACTICE用）
     func stepBeatManually() {
         guard !outcome.isFinished, activeUltimate == nil else { return }
+        preBattlePhase = .none
         advanceBeat()
     }
 
-    // MARK: - Match Setup & Rhythm Loop
+    // MARK: - Match Setup & Pre-Battle Intro Sequence
     private func loadEnemyForCurrentStreak() {
         let info = CharacterProfile.enemy(forStreak: winStreak)
         currentEnemy = info.profile
@@ -445,10 +456,51 @@ final class GameEngine {
         revealedCpuMove = nil
         activeUltimate = nil
         outcome = .ongoing
-        calloutText = "せっせっせーの..."
+        calloutText = "Ready"
         statusDetailText = gameMode == .practice
             ? "赤いバーが消える前にコマンドを選び、アクション発動！"
             : "VS \(enemy.codeName) — 赤いバーが消える前にコマンドを選べ！"
+    }
+
+    /// KUMITE戦闘開始前の演出シーケンス：1. 事前VS画面 → 2. ゲーム画面に切替＋「Ready」 → 3.「Go!!」 → 4. 3拍開始
+    private func startPreBattleIntroThenRhythm(needsTransitionSettle: Bool) {
+        stopTimer()
+        preBattlePhase = .vsScreen
+
+        pendingTimerTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            if needsTransitionSettle {
+                try? await Task.sleep(for: .milliseconds(160))
+            }
+            guard !Task.isCancelled else { return }
+
+            // 1. 事前画面（VS画面）表示
+            HapticManager.playMedium(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(1450))
+            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
+
+            // 2. ゲーム画面に切替 ＆「Ready」表示
+            self.preBattlePhase = .ready
+            self.calloutText = "Ready"
+            self.statusDetailText = "VS \(self.currentEnemy.codeName) — コマンドを準備せよ！"
+            HapticManager.playLight(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(850))
+            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
+
+            // 3.「Go!!」表示
+            self.preBattlePhase = .go
+            self.calloutText = "Go!!"
+            self.statusDetailText = "バトル開始！！"
+            HapticManager.playHeavy(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(620))
+            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
+
+            // 4. 3拍のリズムループ開始（即座に1拍目＆赤いタイムバー開始）
+            self.pendingTimerTask = nil
+            self.preBattlePhase = .none
+            self.scheduleCommonRunLoopTimer()
+            self.advanceBeat()
+        }
     }
 
     private func startTimer(initialDelay: TimeInterval = 0.0) {
@@ -487,7 +539,7 @@ final class GameEngine {
     }
 
     private func restartTimer() {
-        guard isAutoLoopRunning else { return }
+        guard rhythmTimer != nil else { return }
         startTimer()
     }
 
@@ -500,7 +552,7 @@ final class GameEngine {
     }
 
     private func advanceBeat() {
-        guard !outcome.isFinished, activeUltimate == nil else {
+        guard !outcome.isFinished, activeUltimate == nil, preBattlePhase == .none else {
             stopTimer()
             return
         }
@@ -710,6 +762,7 @@ final class GameEngine {
 
     private func finishMatch(playerWon: Bool, reason: String) {
         stopTimer()
+        preBattlePhase = .none
         statusDetailText = reason
 
         if gameMode == .practice {
