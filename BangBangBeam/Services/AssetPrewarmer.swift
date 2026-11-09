@@ -20,6 +20,11 @@ enum AssetPrewarmer {
                 let coreNames: [String] = [
                     "vs_screen_bg",
                     "vs_screen_fg",
+                    "battle_screen_bg",
+                    "battle_enemy_frame_fg",
+                    "btn_battle_charge",
+                    "btn_battle_beam",
+                    "btn_battle_barrier",
                     "hand_clap",
                     "hand_charge",
                     "hand_beam",

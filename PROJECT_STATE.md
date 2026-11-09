@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 18:34 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.29`（対戦直前VS画面の名前切れ修正・キャラ登場SE導入・STARTボタン待機遷移・サイバー揺れ＆放電演出実装）
+最終更新日時: 2026-11-09 18:56 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.30`（VS画面SEの重厚サイバー化・戦闘画面への指定背景テンプレート＆3コマンドボタン素材組み込み）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.29`（対戦直前VS画面：全機種対応の名前表示調整・キャラ登場SE `vs_appear.mp3`・1秒後 `START` ボタン表示＆押下遷移・待機中の画面揺れ＆サイバー放電演出）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.30`（VS画面の重厚サイバーSE `vs_appear.mp3` ＆ 戦闘画面の指定背景素材 `battle_screen_bg` ＋ 3コマンドボタン素材組み込みUI）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 18:56 (`v1.0.30`)**
+  - **VS画面SEの重厚サイバーパンク化 ＆ 戦闘画面への指定背景テンプレート・3コマンドボタン素材の完全組み込み:**
+    1. **VS画面キャラ登場SEの重厚化 ([`vs_appear.mp3`](BangBangBeam/Resources/SE/vs_appear.mp3)):** 高音チャイムを廃し、重低音サブベースドロップ（`125Hz → 36Hz`）＋ ダークなサイバーパンク Reese ブラス咆哮（`55Hz` A1 パワーフィフス）＋ 重量級メカニックゲートロック打撃音 ＋ 低域プラズマサージを合成した1.55秒の重厚な戦闘開始SEへ刷新。
+    2. **戦闘画面用ベース背景＆ボタン素材の抽出・組み込み ([`Assets.xcassets/UI/battle_screen_bg.imageset`](BangBangBeam/Assets.xcassets/UI/battle_screen_bg.imageset) / [`battle_enemy_frame_fg.imageset`](BangBangBeam/Assets.xcassets/UI/battle_enemy_frame_fg.imageset) / [`btn_battle_charge.imageset`](BangBangBeam/Assets.xcassets/UI/btn_battle_charge.imageset) / [`btn_battle_beam.imageset`](BangBangBeam/Assets.xcassets/UI/btn_battle_beam.imageset) / [`btn_battle_barrier.imageset`](BangBangBeam/Assets.xcassets/UI/btn_battle_barrier.imageset) / [`AssetPrewarmer.swift`](BangBangBeam/Services/AssetPrewarmer.swift)):** オーナー指定の2枚目背景テンプレートをベースに、1枚目見本から `REO (YOU)` 表記および斜め3ボタン（`CHARGE` / `BEAM` / `BARRIER`）を高精度アルファマット抽出して組み込み、起動時プリウォーム対象に追加。
+    3. **戦闘画面UIの1枚目見本準拠レイアウト実装 ([`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):** `battle_screen_bg` 上の正規化座標に合わせて、左上フレーム内に右向きミラーの敵キャラ立ち絵（勝敗・被弾で表情変化＋フレーム下辺 `battle_enemy_frame_fg` 重ね）、右上マゼンタ枠内に敵名・3ハート・4バッテリー、中央3Dグリッド上に1本赤タイムバー＆`Ready`/`Go!!`/手イラスト激突、中下に斜め階段配置の `CHARGE / BEAM / BARRIER` ボタン（4チャージで金色発光 `ULTIMATE` に変化）、左下シアン枠内に3緑ハート・4緑バッテリー（4チャージで黄色発光＋電撃アニメーション）、右下にREO立ち絵（表情変化）を配置。
 
 - **2026-11-09 18:34 (`v1.0.29`)**
   - **対戦直前VS画面の4点改善（機種別名前見切れ修正・キャラ登場SE導入・「START」ボタン待機化・サイバー揺れ＆放電演出追加）:**
