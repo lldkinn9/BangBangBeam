@@ -18,6 +18,8 @@ enum AssetPrewarmer {
         Task(priority: .userInitiated) {
             if !isCoreWarmed {
                 let coreNames: [String] = [
+                    "vs_screen_bg",
+                    "vs_screen_fg",
                     "hand_clap",
                     "hand_charge",
                     "hand_beam",

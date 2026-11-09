@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 17:22 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.27`（ゲーム画面デザイン全面刷新・事前VS画面＋Ready/Go!!導入・4チャージ電撃バッテリーアニメーション実装）
+最終更新日時: 2026-11-09 18:09 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.28`（対戦直前のVS画面に指定背景素材を組み込み・1枚目→2枚目のキャラ＆名称挿入アニメーション実装）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.27`（新バトル画面HUD・事前VS画面 → `Ready` → `Go!!` → 3拍開始・4チャージ黄色発光＆電撃アニメーション）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.28`（対戦直前のVS画面：指定背景素材 `vs_screen_bg` の表示 → キャラ立ち絵＆名称が挿入される2段階アニメーション）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,11 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 18:09 (`v1.0.28`)**
+  - **対戦直前のVS画面への指定背景素材組み込み ＆ 1枚目→2枚目キャラ・名称挿入アニメーション実装:**
+    1. **VS画面ベース素材＆前景レイヤー組み込み ([`Assets.xcassets/UI/vs_screen_bg.imageset`](BangBangBeam/Assets.xcassets/UI/vs_screen_bg.imageset) / [`vs_screen_fg.imageset`](BangBangBeam/Assets.xcassets/UI/vs_screen_fg.imageset) / [`AssetPrewarmer.swift`](BangBangBeam/Services/AssetPrewarmer.swift)):** オーナー指定の1枚目素材を `vs_screen_bg` として組み込み、さらに2枚目見本と同様に中央「`VS`」ロゴと斜め稲妻がキャラクター境界の手前に重なる透過前景レイヤー `vs_screen_fg` を生成・プリウォーム対象に追加。
+    2. **対戦相手に応じた動的キャラ・名称挿入 ＆ 1枚目→2枚目切替アニメーション ([`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):** 571×1024正規化キャンバス上で、まず1枚目（文字・キャラなしの背景素材）を表示した状態から、約0.42秒後に右上へ対戦相手の立ち絵（`enemy.standingAsset(for: .normal)`）・左上マゼンタ枠内へ対戦相手の名称（`enemy.codeName`）・左下へREO立ち絵・右下シアン枠内へ `REO (YOU)` が閃光とともにスライド挿入される2段階アニメーションを実装。
 
 - **2026-11-09 17:22 (`v1.0.27`)**
   - **ゲーム画面UIデザインの全面刷新 ＆ 事前VS画面＋「Ready」「Go!!」導入 ＆ 4チャージ電撃バッテリーアニメーション実装:**

@@ -474,9 +474,13 @@ final class GameEngine {
             }
             guard !Task.isCancelled else { return }
 
-            // 1. 事前画面（VS画面）表示
-            HapticManager.playMedium(enabled: self.isHapticsEnabled)
-            try? await Task.sleep(for: .milliseconds(1450))
+            // 1. 事前画面（VS画面）表示：まず1枚目（背景のみ）→ 0.42秒後に2枚目（キャラ＆名称挿入）へアニメーション切替
+            HapticManager.playLight(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(420))
+            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
+
+            HapticManager.playHeavy(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(1480))
             guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
 
             // 2. ゲーム画面に切替 ＆「Ready」表示
