@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 20:31 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.33`（`PracticeTutorialView.swift` の `ResolvedMove` 型およびカラー指定修正・出した手の画面横いっぱい上下2段帯表示化・手の下のテキスト全撤去・手表示中の3拍時間バー非表示化）
+最終更新日時: 2026-11-09 21:19 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.34`（VS画面SEの `cutin.mp3` 統一・3拍の手拍子ダイナミック演出＆ `super clap.mp3` 再生・Reo顔左スペースの勝敗英字判定表示）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.33`（出した手の画面横いっぱい上下2段帯表示・手の下のテキスト撤去・手表示中の3拍時間バー非表示）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.34`（VS画面SEの `cutin.mp3` 統一・3拍の手拍子ダイナミック演出＆ `super clap.mp3` 再生・Reo顔左スペースの勝敗英字判定表示）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 21:19 (`v1.0.34`)**
+  - **VS画面SEの `cutin.mp3` 統一・バトル時3拍の手拍子演出＆ `super clap.mp3` 再生・Reo顔左スペースの勝敗英字判定実装:**
+    1. **VS画面のSEに `cutin.mp3` を使用 ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift)):** `playVsAppearSE()` が `cutin.mp3`（`.cutin`）を再生するよう変更し、旧 `vs_appear.mp3` を削除。
+    2. **バトル時3拍の手に実際に叩いて見える演出（大小・揺れ・衝撃波）＆ `super clap.mp3` 再生 ([`super clap.mp3`](BangBangBeam/Resources/SE/super%20clap.mp3) / [`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift)):** `素材/SE/super clap.mp3` の冒頭無音をトリミング＆音圧最適化したうえでバンドルに組み込み、1拍目・2拍目の手拍子タイミングで `playSuperClapSE()` を再生。あわせて `ClappingHandBeatView` を実装し、拍ごとに手イラストが大小に弾けて揺れ、衝撃リングとスパークが広がる演出を追加。
+    3. **Reoの顔の左側の空きスペースに勝敗に応じた英字判定を大きく表示 ([`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):** 3拍目でお互いの手を出した際、Reoの顔の左側のスペース（`x: w * 0.355, y: h * 0.788`）に「ガードが成立 → `Good!!`（シアン）」「ビームが相手にあたる → `Nice!!`（黄色）」「チャージ成功 → `Charge`（ネオングリーン）」「相手のビーム被弾 → `Bad`（赤）」を大きく表示し、上記以外の状況では何も表示しない仕様（`PlayerClashCallout`）を実装。
 
 - **2026-11-09 20:31 (`v1.0.33`)**
   - **Xcode ビルドエラー修正 ([`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift)):** `practiceHandBand` の引数型を正しくは `ResolvedMove`（旧表記 `BattleMove` を修正）に、相手側アクセントカラー指定を `Color(red: 1.0, green: 0.16, blue: 0.88)`（未定義の `Color.cyberMagenta` を修正）に修正。

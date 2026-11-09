@@ -355,10 +355,8 @@ struct PracticeTutorialView: View {
                 }
 
                 if engine.beat == 1 || engine.beat == 2 {
-                    Image("hand_clap")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 92)
+                    ClappingHandBeatView(baseHeight: 92)
+                        .id("practice-clap-\(engine.turnCount)-\(engine.beat)")
                 } else if isShowingHands,
                           let pMove = engine.revealedPlayerMove,
                           let cMove = engine.revealedCpuMove {
@@ -443,6 +441,14 @@ struct PracticeTutorialView: View {
                         .foregroundStyle(.white)
                     HealthBarView(currentHP: engine.playerHP, maxHP: engine.maxHP, accentColor: .cyberEmerald)
                     Spacer()
+                    if engine.beat == 3, let callout = engine.playerClashCallout {
+                        Text(callout.displayText)
+                            .font(.system(size: 20, weight: .black, design: .rounded))
+                            .italic()
+                            .foregroundStyle(callout.primaryColor)
+                            .shadow(color: callout.primaryColor, radius: 6)
+                            .padding(.trailing, 4)
+                    }
                     EnergyOrbView(label: "CHARGE", currentCharge: engine.playerCharge, maxCharge: engine.maxCharge, accentColor: .cyberEmerald)
                 }
 

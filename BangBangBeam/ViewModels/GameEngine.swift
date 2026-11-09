@@ -47,6 +47,44 @@ enum PreBattleIntroPhase: Equatable, Sendable {
     case none
 }
 
+/// 出した手の相手との勝敗に応じて、Reoの顔の左側の空きスペースに大きく表示する英字判定（該当しない場合は非表示）
+enum PlayerClashCallout: Equatable, Sendable {
+    /// ガードが成立 → Good!!（シアンカラー）
+    case goodGuard
+    /// ビームが相手にあたる → Nice!!（黄色）
+    case niceHit
+    /// チャージ成功 → Charge（ネオングリーン）
+    case chargeSuccess
+    /// 相手のビーム被弾 → Bad（赤）
+    case badHit
+
+    var displayText: String {
+        switch self {
+        case .goodGuard:
+            return "Good!!"
+        case .niceHit:
+            return "Nice!!"
+        case .chargeSuccess:
+            return "Charge"
+        case .badHit:
+            return "Bad"
+        }
+    }
+
+    var primaryColor: Color {
+        switch self {
+        case .goodGuard:
+            return Color.cyberCyan
+        case .niceHit:
+            return Color(red: 1.0, green: 0.90, blue: 0.14)
+        case .chargeSuccess:
+            return Color.cyberEmerald
+        case .badHit:
+            return Color.cyberDanger
+        }
+    }
+}
+
 /// リズム速度プリセット（標準 / 速め の2択）
 enum TempoPreset: String, CaseIterable, Identifiable, Sendable {
     case standard
@@ -154,6 +192,9 @@ final class GameEngine {
     /// 直近の3拍目で確定・公開された実効アクション
     var revealedPlayerMove: ResolvedMove? = nil
     var revealedCpuMove: ResolvedMove? = nil
+
+    /// 出した手の勝敗に応じてReoの顔の左側に大きく表示する判定テキスト（Good!! / Nice!! / Charge / Bad / nil）
+    var playerClashCallout: PlayerClashCallout? = nil
 
     var calloutText: String = "Ready"
     var statusDetailText: String = "赤いバーが消える前にコマンドを選択！"
@@ -417,6 +458,7 @@ final class GameEngine {
         playerCharge = 0
         selectedAction = .charge
         revealedPlayerMove = .valid(.megaBeam)
+        playerClashCallout = nil
         calloutText = "🌟 ULTIMATE!!"
         statusDetailText = "REO 一撃必殺発動！！"
         HapticManager.playHeavy(enabled: isHapticsEnabled)
@@ -454,6 +496,7 @@ final class GameEngine {
         selectedAction = .charge
         revealedPlayerMove = nil
         revealedCpuMove = nil
+        playerClashCallout = nil
         activeUltimate = nil
         outcome = .ongoing
         calloutText = "Ready"
@@ -570,12 +613,14 @@ final class GameEngine {
             }
             revealedPlayerMove = nil
             revealedCpuMove = nil
+            playerClashCallout = nil
             playerExpression = .normal
             cpuExpression = .normal
             calloutText = "💥 バン！"
             statusDetailText = playerCharge >= maxCharge
                 ? "🌟 ULTIMATE ボタンを押して一撃必殺を放て！"
                 : "赤いバーが消える前にコマンドを選択！"
+            SoundManager.shared.playSuperClapSE()
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 1:
@@ -587,6 +632,7 @@ final class GameEngine {
             statusDetailText = playerCharge >= maxCharge
                 ? "🌟 今すぐ ULTIMATE ボタンをタップ！！"
                 : "まもなくアクション激突！"
+            SoundManager.shared.playSuperClapSE()
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 2:
@@ -602,6 +648,8 @@ final class GameEngine {
 
     // MARK: - Clash Resolution (HP=3 / 被弾チャージ-1 / お手つき無防備 / 4チャージ一撃必殺)
     private func resolveClash() {
+        playerClashCallout = nil
+
         // 1. プレイヤー行動の解決（チャージ不足なら無防備 .fumble）
         let pMove: ResolvedMove
         if playerCharge < selectedAction.cost {
@@ -653,7 +701,8 @@ final class GameEngine {
             calloutText = "💥 ビーム相殺！"
             statusDetailText = "両者のビームが激突して相殺！"
         } else if playerFiredBeam && cMove.isVulnerableToBeam {
-            // プレイヤーの通常ビームが命中！（敵HP -1 ＆ 敵の蓄積チャージも -1）
+            // プレイヤーの通常ビームが命中！（敵HP -1 ＆ 敵の蓄積チャージも -1）→ Nice!!（黄色）
+            playerClashCallout = .niceHit
             cpuHP = max(0, cpuHP - 1)
             cpuCharge = max(0, cpuCharge - 1)
             playerExpression = .fun
@@ -671,7 +720,8 @@ final class GameEngine {
                 return
             }
         } else if cpuFiredBeam && pMove.isVulnerableToBeam {
-            // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）
+            // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）→ Bad（赤）
+            playerClashCallout = .badHit
             playerHP = max(0, playerHP - 1)
             playerCharge = max(0, playerCharge - 1)
             playerExpression = .sad
@@ -692,6 +742,8 @@ final class GameEngine {
             calloutText = "🛡️ ガードされた！"
             statusDetailText = "\(currentEnemy.codeName) のバリアに通常ビームを防がれた！"
         } else if cpuFiredBeam && pMove == .valid(.barrier) {
+            // ガードが成立 → Good!!（シアンカラー）
+            playerClashCallout = .goodGuard
             calloutText = "🛡️ ナイスガード！"
             statusDetailText = "敵の通常ビームをバリアで完全防御！"
             playerExpression = .fun
@@ -699,6 +751,8 @@ final class GameEngine {
             // 互いに攻撃命中なし -> チャージを選んでいた側のみチャージ +1
             var notes: [String] = []
             if pMove == .valid(.charge) {
+                // チャージ成功 → Charge（ネオングリーン）
+                playerClashCallout = .chargeSuccess
                 playerCharge = min(maxCharge, playerCharge + 1)
                 notes.append("Reo チャージ+1")
             } else if case .fumble(let attempted) = pMove {

@@ -95,8 +95,11 @@ struct BattleView: View {
                 .clipped()
                 .allowsHitTesting(false)
 
-                // MARK: 5. 左下シアン枠内：3緑ハート・4緑バッテリー（4チャージで黄色発光＋電撃アニメーション）
+                // MARK: 5. 左下シアン枠内：3緑ハート・4緑バッテリー（4チャージで黄色発光）
                 playerHudContents(w: w, h: h)
+
+                // MARK: 5.5 Reoの顔の左側の空きスペース：勝敗に応じた英字判定（Good!! / Nice!! / Charge / Bad）
+                reoLeftStatusCalloutView(w: w, h: h)
 
                 // MARK: 6. 中央3Dグリッドアリーナ：1本の赤いタイムバー ＆ Ready/Go!!/上下2段の横帯手イラスト表示
                 handsArenaStage(w: w, h: h)
@@ -233,6 +236,30 @@ struct BattleView: View {
         .position(x: w * 0.440, y: h * 0.896)
     }
 
+    // MARK: - Left of Reo's Face: Clash Result Callout (Good!! / Nice!! / Charge / Bad)
+    @ViewBuilder
+    private func reoLeftStatusCalloutView(w: CGFloat, h: CGFloat) -> some View {
+        if engine.preBattlePhase == .none,
+           engine.beat == 3,
+           let callout = engine.playerClashCallout {
+            Text(callout.displayText)
+                .font(.system(size: min(w * 0.135, 52), weight: .black, design: .rounded))
+                .italic()
+                .tracking(1.5)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(callout.primaryColor)
+                .shadow(color: Color.black.opacity(0.95), radius: 2, x: 0, y: 2)
+                .shadow(color: callout.primaryColor, radius: 10)
+                .shadow(color: callout.primaryColor.opacity(0.85), radius: 22)
+                .frame(width: w * 0.54, alignment: .center)
+                .position(x: w * 0.355, y: h * 0.788)
+                .id("callout-\(engine.turnCount)-\(callout.displayText)")
+                .transition(.scale(scale: 0.65).combined(with: .opacity))
+                .allowsHitTesting(false)
+        }
+    }
+
     // MARK: - Center: Red Time Bar & Hand Clash (Full-Width Vertical Bands) / Ready-Go Arena
     private func handsArenaStage(w: CGFloat, h: CGFloat) -> some View {
         let isShowingRevealedHands = (
@@ -277,14 +304,9 @@ struct BattleView: View {
                         .shadow(color: Color.cyberDanger, radius: 28)
                         .transition(.scale(scale: 1.25).combined(with: .opacity))
                 } else if engine.beat == 1 || engine.beat == 2 {
-                    // 1・2拍目：手拍子イラストのみ表示（「バン！」等の下部文字は非表示）
-                    Image("hand_clap")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: min(h * 0.125, 108))
-                        .shadow(color: Color.cyberCyan.opacity(0.85), radius: 14)
-                        .scaleEffect(engine.beat == 2 ? 1.08 : 0.98)
-                        .animation(.spring(response: 0.2, dampingFraction: 0.55), value: engine.beat)
+                    // 1・2拍目：実際に手が叩いて見えるダイナミック演出（拡大縮小＆シェイク揺れ＆衝撃リング）
+                    ClappingHandBeatView(baseHeight: min(h * 0.125, 108))
+                        .id("clap-\(engine.turnCount)-\(engine.beat)")
                 } else if engine.beat == 3,
                           let pMove = engine.revealedPlayerMove,
                           let cMove = engine.revealedCpuMove {
@@ -1085,6 +1107,100 @@ struct UltimateReadyButton: View {
         .onAppear {
             withAnimation(.easeInOut(duration: 0.62).repeatForever(autoreverses: true)) {
                 isGlowing = true
+            }
+        }
+    }
+}
+
+/// 1・2拍目で「実際に手が叩いて見える」ダイナミック手拍子アニメーションView（大小バウンス＋小刻みな揺れ＋衝撃リング＆スプラッシュ）
+struct ClappingHandBeatView: View {
+    let baseHeight: CGFloat
+
+    @State private var handScale: CGFloat = 0.72
+    @State private var handRotation: Double = -11.0
+    @State private var shakeOffsetX: CGFloat = 0.0
+    @State private var shakeOffsetY: CGFloat = 6.0
+    @State private var ringScale: CGFloat = 0.45
+    @State private var ringOpacity: Double = 0.95
+
+    var body: some View {
+        ZStack {
+            // 手拍子の衝撃で広がるシアン＆ホワイトのショックウェーブリング
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [.white, Color.cyberCyan, Color.cyberEmerald.opacity(0.6)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 3.2
+                )
+                .frame(width: baseHeight * 1.15, height: baseHeight * 1.15)
+                .scaleEffect(ringScale)
+                .opacity(ringOpacity)
+                .shadow(color: Color.cyberCyan, radius: 10)
+
+            // 放射状のクラップ集中線スパーク（8方向）
+            ForEach(0..<8, id: \.self) { idx in
+                Capsule()
+                    .fill(idx.isMultiple(of: 2) ? Color.white : Color.cyberCyan)
+                    .frame(width: 3.0, height: baseHeight * 0.22)
+                    .offset(y: -baseHeight * 0.62 * ringScale)
+                    .rotationEffect(.degrees(Double(idx) * 45.0 + 22.5))
+                    .opacity(ringOpacity)
+                    .shadow(color: Color.cyberCyan, radius: 6)
+            }
+
+            // 手拍子イラスト本体（叩く瞬間に大きく弾けて揺れ、収束する）
+            Image("hand_clap")
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(height: baseHeight)
+                .shadow(color: Color.white.opacity(ringOpacity * 0.85), radius: 10)
+                .shadow(color: Color.cyberCyan.opacity(0.90), radius: 16)
+                .scaleEffect(handScale)
+                .rotationEffect(.degrees(handRotation))
+                .offset(x: shakeOffsetX, y: shakeOffsetY)
+        }
+        .onAppear {
+            // 1. 叩いた瞬間の急激な拡大＆傾き（パン！）
+            withAnimation(.easeOut(duration: 0.065)) {
+                handScale = 1.28
+                handRotation = 8.0
+                shakeOffsetX = -6.0
+                shakeOffsetY = -5.0
+            }
+
+            // 2. 衝撃リングの拡散フェードアウト
+            withAnimation(.easeOut(duration: 0.34)) {
+                ringScale = 1.55
+                ringOpacity = 0.0
+            }
+
+            // 3. 叩いた反動のシェイク揺れ ＆ バウンス収束
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(65))
+                withAnimation(.easeInOut(duration: 0.055)) {
+                    handScale = 0.92
+                    handRotation = -6.5
+                    shakeOffsetX = 6.0
+                    shakeOffsetY = 2.0
+                }
+                try? await Task.sleep(for: .milliseconds(55))
+                withAnimation(.easeInOut(duration: 0.05)) {
+                    handScale = 1.08
+                    handRotation = 3.5
+                    shakeOffsetX = -3.5
+                    shakeOffsetY = -1.0
+                }
+                try? await Task.sleep(for: .milliseconds(50))
+                withAnimation(.spring(response: 0.18, dampingFraction: 0.52)) {
+                    handScale = 1.0
+                    handRotation = 0.0
+                    shakeOffsetX = 0.0
+                    shakeOffsetY = 0.0
+                }
             }
         }
     }
