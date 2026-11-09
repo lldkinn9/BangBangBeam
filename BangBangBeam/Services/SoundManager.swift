@@ -13,27 +13,25 @@ enum BGMTrack: String, CaseIterable {
 enum SoundEffect: String, CaseIterable {
     case button = "button"
     case cutin = "cutin"
+    case cutin3 = "cutin3"
     case superClap = "super clap"
-    case voiceNice = "nice"
-    case voiceGood = "good"
-    case voiceBad = "bad"
     case voiceYouWin = "you win"
     case voiceYouLose = "you lose"
 
     var fileExtension: String {
         switch self {
-        case .button, .cutin, .superClap:
+        case .button, .cutin, .cutin3, .superClap:
             return "mp3"
-        case .voiceNice, .voiceGood, .voiceBad, .voiceYouWin, .voiceYouLose:
+        case .voiceYouWin, .voiceYouLose:
             return "wav"
         }
     }
 
     var fileTypeHint: String {
         switch self {
-        case .button, .cutin, .superClap:
+        case .button, .cutin, .cutin3, .superClap:
             return AVFileType.mp3.rawValue
-        case .voiceNice, .voiceGood, .voiceBad, .voiceYouWin, .voiceYouLose:
+        case .voiceYouWin, .voiceYouLose:
             return AVFileType.wav.rawValue
         }
     }
@@ -43,11 +41,11 @@ enum SoundEffect: String, CaseIterable {
         case .button:
             return 4
         case .cutin:
-            return 3
+            return 4
+        case .cutin3:
+            return 2
         case .superClap:
             return 4
-        case .voiceNice, .voiceGood, .voiceBad:
-            return 3
         case .voiceYouWin, .voiceYouLose:
             return 2
         }
@@ -251,9 +249,10 @@ final class SoundManager {
         playSE(.button)
     }
 
-    /// 必殺技カットイン演出時の効果音（cutin.mp3）を再生
+    /// 必殺技カットイン演出時の効果音（cutin3.mp3）を再生
     func playCutinSE() {
-        playSE(.cutin)
+        stopSE(.cutin)
+        playSE(.cutin3)
     }
 
     /// 対戦直前VS画面でキャラクター＆名称が登場する瞬間の効果音（cutin.mp3）を再生
@@ -261,24 +260,14 @@ final class SoundManager {
         playSE(.cutin)
     }
 
+    /// バトル時3拍目（手を出すタイミング）の効果音（cutin.mp3）を再生
+    func playHandRevealSE() {
+        playSE(.cutin)
+    }
+
     /// バトル時1拍目・2拍目の手拍子効果音（super clap.mp3）を再生
     func playSuperClapSE() {
         playSE(.superClap)
-    }
-
-    /// バトル時「Nice!!」表示と同時のボイス（nice.wav）を再生
-    func playVoiceNiceSE() {
-        playSE(.voiceNice)
-    }
-
-    /// バトル時「Good!!」表示と同時のボイス（good.wav）を再生
-    func playVoiceGoodSE() {
-        playSE(.voiceGood)
-    }
-
-    /// バトル時「Bad」表示と同時のボイス（bad.wav）を再生
-    func playVoiceBadSE() {
-        playSE(.voiceBad)
     }
 
     /// バトル結果確定時「YOU WIN」表示と同時のボイス（you win.wav）を再生
@@ -300,9 +289,9 @@ final class SoundManager {
         }
     }
 
-    /// カットイン演出スキップ時などに再生中の cutin.mp3 を停止
+    /// カットイン演出スキップ時などに再生中の cutin3.mp3 を停止
     func stopCutinSE() {
-        stopSE(.cutin)
+        stopSE(.cutin3)
     }
 
     /// 再生中の全効果音（SE）を一括停止（BGM OFF切替時などに使用）

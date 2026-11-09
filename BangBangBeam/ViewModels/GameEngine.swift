@@ -639,6 +639,7 @@ final class GameEngine {
             beat = 3
             turnWindowStartDate = nil
             calloutText = "⚡️ アクション！"
+            SoundManager.shared.playHandRevealSE()
             resolveClash()
 
         default:
@@ -719,7 +720,6 @@ final class GameEngine {
                 finishMatch(playerWon: true, reason: "\(currentEnemy.codeName) の体力を削り切って撃破！")
                 return
             }
-            SoundManager.shared.playVoiceNiceSE()
         } else if cpuFiredBeam && pMove.isVulnerableToBeam {
             // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）→ Bad（赤）
             playerClashCallout = .badHit
@@ -739,14 +739,12 @@ final class GameEngine {
                 finishMatch(playerWon: false, reason: "ビームを3回被弾して力尽きた...")
                 return
             }
-            SoundManager.shared.playVoiceBadSE()
         } else if playerFiredBeam && cMove == .valid(.barrier) {
             calloutText = "🛡️ ガードされた！"
             statusDetailText = "\(currentEnemy.codeName) のバリアに通常ビームを防がれた！"
         } else if cpuFiredBeam && pMove == .valid(.barrier) {
             // ガードが成立 → Good!!（シアンカラー）
             playerClashCallout = .goodGuard
-            SoundManager.shared.playVoiceGoodSE()
             calloutText = "🛡️ ナイスガード！"
             statusDetailText = "敵の通常ビームをバリアで完全防御！"
             playerExpression = .fun

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-09 22:37 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.37`（体力1時の自キャラ名称 `REO (YOU)` の白文字くっきり前面表示化 ＆ 敵エリア右上の STAGE・連勝表示撤去）
+最終更新日時: 2026-11-09 22:50 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.38`（`nice.wav` / `good.wav` / `bad.wav` 機能削除・3拍目の手出しタイミングで `cutin.mp3` 再生・必殺技カットインSEを `cutin3.mp3` に変更）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.37`（体力1時の自キャラ名称 `REO (YOU)` の白文字くっきり前面表示化 ＆ 敵エリア右上の STAGE・連勝表示撤去）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、シミュレータ／実機で `v1.0.38`（`nice.wav` / `good.wav` / `bad.wav` 削除・3拍目の手出しタイミングで `cutin.mp3` 再生・必殺技カットインSEを `cutin3.mp3` に変更）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-09 22:50 (`v1.0.38`)**
+  - **`nice.wav` / `good.wav` / `bad.wav` 機能削除・3拍目（手出し）で `cutin.mp3` 再生・必殺技カットインSEを `cutin3.mp3` に変更 ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`cutin3.mp3`](BangBangBeam/Resources/SE/cutin3.mp3)):**
+    1. **バトル中の3ボイス（`nice.wav` / `good.wav` / `bad.wav`）の削除:** バンドル内の該当3ファイルを削除し、[`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) および [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) から再生処理を削除（勝敗確定時の `you win.wav` / `you lose.wav` は維持）。
+    2. **3拍目（手を出すタイミング）で `cutin.mp3` を再生:** [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) の `advanceBeat()` にて、3拍目突入時に `SoundManager.shared.playHandRevealSE()`（`cutin.mp3`）を再生するよう実装。
+    3. **必殺技カットイン時の再生SEを `cutin3.mp3` に変更:** `素材/SE/cutin3.mp3` を `BangBangBeam/Resources/SE/cutin3.mp3` に組み込み、[`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) の `playCutinSE()` / `stopCutinSE()` が `.cutin3`（`cutin3.mp3`）を再生・停止するよう変更。
 
 - **2026-11-09 22:37 (`v1.0.37`)**
   - **体力1時の自キャラ名称 `REO (YOU)` の白文字前面表示化 ＆ 敵エリア右上のSTAGE・連勝表示撤去 ([`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`battle_screen_bg.imageset`](BangBangBeam/Assets.xcassets/UI/battle_screen_bg.imageset)):**
