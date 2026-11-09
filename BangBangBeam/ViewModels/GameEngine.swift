@@ -614,8 +614,8 @@ final class GameEngine {
             revealedPlayerMove = nil
             revealedCpuMove = nil
             playerClashCallout = nil
-            playerExpression = .normal
-            cpuExpression = .normal
+            playerExpression = playerHP == 1 ? .sad : .normal
+            cpuExpression = cpuHP == 1 ? .sad : .normal
             calloutText = "💥 バン！"
             statusDetailText = playerCharge >= maxCharge
                 ? "🌟 ULTIMATE ボタンを押して一撃必殺を放て！"
@@ -776,6 +776,14 @@ final class GameEngine {
             statusDetailText = playerCharge >= maxCharge
                 ? "🌟 金色の ULTIMATE ボタンをタップして一撃必殺！！"
                 : notes.joined(separator: " / ")
+        }
+
+        // 体力が残り1になった側は常時 sad.png を表示
+        if playerHP == 1 {
+            playerExpression = .sad
+        }
+        if cpuHP == 1 {
+            cpuExpression = .sad
         }
 
         resetSelectionIfNeeded()

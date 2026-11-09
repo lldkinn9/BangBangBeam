@@ -9,9 +9,14 @@ struct BattleView: View {
     @State private var isShowingRankingFallback: Bool = false
 
     private let enemyNeonMagenta = Color(red: 0.96, green: 0.26, blue: 0.88)
+    private let dangerNeonRed = Color(red: 1.0, green: 0.08, blue: 0.18)
 
     var body: some View {
         let isUltReady = engine.playerCharge >= engine.maxCharge
+        let isCpuLowHP = (engine.cpuHP == 1)
+        let isPlayerLowHP = (engine.playerHP == 1)
+        let cpuDisplayExpression: CharacterExpression = isCpuLowHP ? .sad : engine.cpuExpression
+        let playerDisplayExpression: CharacterExpression = isPlayerLowHP ? .sad : engine.playerExpression
 
         ZStack {
             // iPhone最上部のステータスバー領域（時計・電波・バッテリー残量）の背面のみ黒で塗りつぶし、バトル画面UI本体はその下に配置
@@ -32,6 +37,20 @@ struct BattleView: View {
                     .interpolation(.high)
                     .frame(width: w, height: h)
 
+                // MARK: 1.2 敵の体力が残り1のとき：敵側の背景を赤いネオンカラーで発光表示
+                if isCpuLowHP {
+                    enemyLowHpNeonRedBackdrop(w: w, h: h)
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                }
+
+                // MARK: 1.3 自分の体力が残り1のとき：自分（REO）側の背景を赤いネオンカラーで発光表示
+                if isPlayerLowHP {
+                    playerLowHpNeonRedBackdrop(w: w, h: h)
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                }
+
                 // 4チャージ到達時の黄金アンビエント発光
                 if isUltReady {
                     RadialGradient(
@@ -48,55 +67,83 @@ struct BattleView: View {
                     .allowsHitTesting(false)
                 }
 
-                // MARK: 2. 左上：敵キャラクター大型立ち絵（右向きミラー・勝敗/被弾で normal / fun / sad に表情変化）
+                // MARK: 2. 左上：敵キャラクター大型立ち絵（右向きミラー・体力1の時は常時 sad.png）
                 ZStack {
-                    Image(engine.currentEnemy.standingAsset(for: engine.cpuExpression))
+                    if isCpuLowHP {
+                        RadialGradient(
+                            colors: [
+                                dangerNeonRed.opacity(0.72),
+                                Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
+                                Color.clear
+                            ],
+                            center: UnitPoint(x: 0.22, y: 0.18),
+                            startRadius: 8,
+                            endRadius: w * 0.36
+                        )
+                    }
+
+                    Image(engine.currentEnemy.standingAsset(for: cpuDisplayExpression))
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
                         .frame(height: h * 0.565)
                         .scaleEffect(x: -1.0, y: 1.0)
                         .scaleEffect(
-                            engine.cpuExpression == .fun ? 1.05 : (engine.cpuExpression == .sad ? 0.95 : 1.0)
+                            cpuDisplayExpression == .fun ? 1.05 : (cpuDisplayExpression == .sad ? 0.95 : 1.0)
                         )
-                        .shadow(color: enemyNeonMagenta.opacity(0.65), radius: 12)
+                        .shadow(color: (isCpuLowHP ? dangerNeonRed : enemyNeonMagenta).opacity(0.80), radius: isCpuLowHP ? 16 : 12)
                         .position(x: w * 0.220, y: h * 0.285)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: engine.cpuExpression)
+                        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: cpuDisplayExpression)
                 }
                 .frame(width: w, height: h)
                 .clipShape(TopLeftBattleEnemyClipShape())
                 .allowsHitTesting(false)
 
-                // 左上敵フレーム下辺のマゼンタ発光ボーダー前景レイヤー（キャラの腰境界を自然にフレーム内へ収める）
+                // 左上敵フレーム下辺の発光ボーダー前景レイヤー（体力1の時は赤いネオンカラーに変化）
                 Image("battle_enemy_frame_fg")
                     .resizable()
                     .interpolation(.high)
+                    .colorMultiply(isCpuLowHP ? Color(red: 1.0, green: 0.28, blue: 0.28) : .white)
+                    .shadow(color: isCpuLowHP ? dangerNeonRed : .clear, radius: 8)
                     .frame(width: w, height: h)
                     .allowsHitTesting(false)
 
                 // MARK: 3. 右上マゼンタ枠内：敵名称・3ハート・4バッテリー（添付1枚目の座標に完全準拠）
-                enemyHudContents(w: w, h: h)
+                enemyHudContents(w: w, h: h, isLowHP: isCpuLowHP)
 
-                // MARK: 4. 右下：主人公 REO 大型立ち絵（勝敗/被弾で normal / fun / sad に表情変化）
+                // MARK: 4. 右下：主人公 REO 大型立ち絵（体力1の時は常時 sad.png）
                 ZStack {
-                    Image(CharacterProfile.reo.standingAsset(for: engine.playerExpression))
+                    if isPlayerLowHP {
+                        RadialGradient(
+                            colors: [
+                                dangerNeonRed.opacity(0.75),
+                                Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
+                                Color.clear
+                            ],
+                            center: UnitPoint(x: 0.78, y: 0.86),
+                            startRadius: 10,
+                            endRadius: w * 0.40
+                        )
+                    }
+
+                    Image(CharacterProfile.reo.standingAsset(for: playerDisplayExpression))
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
                         .frame(height: h * 0.625)
                         .scaleEffect(
-                            engine.playerExpression == .fun ? 1.05 : (engine.playerExpression == .sad ? 0.95 : 1.0)
+                            playerDisplayExpression == .fun ? 1.05 : (playerDisplayExpression == .sad ? 0.95 : 1.0)
                         )
-                        .shadow(color: Color.cyberCyan.opacity(0.65), radius: 12)
+                        .shadow(color: (isPlayerLowHP ? dangerNeonRed : Color.cyberCyan).opacity(0.80), radius: isPlayerLowHP ? 16 : 12)
                         .position(x: w * 0.785, y: h * 1.002)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: engine.playerExpression)
+                        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: playerDisplayExpression)
                 }
                 .frame(width: w, height: h)
                 .clipped()
                 .allowsHitTesting(false)
 
                 // MARK: 5. 左下シアン枠内：3緑ハート・4緑バッテリー（4チャージで黄色発光）
-                playerHudContents(w: w, h: h)
+                playerHudContents(w: w, h: h, isLowHP: isPlayerLowHP)
 
                 // MARK: 5.5 Reoの顔の左側の空きスペース：勝敗に応じた英字判定（Good!! / Nice!! / Charge / Bad）
                 reoLeftStatusCalloutView(w: w, h: h)
@@ -156,16 +203,88 @@ struct BattleView: View {
         }
     }
 
+    // MARK: - Enemy / Player Low-HP (HP == 1) Red Neon Background Overlays
+    private func enemyLowHpNeonRedBackdrop(w: CGFloat, h: CGFloat) -> some View {
+        ZStack {
+            // 上部エリア全体への赤いネオンアンビエント照射
+            LinearGradient(
+                colors: [
+                    dangerNeonRed.opacity(0.55),
+                    Color(red: 0.72, green: 0.02, blue: 0.10).opacity(0.32),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: UnitPoint(x: 0.5, y: 0.36)
+            )
+
+            // 敵ステータス＆立ち絵フレームの赤ネオン発光塗り＋赤ネオン枠
+            EnemyLowHpPanelShape()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.58, green: 0.02, blue: 0.08).opacity(0.68),
+                            dangerNeonRed.opacity(0.38)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    EnemyLowHpPanelShape()
+                        .stroke(dangerNeonRed, lineWidth: 2.4)
+                        .shadow(color: dangerNeonRed, radius: 10)
+                        .shadow(color: dangerNeonRed, radius: 18)
+                )
+        }
+        .frame(width: w, height: h)
+    }
+
+    private func playerLowHpNeonRedBackdrop(w: CGFloat, h: CGFloat) -> some View {
+        ZStack {
+            // 下部エリア全体への赤いネオンアンビエント照射
+            LinearGradient(
+                colors: [
+                    Color.clear,
+                    Color(red: 0.72, green: 0.02, blue: 0.10).opacity(0.34),
+                    dangerNeonRed.opacity(0.58)
+                ],
+                startPoint: UnitPoint(x: 0.5, y: 0.68),
+                endPoint: .bottom
+            )
+
+            // 自分（REO）ステータス＆立ち絵フレームの赤ネオン発光塗り＋赤ネオン枠
+            PlayerLowHpPanelShape()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            dangerNeonRed.opacity(0.38),
+                            Color(red: 0.58, green: 0.02, blue: 0.08).opacity(0.70)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    PlayerLowHpPanelShape()
+                        .stroke(dangerNeonRed, lineWidth: 2.4)
+                        .shadow(color: dangerNeonRed, radius: 10)
+                        .shadow(color: dangerNeonRed, radius: 18)
+                )
+        }
+        .frame(width: w, height: h)
+    }
+
     // MARK: - Top-Right Enemy HUD Box Contents (`x = 0.45..0.94 * w, y = 0.05..0.16 * h`)
-    private func enemyHudContents(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: h * 0.008) {
+    private func enemyHudContents(w: CGFloat, h: CGFloat, isLowHP: Bool) -> some View {
+        let hudAccent = isLowHP ? dangerNeonRed : enemyNeonMagenta
+        return VStack(alignment: .leading, spacing: h * 0.008) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(engine.currentEnemy.codeName)
                     .font(.system(size: min(w * 0.060, h * 0.026), weight: .black, design: .rounded))
                     .tracking(1.5)
                     .foregroundStyle(.white)
-                    .shadow(color: enemyNeonMagenta, radius: 7)
-                    .shadow(color: enemyNeonMagenta, radius: 14)
+                    .shadow(color: hudAccent, radius: 7)
+                    .shadow(color: hudAccent, radius: 14)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
 
@@ -193,7 +312,7 @@ struct BattleView: View {
             HealthBarView(
                 currentHP: engine.cpuHP,
                 maxHP: engine.maxHP,
-                accentColor: enemyNeonMagenta,
+                accentColor: hudAccent,
                 heartSize: min(w * 0.050, h * 0.023)
             )
 
@@ -212,12 +331,13 @@ struct BattleView: View {
     }
 
     // MARK: - Bottom-Left Player HUD Box Contents (`REO (YOU)` の右隣にハート3つ＋バッテリー4つ)
-    private func playerHudContents(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .trailing, spacing: h * 0.010) {
+    private func playerHudContents(w: CGFloat, h: CGFloat, isLowHP: Bool) -> some View {
+        let hpAccent: Color = isLowHP ? dangerNeonRed : .cyberEmerald
+        return VStack(alignment: .trailing, spacing: h * 0.010) {
             HealthBarView(
                 currentHP: engine.playerHP,
                 maxHP: engine.maxHP,
-                accentColor: .cyberEmerald,
+                accentColor: hpAccent,
                 heartSize: min(w * 0.050, h * 0.023)
             )
 
@@ -236,27 +356,49 @@ struct BattleView: View {
         .position(x: w * 0.440, y: h * 0.896)
     }
 
-    // MARK: - Left of Reo's Face: Clash Result Callout (Good!! / Nice!! / Charge / Bad)
+    // MARK: - Left of Reo's Face: Clash Result Callout (Good!! / Nice!! / Charge / Bad) with Crisp White Outline
     @ViewBuilder
     private func reoLeftStatusCalloutView(w: CGFloat, h: CGFloat) -> some View {
         if engine.preBattlePhase == .none,
            engine.beat == 3,
            let callout = engine.playerClashCallout {
-            Text(callout.displayText)
-                .font(.system(size: min(w * 0.135, 52), weight: .black, design: .rounded))
-                .italic()
-                .tracking(1.5)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .foregroundStyle(callout.primaryColor)
-                .shadow(color: Color.black.opacity(0.95), radius: 2, x: 0, y: 2)
-                .shadow(color: callout.primaryColor, radius: 10)
-                .shadow(color: callout.primaryColor.opacity(0.85), radius: 22)
-                .frame(width: w * 0.54, alignment: .center)
-                .position(x: w * 0.355, y: h * 0.788)
-                .id("callout-\(engine.turnCount)-\(callout.displayText)")
-                .transition(.scale(scale: 0.65).combined(with: .opacity))
-                .allowsHitTesting(false)
+            let fontSize = min(w * 0.135, 52)
+            let outlineOffsets: [(CGFloat, CGFloat)] = [
+                (-1.6, -1.6), (0.0, -1.8), (1.6, -1.6),
+                (-1.8,  0.0),              (1.8,  0.0),
+                (-1.6,  1.6), (0.0,  1.8), (1.6,  1.6)
+            ]
+
+            ZStack {
+                // 視認性を高める白枠（8方向オフセットによるシャープな白縁取り）
+                ForEach(0..<outlineOffsets.count, id: \.self) { idx in
+                    Text(callout.displayText)
+                        .font(.system(size: fontSize, weight: .black, design: .rounded))
+                        .italic()
+                        .tracking(1.5)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .foregroundStyle(Color.white)
+                        .offset(x: outlineOffsets[idx].0, y: outlineOffsets[idx].1)
+                }
+
+                // メインのカラー英字（シアン / 黄色 / ネオングリーン / 赤）
+                Text(callout.displayText)
+                    .font(.system(size: fontSize, weight: .black, design: .rounded))
+                    .italic()
+                    .tracking(1.5)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .foregroundStyle(callout.primaryColor)
+            }
+            .shadow(color: Color.black.opacity(0.95), radius: 2, x: 0, y: 2)
+            .shadow(color: callout.primaryColor, radius: 10)
+            .shadow(color: callout.primaryColor.opacity(0.85), radius: 20)
+            .frame(width: w * 0.54, alignment: .center)
+            .position(x: w * 0.355, y: h * 0.788)
+            .id("callout-\(engine.turnCount)-\(callout.displayText)")
+            .transition(.scale(scale: 0.65).combined(with: .opacity))
+            .allowsHitTesting(false)
         }
     }
 
@@ -814,6 +956,51 @@ private struct TopLeftBattleEnemyClipShape: Shape {
     }
 }
 
+/// 敵の体力が残り1のときに赤ネオン発光させる上部背景パネル形状（571×1024正規化座標）
+private struct EnemyLowHpPanelShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: w * 0.028, y: h * 0.052))
+        path.addLine(to: CGPoint(x: w * 0.410, y: h * 0.052))
+        path.addLine(to: CGPoint(x: w * 0.432, y: h * 0.036))
+        path.addLine(to: CGPoint(x: w * 0.946, y: h * 0.036))
+        path.addLine(to: CGPoint(x: w * 0.970, y: h * 0.050))
+        path.addLine(to: CGPoint(x: w * 0.970, y: h * 0.238))
+        path.addLine(to: CGPoint(x: w * 0.942, y: h * 0.256))
+        path.addLine(to: CGPoint(x: w * 0.488, y: h * 0.256))
+        path.addLine(to: CGPoint(x: w * 0.432, y: h * 0.286))
+        path.addLine(to: CGPoint(x: w * 0.048, y: h * 0.286))
+        path.addLine(to: CGPoint(x: w * 0.028, y: h * 0.273))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// 自分（REO）の体力が残り1のときに赤ネオン発光させる下部背景パネル形状（571×1024正規化座標）
+private struct PlayerLowHpPanelShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: w * 0.028, y: h * 0.858))
+        path.addLine(to: CGPoint(x: w * 0.052, y: h * 0.842))
+        path.addLine(to: CGPoint(x: w * 0.194, y: h * 0.842))
+        path.addLine(to: CGPoint(x: w * 0.260, y: h * 0.781))
+        path.addLine(to: CGPoint(x: w * 0.572, y: h * 0.781))
+        path.addLine(to: CGPoint(x: w * 0.608, y: h * 0.754))
+        path.addLine(to: CGPoint(x: w * 0.966, y: h * 0.754))
+        path.addLine(to: CGPoint(x: w * 0.986, y: h * 0.768))
+        path.addLine(to: CGPoint(x: w * 0.986, y: h * 0.958))
+        path.addLine(to: CGPoint(x: w * 0.962, y: h * 0.968))
+        path.addLine(to: CGPoint(x: w * 0.054, y: h * 0.968))
+        path.addLine(to: CGPoint(x: w * 0.028, y: h * 0.952))
+        path.closeSubpath()
+        return path
+    }
+}
+
 // MARK: - 1本の時間の赤いバー（右から左へ消えていく描写）
 struct RhythmTimeBarView: View {
     var engine: GameEngine
@@ -1112,7 +1299,7 @@ struct UltimateReadyButton: View {
     }
 }
 
-/// 1・2拍目で「実際に手が叩いて見える」ダイナミック手拍子アニメーションView（大小バウンス＋小刻みな揺れ＋衝撃リング＆スプラッシュ）
+/// 1・2拍目で「実際に手が叩いて見える」ダイナミック手拍子アニメーションView（大小バウンス＋小刻みな揺れ＋衝撃リング＆ネオングリーン・シアン火花）
 struct ClappingHandBeatView: View {
     let baseHeight: CGFloat
 
@@ -1122,18 +1309,36 @@ struct ClappingHandBeatView: View {
     @State private var shakeOffsetY: CGFloat = 6.0
     @State private var ringScale: CGFloat = 0.45
     @State private var ringOpacity: Double = 0.95
+    @State private var sparkDistanceFactor: CGFloat = 0.22
+    @State private var sparkOpacity: Double = 1.0
+
+    /// ネオングリーンとシアンの火花データ（角度・飛距離係数・サイズ・色種別）
+    private static let sparkSpecs: [(angleDeg: Double, dist: CGFloat, length: CGFloat, isGreen: Bool)] = [
+        (  12, 0.78, 10, true),
+        (  38, 0.92,  8, false),
+        (  67, 0.74,  9, true),
+        ( 104, 0.88,  7, false),
+        ( 132, 0.95, 11, true),
+        ( 158, 0.76,  8, false),
+        ( 194, 0.86, 10, true),
+        ( 222, 0.94,  8, false),
+        ( 252, 0.72,  9, true),
+        ( 284, 0.90,  7, false),
+        ( 314, 0.84, 11, true),
+        ( 342, 0.92,  8, false)
+    ]
 
     var body: some View {
         ZStack {
-            // 手拍子の衝撃で広がるシアン＆ホワイトのショックウェーブリング
+            // 手拍子の衝撃で広がるシアン＆ネオングリーンのショックウェーブリング
             Circle()
                 .stroke(
                     LinearGradient(
-                        colors: [.white, Color.cyberCyan, Color.cyberEmerald.opacity(0.6)],
+                        colors: [.white, Color.cyberCyan, Color.cyberEmerald.opacity(0.75)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 3.2
+                    lineWidth: 3.0
                 )
                 .frame(width: baseHeight * 1.15, height: baseHeight * 1.15)
                 .scaleEffect(ringScale)
@@ -1142,13 +1347,37 @@ struct ClappingHandBeatView: View {
 
             // 放射状のクラップ集中線スパーク（8方向）
             ForEach(0..<8, id: \.self) { idx in
+                let isGreen = idx.isMultiple(of: 2)
+                let streakColor = isGreen ? Color.cyberEmerald : Color.cyberCyan
                 Capsule()
-                    .fill(idx.isMultiple(of: 2) ? Color.white : Color.cyberCyan)
-                    .frame(width: 3.0, height: baseHeight * 0.22)
+                    .fill(streakColor)
+                    .frame(width: 2.8, height: baseHeight * 0.20)
                     .offset(y: -baseHeight * 0.62 * ringScale)
                     .rotationEffect(.degrees(Double(idx) * 45.0 + 22.5))
                     .opacity(ringOpacity)
-                    .shadow(color: Color.cyberCyan, radius: 6)
+                    .shadow(color: streakColor, radius: 6)
+            }
+
+            // 飛び散るネオングリーン＆シアンの火花パーティクル（12個）
+            ForEach(0..<Self.sparkSpecs.count, id: \.self) { idx in
+                let spec = Self.sparkSpecs[idx]
+                let sparkColor = spec.isGreen
+                    ? Color(red: 0.18, green: 1.0, blue: 0.56)
+                    : Color.cyberCyan
+                let radius = baseHeight * spec.dist * sparkDistanceFactor
+
+                ZStack {
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: 2.2, height: spec.length * 0.65)
+                    Capsule()
+                        .fill(sparkColor)
+                        .frame(width: 3.6, height: spec.length)
+                        .shadow(color: sparkColor, radius: 6)
+                }
+                .offset(y: -radius)
+                .rotationEffect(.degrees(spec.angleDeg))
+                .opacity(sparkOpacity)
             }
 
             // 手拍子イラスト本体（叩く瞬間に大きく弾けて揺れ、収束する）
@@ -1172,10 +1401,14 @@ struct ClappingHandBeatView: View {
                 shakeOffsetY = -5.0
             }
 
-            // 2. 衝撃リングの拡散フェードアウト
+            // 2. 衝撃リング＆ネオングリーン・シアン火花の拡散フェードアウト
             withAnimation(.easeOut(duration: 0.34)) {
                 ringScale = 1.55
                 ringOpacity = 0.0
+            }
+            withAnimation(.easeOut(duration: 0.38)) {
+                sparkDistanceFactor = 1.08
+                sparkOpacity = 0.0
             }
 
             // 3. 叩いた反動のシェイク揺れ ＆ バウンス収束
