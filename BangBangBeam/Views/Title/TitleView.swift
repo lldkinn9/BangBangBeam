@@ -3,8 +3,10 @@ import SwiftUI
 /// 画面1: タイトル画面 (TitleView)
 struct TitleView: View {
     @Bindable var engine: GameEngine
+    @Bindable private var itemManager = ItemManager.shared
 
     @State private var isMenuExpanded: Bool = false
+    @State private var isShowingItemSheet: Bool = false
     @State private var isShowingSettings: Bool = false
     @State private var isShowingRankingSheet: Bool = false
     @State private var isPulsing: Bool = false
@@ -126,6 +128,9 @@ struct TitleView: View {
                 .scaledToFill()
                 .ignoresSafeArea()
         }
+        .sheet(isPresented: $isShowingItemSheet) {
+            ItemShopSheetView(engine: engine)
+        }
         .sheet(isPresented: $isShowingSettings) {
             SettingSheetView(engine: engine)
         }
@@ -205,7 +210,15 @@ struct TitleView: View {
 
     // MARK: - Mode Selection Menu
     private var modeMenuPanel: some View {
-        VStack(spacing: 12) {
+        let equippedItemName = (itemManager.activeRunCarryInItem ?? itemManager.selectedCarryInItem)?.displayName
+        let itemBadgeText: String = {
+            if let equippedItemName {
+                return "\(equippedItemName) 装備中"
+            }
+            return "\(itemManager.points) PT"
+        }()
+
+        return VStack(spacing: 10) {
             // ① KUMITE (メイン勝ち抜きモード：中断記録があれば右上に「〇連勝中」バッジを表示し引き継ぎ再開)
             modeButton(
                 title: "KUMITE",
@@ -220,7 +233,19 @@ struct TitleView: View {
                 engine.startOrResumeKumite()
             }
 
-            // ② RANKING (世界ランキング：自分の順位 ＆ 1〜100位)
+            // ② ITEM (ポイント交換・次戦KUMITE持ち込み設定)
+            modeButton(
+                title: "ITEM",
+                subtitle: "ポイント交換・持ち込みアイテム設定",
+                systemImage: "shippingbox.fill",
+                primary: .cyberEmerald,
+                secondary: .cyberCyan,
+                topTrailingBadge: itemBadgeText
+            ) {
+                isShowingItemSheet = true
+            }
+
+            // ③ RANKING (世界ランキング：自分の順位 ＆ 1〜100位)
             modeButton(
                 title: "RANKING",
                 subtitle: "世界ランキング",
@@ -231,7 +256,7 @@ struct TitleView: View {
                 isShowingRankingSheet = true
             }
 
-            // ③ SETTING
+            // ④ SETTING
             modeButton(
                 title: "SETTING",
                 subtitle: "各種設定",

@@ -125,7 +125,7 @@ private struct PendingRevivePromptOverlayView: View {
                         .lineLimit(1)
                         .foregroundStyle(.white)
 
-                        Text("\(engine.winStreak)連勝を維持して再戦（復活残り \(engine.remainingRevives) / \(engine.maxRevivesPerRun) 回）")
+                        Text("\(engine.winStreak)連勝を維持して再戦（復活残り \(engine.remainingRevives) / \(engine.currentRunMaxRevives) 回）")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(Color.cyberAmber)
                     }

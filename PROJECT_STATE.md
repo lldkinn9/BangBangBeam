@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 11:45 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.42`（Practiceモード STEP 1 文言更新・STEP 6 から「標準」速度の1戦練習バトル＆終了後の KUMITE/ランキング/テンポ高速化紹介ガイド実装・バトル画面の Ninja 右端途切れ修正）
+最終更新日時: 2026-11-10 12:45 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.43`（ポイント＆アイテム交換・KUMITE持ち込み制度の全8種実装：メニュー「ITEM」画面・バトル中REOハート上アイコン＆タップ即時使用・勝敗リザルトでのポイント表示）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.42`（Practice STEP 1 文言・STEP 6「練習」ボタンからの標準速度1戦バトル＆終了後ガイド・Ninja立ち絵表示修正）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.43`（ポイント獲得・メニュー「ITEM」画面での交換＆持ち込み設定・REOハート上のアイテム表示＆タップ即時発動・リザルト画面のポイント表示）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,14 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 12:45 (`v1.0.43`)**
+  - **ポイント＆アイテム制度（全8種）・メニュー「ITEM」画面・バトル中REOハート上アイコン＆即時使用・勝敗リザルトのポイント表示を実装 ([`BattleItem.swift`](BangBangBeam/Models/BattleItem.swift) / [`ItemManager.swift`](BangBangBeam/Services/ItemManager.swift) / [`BattleItemIconView.swift`](BangBangBeam/Views/Items/BattleItemIconView.swift) / [`ItemShopSheetView.swift`](BangBangBeam/Views/Items/ItemShopSheetView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift)):**
+    1. **勝利ポイント獲得＆永続管理 (`ItemManager`):** KUMITE で1勝するたびに `+1 PT` 加算され、アイテム交換時にポイントを消費。勝敗リザルト画面（`YOU WIN` / `YOU LOSE...`）に現在の所持ポイント（勝利時は `+1 PT` バッジ付き）を表示。
+    2. **メニュー画面に「ITEM」ボタン＆交換・持ち込み設定画面（`ItemShopSheetView`）を追加:**
+       - 持ち込みアイテム5種（所持品の中から1つのみ次のKUMITEへ持ち込み設定可能、勝利後タイトル中断時からの再開にも設定可）：`ハート`（10pt / 初期＆最大体力4）、`電池`（10pt / 開始時チャージ1・初手ビーム可）、`防弾チョッキ`（20pt / 通常ビームおよび必殺技を一度だけ完全防御）、`回復薬`（30pt / バトル中タップで体力全回復）、`エナジードリンク`（30pt / バトル中タップでチャージ+2）。
+       - 救急キット3種（購入と同時に自動適用・持ち込みアイテムと併用可・1回のKUMITEにつき1つまで適用）：`救急キット(小)`（30pt / 復活回数+1）、`救急キット(中)`（40pt / 復活回数+2）、`救急キット(大)`（50pt / 復活回数+3）。
+    3. **バトル画面の REO ハート上にサイバーネオンアイコンを表示 (`PlayerBattleItemHudBar`):** 持ち込みアイテムと適用中の救急キットを REO のハート上部に並べて表示し、`回復薬`・`エナジードリンク` はアイコンをタップした瞬間に効果が即時適用されるよう実装。
 
 - **2026-11-10 11:45 (`v1.0.42`)**
   - **Practiceモード文言＆1戦練習バトル導線実装・Ninja立ち絵の右端途切れ修正 ([`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):**

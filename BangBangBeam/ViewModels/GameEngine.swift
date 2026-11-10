@@ -121,6 +121,7 @@ final class GameEngine {
     private let savedKumiteActiveKey = "BangBangBeam.hasSavedKumiteSession"
     private let savedKumiteStreakKey = "BangBangBeam.savedKumiteWinStreak"
     private let savedKumiteRevivesKey = "BangBangBeam.savedKumiteRemainingRevives"
+    private let savedKumiteMaxRevivesKey = "BangBangBeam.savedKumiteMaxRevives"
     private let savedKumitePendingReviveKey = "BangBangBeam.savedKumitePendingRevive"
 
     // MARK: - Navigation & Mode
@@ -155,6 +156,7 @@ final class GameEngine {
     // MARK: - KUMITE Progression State
     var winStreak: Int = 0
     var remainingRevives: Int = 2
+    var currentRunMaxRevives: Int = 2
     var hasSavedKumiteSession: Bool = false
     /// 敗退後に復活回数を残してタイトルへ戻った保留状態かどうか
     var isPendingKumiteRevive: Bool = false
@@ -203,6 +205,15 @@ final class GameEngine {
     /// 4チャージ一撃必殺発動中のカットイン＆動画演出状態
     var activeUltimate: UltimatePresentation? = nil
 
+    /// アイテム使用・自動防御時のミニトースト表示テキスト
+    var itemEffectFeedbackText: String? = nil
+    private var itemFeedbackTask: Task<Void, Never>? = nil
+
+    /// プレイヤーの現在の最大体力（ハート持ち込み時は 4、通常時は 3）
+    var playerMaxHP: Int {
+        (gameMode == .kumite && ItemManager.shared.activeRunCarryInItem == .heart) ? (maxHP + 1) : maxHP
+    }
+
     // MARK: - Timer
     private var rhythmTimer: Timer? = nil
     private var pendingTimerTask: Task<Void, Never>? = nil
@@ -235,7 +246,8 @@ final class GameEngine {
 
         if UserDefaults.standard.bool(forKey: savedKumiteActiveKey) {
             let loadedStreak = max(0, UserDefaults.standard.integer(forKey: savedKumiteStreakKey))
-            let savedRevives = min(maxRevivesPerRun, max(0, UserDefaults.standard.integer(forKey: savedKumiteRevivesKey)))
+            let loadedMaxRevives = max(maxRevivesPerRun, UserDefaults.standard.integer(forKey: savedKumiteMaxRevivesKey))
+            let savedRevives = min(loadedMaxRevives, max(0, UserDefaults.standard.integer(forKey: savedKumiteRevivesKey)))
             let pendingRevive = UserDefaults.standard.bool(forKey: savedKumitePendingReviveKey)
 
             if pendingRevive && (loadedStreak <= 0 || savedRevives <= 0) {
@@ -243,6 +255,7 @@ final class GameEngine {
             } else if loadedStreak > 0 {
                 self.hasSavedKumiteSession = true
                 self.winStreak = loadedStreak
+                self.currentRunMaxRevives = loadedMaxRevives
                 self.remainingRevives = savedRevives
                 self.isPendingKumiteRevive = pendingRevive
             } else {
@@ -302,6 +315,13 @@ final class GameEngine {
             stopTimer()
             HapticManager.warmUp(enabled: isHapticsEnabled)
             gameMode = .kumite
+            let previousMedkit = ItemManager.shared.activeRunMedkit
+            let loadout = ItemManager.shared.activatePendingLoadoutForResumedKumite()
+            if previousMedkit == nil, let newlyAppliedMedkit = loadout.medkit {
+                currentRunMaxRevives += newlyAppliedMedkit.bonusRevives
+                remainingRevives += newlyAppliedMedkit.bonusRevives
+            }
+            saveKumiteSession(isPendingRevive: false)
             loadEnemyForCurrentStreak()
             setupMatchState(enemy: currentEnemy)
             currentScreen = .kumiteBattle
@@ -312,17 +332,20 @@ final class GameEngine {
         }
     }
 
-    /// KUMITE（勝ち抜きサバイバル）を最初から（連勝0・復活残り2回）開始
+    /// KUMITE（勝ち抜きサバイバル）を最初から（連勝0・基本復活2回＋救急キットボーナス）開始
     func startKumiteFromBeginning() {
         let needsTransitionSettle = (currentScreen != .kumiteBattle)
         isShowingPendingRevivePrompt = false
         markTutorialCompleted()
         stopTimer()
         HapticManager.warmUp(enabled: isHapticsEnabled)
-        clearSavedKumiteSession()
+        clearSavedKumiteSession(clearActiveItems: false)
         gameMode = .kumite
         winStreak = 0
-        remainingRevives = maxRevivesPerRun
+        let loadout = ItemManager.shared.activateLoadoutForNewKumiteRun()
+        let bonusRevives = loadout.medkit?.bonusRevives ?? 0
+        currentRunMaxRevives = maxRevivesPerRun + bonusRevives
+        remainingRevives = currentRunMaxRevives
         loadEnemyForCurrentStreak()
         setupMatchState(enemy: currentEnemy)
         currentScreen = .kumiteBattle
@@ -337,6 +360,7 @@ final class GameEngine {
         isShowingPendingRevivePrompt = false
         markTutorialCompleted()
         remainingRevives -= 1
+        ItemManager.shared.markReviveUsedInActiveRun()
         isPendingKumiteRevive = false
         if winStreak > 0 {
             saveKumiteSession(isPendingRevive: false)
@@ -421,12 +445,14 @@ final class GameEngine {
             } else if case .gameOver = outcome, winStreak > 0, remainingRevives > 0 {
                 saveKumiteSession(isPendingRevive: true)
             } else {
-                clearSavedKumiteSession()
+                clearSavedKumiteSession(clearActiveItems: true)
                 winStreak = 0
+                currentRunMaxRevives = maxRevivesPerRun
                 remainingRevives = maxRevivesPerRun
             }
         }
         activeUltimate = nil
+        itemEffectFeedbackText = nil
         SoundManager.shared.setDucked(false)
         currentScreen = .title
         SoundManager.shared.playTitleBGM()
@@ -438,16 +464,95 @@ final class GameEngine {
         UserDefaults.standard.set(true, forKey: savedKumiteActiveKey)
         UserDefaults.standard.set(winStreak, forKey: savedKumiteStreakKey)
         UserDefaults.standard.set(remainingRevives, forKey: savedKumiteRevivesKey)
+        UserDefaults.standard.set(currentRunMaxRevives, forKey: savedKumiteMaxRevivesKey)
         UserDefaults.standard.set(isPendingRevive, forKey: savedKumitePendingReviveKey)
     }
 
-    private func clearSavedKumiteSession() {
+    private func clearSavedKumiteSession(clearActiveItems: Bool = true) {
         hasSavedKumiteSession = false
         isPendingKumiteRevive = false
         UserDefaults.standard.set(false, forKey: savedKumiteActiveKey)
         UserDefaults.standard.removeObject(forKey: savedKumiteStreakKey)
         UserDefaults.standard.removeObject(forKey: savedKumiteRevivesKey)
+        UserDefaults.standard.removeObject(forKey: savedKumiteMaxRevivesKey)
         UserDefaults.standard.removeObject(forKey: savedKumitePendingReviveKey)
+        if clearActiveItems {
+            ItemManager.shared.clearFinishedKumiteRunLoadout()
+        }
+    }
+
+    // MARK: - Item Shop & Battle Active Item Actions
+    /// ITEM画面から救急キットを購入・即時適用（中断中の連勝セッションがある場合はその残り復活回数にも即加算）
+    @discardableResult
+    func purchaseAndApplyMedkit(_ medkit: BattleItem) -> Bool {
+        guard ItemManager.shared.purchaseAndApplyMedkit(medkit, hasSavedKumiteSession: hasSavedKumiteSession) else {
+            return false
+        }
+        if hasSavedKumiteSession {
+            currentRunMaxRevives += medkit.bonusRevives
+            remainingRevives += medkit.bonusRevives
+            saveKumiteSession(isPendingRevive: isPendingKumiteRevive)
+        }
+        return true
+    }
+
+    /// バトル画面のREOハート上に表示された使用型アイテム（回復薬・エナジードリンク）をタップした瞬間に即時適用する
+    func useEquippedBattleItem() {
+        guard gameMode == .kumite,
+              preBattlePhase == .none,
+              !outcome.isFinished,
+              activeUltimate == nil,
+              let item = ItemManager.shared.activeRunCarryInItem,
+              item.isTapUsableInBattle else {
+            return
+        }
+
+        switch item {
+        case .healingPotion:
+            guard playerHP < playerMaxHP else {
+                HapticManager.playLight(enabled: isHapticsEnabled)
+                showItemEffectFeedback("体力はすでに満タンです")
+                return
+            }
+            ItemManager.shared.consumeActiveRunCarryInItem()
+            playerHP = playerMaxHP
+            if playerExpression == .sad {
+                playerExpression = .normal
+            }
+            SoundManager.shared.playButtonSE()
+            HapticManager.playHeavy(enabled: isHapticsEnabled)
+            showItemEffectFeedback("💊 体力全回復！！")
+
+        case .energyDrink:
+            guard playerCharge < maxCharge else {
+                HapticManager.playLight(enabled: isHapticsEnabled)
+                showItemEffectFeedback("チャージはすでに満タンです")
+                return
+            }
+            ItemManager.shared.consumeActiveRunCarryInItem()
+            playerCharge = min(maxCharge, playerCharge + 2)
+            if playerCharge >= maxCharge {
+                selectedAction = .charge
+            }
+            SoundManager.shared.playButtonSE()
+            HapticManager.playHeavy(enabled: isHapticsEnabled)
+            showItemEffectFeedback("⚡ チャージ +2！！")
+
+        default:
+            break
+        }
+    }
+
+    private func showItemEffectFeedback(_ message: String) {
+        itemFeedbackTask?.cancel()
+        itemEffectFeedbackText = message
+        itemFeedbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(1600))
+            guard !Task.isCancelled else { return }
+            if self?.itemEffectFeedbackText == message {
+                self?.itemEffectFeedbackText = nil
+            }
+        }
     }
 
     // MARK: - Player Input
@@ -491,9 +596,10 @@ final class GameEngine {
         beat = 0
         turnCount = 1
         turnWindowStartDate = nil
-        playerHP = maxHP
+        let activeCarryIn: BattleItem? = (gameMode == .kumite) ? ItemManager.shared.activeRunCarryInItem : nil
+        playerHP = (activeCarryIn == .heart) ? (maxHP + 1) : maxHP
         cpuHP = maxHP
-        playerCharge = 0
+        playerCharge = (activeCarryIn == .battery) ? 1 : 0
         cpuCharge = 0
         playerExpression = .normal
         cpuExpression = .normal
@@ -502,6 +608,7 @@ final class GameEngine {
         revealedCpuMove = nil
         playerClashCallout = nil
         activeUltimate = nil
+        itemEffectFeedbackText = nil
         outcome = .ongoing
         calloutText = "Ready"
         statusDetailText = gameMode == .practice
@@ -725,23 +832,34 @@ final class GameEngine {
                 return
             }
         } else if cpuFiredBeam && pMove.isVulnerableToBeam {
-            // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）→ Bad（赤）
-            playerClashCallout = .badHit
-            playerHP = max(0, playerHP - 1)
-            playerCharge = max(0, playerCharge - 1)
-            playerExpression = .sad
-            cpuExpression = .fun
-            calloutText = "💥 被弾ダメージ！！"
-
-            if case .fumble(let attempted) = pMove {
-                statusDetailText = "⚠️ お手つき(\(attempted.label)不発)の無防備に被弾！HP -1 ＆ チャージ -1！"
+            if gameMode == .kumite && ItemManager.shared.activeRunCarryInItem == .bulletproofVest {
+                // 防弾チョッキが発動し相手のビームを一度だけ完全防御！
+                ItemManager.shared.consumeActiveRunCarryInItem()
+                playerClashCallout = .goodGuard
+                playerExpression = .fun
+                calloutText = "🛡️ チョッキで防御！！"
+                statusDetailText = "防弾チョッキが敵のビームを防いだ！（ダメージ0）"
+                HapticManager.playHeavy(enabled: isHapticsEnabled)
+                showItemEffectFeedback("🛡️ 防弾チョッキでビーム防御！")
             } else {
-                statusDetailText = "チャージ中に被弾！HP -1 ＆ チャージ -1！"
-            }
+                // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）→ Bad（赤）
+                playerClashCallout = .badHit
+                playerHP = max(0, playerHP - 1)
+                playerCharge = max(0, playerCharge - 1)
+                playerExpression = .sad
+                cpuExpression = .fun
+                calloutText = "💥 被弾ダメージ！！"
 
-            if playerHP <= 0 {
-                finishMatch(playerWon: false, reason: "ビームを3回被弾して力尽きた...")
-                return
+                if case .fumble(let attempted) = pMove {
+                    statusDetailText = "⚠️ お手つき(\(attempted.label)不発)の無防備に被弾！HP -1 ＆ チャージ -1！"
+                } else {
+                    statusDetailText = "チャージ中に被弾！HP -1 ＆ チャージ -1！"
+                }
+
+                if playerHP <= 0 {
+                    finishMatch(playerWon: false, reason: "ビームを被弾して力尽きた...")
+                    return
+                }
             }
         } else if playerFiredBeam && cMove == .valid(.barrier) {
             calloutText = "🛡️ ガードされた！"
@@ -819,6 +937,23 @@ final class GameEngine {
             calloutText = "🌟 一撃必殺 K.O.!!"
             finishMatch(playerWon: true, reason: "4チャージ ULTIMATE 炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！")
         } else {
+            if gameMode == .kumite && ItemManager.shared.activeRunCarryInItem == .bulletproofVest {
+                // 防弾チョッキが一撃必殺の必殺技も一度だけ防ぐ！
+                ItemManager.shared.consumeActiveRunCarryInItem()
+                playerClashCallout = .goodGuard
+                playerExpression = .fun
+                cpuExpression = cpuHP == 1 ? .sad : .normal
+                calloutText = "🛡️ 必殺技を防御！！"
+                statusDetailText = "防弾チョッキが敵の必殺技を完全に防ぎ切った！！"
+                HapticManager.playHeavy(enabled: isHapticsEnabled)
+                showItemEffectFeedback("🛡️ 防弾チョッキで必殺技を防御！！")
+                resetSelectionIfNeeded()
+                if currentScreen == .kumiteBattle {
+                    scheduleCommonRunLoopTimer()
+                }
+                return
+            }
+
             playerHP = 0
             playerExpression = .sad
             cpuExpression = .fun
@@ -846,6 +981,7 @@ final class GameEngine {
 
         if playerWon {
             winStreak += 1
+            ItemManager.shared.addVictoryPoint()
             saveKumiteSession(isPendingRevive: false)
             PlayerIconManager.shared.recordKumiteVictory(
                 enemy: currentEnemy,
@@ -858,7 +994,7 @@ final class GameEngine {
             if winStreak > 0 && remainingRevives > 0 {
                 saveKumiteSession(isPendingRevive: true)
             } else {
-                clearSavedKumiteSession()
+                clearSavedKumiteSession(clearActiveItems: remainingRevives <= 0)
             }
             GameCenterManager.shared.recordWinStreak(winStreak)
             outcome = .gameOver(finalStreak: winStreak, reason: reason)
@@ -876,8 +1012,8 @@ final class GameEngine {
     }
 
     private func selectCpuAction() -> GameAction {
-        // 0. 初手（1ターン目）は両者チャージ0で他行動が無意味なため、必ずチャージを選択
-        if turnCount == 1 {
+        // 0. 初手（1ターン目）で両者ともチャージ0の時は他行動が無意味なため必ずチャージを選択（電池持ち込み時は通常の読み合いへ移行）
+        if turnCount == 1 && playerCharge == 0 && cpuCharge == 0 {
             return .charge
         }
 

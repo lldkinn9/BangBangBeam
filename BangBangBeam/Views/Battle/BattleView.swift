@@ -6,6 +6,7 @@ struct BattleView: View {
     @Bindable var engine: GameEngine
     @Bindable private var adManager = AdManager.shared
     @Bindable private var soundManager = SoundManager.shared
+    @Bindable private var itemManager = ItemManager.shared
     @State private var isShowingRankingFallback: Bool = false
 
     private let enemyNeonMagenta = Color(red: 0.96, green: 0.26, blue: 0.88)
@@ -334,13 +335,13 @@ struct BattleView: View {
             .frame(width: w * 0.24, alignment: .leading)
             .position(x: w * 0.195, y: h * 0.885)
 
-            // 右側：ハート3つ＋バッテリー4つ
+            // 右側：ハート（通常3・ハート持ち込み時4）＋バッテリー4つ
             VStack(alignment: .trailing, spacing: h * 0.010) {
                 HealthBarView(
                     currentHP: engine.playerHP,
-                    maxHP: engine.maxHP,
+                    maxHP: engine.playerMaxHP,
                     accentColor: hpAccent,
-                    heartSize: min(w * 0.050, h * 0.023)
+                    heartSize: min(w * 0.048, h * 0.022)
                 )
 
                 EnergyOrbView(
@@ -354,8 +355,22 @@ struct BattleView: View {
                 )
                 .padding(.trailing, w * 0.035)
             }
-            .frame(width: w * 0.28, alignment: .trailing)
-            .position(x: w * 0.440, y: h * 0.896)
+            .frame(width: w * 0.34, alignment: .trailing)
+            .position(x: w * 0.435, y: h * 0.896)
+
+            // REOのハートの上に持ち込みアイテム＆適用中の救急キットをアイコン表示（バトル中使用アイテムはタップした瞬間に即時適用）
+            if engine.gameMode == .kumite {
+                PlayerBattleItemHudBar(
+                    carryInItem: itemManager.activeRunCarryInItem,
+                    medkitItem: itemManager.activeRunMedkit,
+                    feedbackText: engine.itemEffectFeedbackText,
+                    onTapActiveItem: {
+                        engine.useEquippedBattleItem()
+                    }
+                )
+                .frame(width: w * 0.44, alignment: .trailing)
+                .position(x: w * 0.365, y: h * 0.816)
+            }
         }
     }
 
@@ -398,7 +413,7 @@ struct BattleView: View {
             .shadow(color: callout.primaryColor, radius: 10)
             .shadow(color: callout.primaryColor.opacity(0.85), radius: 20)
             .frame(width: w * 0.54, alignment: .center)
-            .position(x: w * 0.355, y: h * 0.788)
+            .position(x: w * 0.345, y: h * 0.752)
             .id("callout-\(engine.turnCount)-\(callout.displayText)")
             .transition(.scale(scale: 0.65).combined(with: .opacity))
             .allowsHitTesting(false)
@@ -632,6 +647,37 @@ struct BattleView: View {
                         .foregroundStyle(accent)
                         .shadow(color: accent.opacity(0.9), radius: 14)
 
+                    // 勝敗リザルト共通：所持ポイント表示（勝利時は +1 PT 獲得バッジ付き）
+                    HStack(spacing: 8) {
+                        Image(systemName: "bitcoinsign.circle.fill")
+                            .font(.system(size: 15, weight: .black))
+                            .foregroundStyle(Color.cyberAmber)
+
+                        Text("所持ポイント: \(itemManager.points) PT")
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        if isStageClear {
+                            Text("+1 PT")
+                                .font(.system(size: 11.5, weight: .black, design: .rounded))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2.5)
+                                .background(Color.cyberAmber, in: Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule()
+                            .fill(Color.black.opacity(0.48))
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.cyberAmber.opacity(0.65), lineWidth: 1.2)
+                            )
+                    )
+                    .shadow(color: Color.cyberAmber.opacity(0.35), radius: 6)
+
                     if case .stageClear = engine.outcome {
                         HStack(alignment: .center, spacing: 12) {
                             Image("result_reo_happy")
@@ -790,7 +836,7 @@ struct BattleView: View {
                                     .font(.system(size: 16, weight: .black, design: .rounded))
                                     .foregroundStyle(.white)
 
-                                    Text("連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.maxRevivesPerRun) 回）")
+                                    Text("連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.currentRunMaxRevives) 回）")
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(Color.cyberAmber)
                                 }
@@ -815,7 +861,7 @@ struct BattleView: View {
                                     .frame(maxWidth: .infinity)
                             }
                         } else {
-                            Text("※今回の挑戦での復活回数（最大\(engine.maxRevivesPerRun)回）を使い切りました")
+                            Text("※今回の挑戦での復活回数（最大\(engine.currentRunMaxRevives)回）を使い切りました")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(Color.white.opacity(0.6))
                                 .multilineTextAlignment(.center)
