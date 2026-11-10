@@ -5,7 +5,7 @@ struct CyberShape: InsettableShape, Sendable {
     let cutSize: CGFloat
     let insetAmount: CGFloat
 
-    init(cutSize: CGFloat = 14, insetAmount: CGFloat = 0) {
+    nonisolated init(cutSize: CGFloat = 14, insetAmount: CGFloat = 0) {
         self.cutSize = cutSize
         self.insetAmount = insetAmount
     }

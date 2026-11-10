@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 08:23 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.40`（iPhone消音モード時の必殺技動画音声の完全消音化 ＆ Practiceモード旧フリー実戦コード完全撤去・吹き出し配置調整）
+最終更新日時: 2026-11-10 11:16 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.41`（Xcode ビルドエラー修正：`PracticeTutorialView` の `CharacterProfile.geek` 参照解決、および `UltimateCutinOverlayView` / `CyberShape` の Swift 6 並行処理警告の解消）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側でローカル変更がないことを確認した上で `git pull origin main`＆クリーンビルドを実行し、実機で `v1.0.40`（本番UIのPractice吹き出しルール学習・iPhone消音モード時の必殺技動画無音化）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.41`（ビルド成功確認・本番UIのPractice吹き出しルール学習・iPhone消音モード時の必殺技動画無音化）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,11 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 11:16 (`v1.0.41`)**
+  - **Xcode ビルドエラー＆Swift 6 警告の修正 ([`CharacterProfile.swift`](BangBangBeam/Models/CharacterProfile.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) / [`CyberShape.swift`](BangBangBeam/Views/Components/CyberShape.swift)):**
+    1. **`PracticeTutorialView` の `CharacterProfile.geek` 参照エラー修正:** `CharacterProfile` に `static var geek` を追加するとともに、[`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) 側も `CharacterProfile.baseKumiteRoster[0]` を参照するよう修正。
+    2. **Swift 6 並行処理警告の解消:** [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) の `Coordinator` における非Sendable `player` キャプチャを `@MainActor` 経由に整理し、[`CyberShape.swift`](BangBangBeam/Views/Components/CyberShape.swift) の `init` に `nonisolated` を付与して警告を解消。
 
 - **2026-11-10 08:23 (`v1.0.40`)**
   - **iPhone消音モード時の必殺技動画BGM消音対応 ＆ Practiceモード旧フリー実戦ロジック完全除去・吹き出し配置ブラッシュアップ ([`SoundManager.swift`](BangBangBeam/Services/SoundManager.swift) / [`AdManager.swift`](BangBangBeam/Services/AdManager.swift) / [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift)):**

@@ -264,7 +264,7 @@ struct PracticeTutorialView: View {
                             )
                         }
 
-                        Image(CharacterProfile.geek.standingAsset(for: cpuDisplayExpression))
+                        Image(CharacterProfile.baseKumiteRoster[0].standingAsset(for: cpuDisplayExpression))
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()

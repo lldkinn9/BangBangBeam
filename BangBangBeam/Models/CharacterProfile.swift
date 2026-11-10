@@ -61,6 +61,11 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         ai: AITraits(aggression: 0.5, defenseAwareness: 0.5, ultimateGreed: 0.5, readPrecision: 0.5)
     )
 
+    /// 1戦目・Practiceガイド相手（GEEK）
+    static var geek: CharacterProfile {
+        baseKumiteRoster[0]
+    }
+
     // MARK: - 1周目 基本敵11キャラクター（2周目以降の前半11名としても登場）
     // geek → boarder → JK → engineer → alice → defective → spy → Ninja → pirate → skin → oldman
     static let baseKumiteRoster: [CharacterProfile] = [

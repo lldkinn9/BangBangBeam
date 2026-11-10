@@ -207,7 +207,7 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
         coordinator.cleanup()
     }
 
-    final class Coordinator {
+    final class Coordinator: @unchecked Sendable {
         private let onEnded: () -> Void
         private var player: AVPlayer?
         private var endObserver: NSObjectProtocol?
@@ -242,9 +242,10 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
             }
         }
 
+        @MainActor
         func startPlaybackIfNeeded(volume: Float) {
-            guard !didStartPlayback, let player else { return }
-            if player.currentItem?.status == .failed {
+            guard !didStartPlayback, let activePlayer = self.player else { return }
+            if activePlayer.currentItem?.status == .failed {
                 onEnded()
                 return
             }
@@ -252,26 +253,24 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
             SoundManager.shared.ensureAudioSessionActive()
 
             let shouldMute = (volume <= 0.001)
-            player.isMuted = shouldMute
-            player.volume = shouldMute ? 0.0 : volume
+            activePlayer.isMuted = shouldMute
+            activePlayer.volume = shouldMute ? 0.0 : volume
 
-            let currentSeconds = player.currentTime().seconds
+            let currentSeconds = activePlayer.currentTime().seconds
             if currentSeconds.isFinite && currentSeconds > 0.05 {
-                player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak player] _ in
-                    Task { @MainActor in
-                        SoundManager.shared.ensureAudioSessionActive()
-                        player?.play()
+                activePlayer.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.playImmediatelyOnMainActor()
                     }
                 }
             } else {
-                SoundManager.shared.ensureAudioSessionActive()
-                player.play()
+                playImmediatelyOnMainActor()
             }
 
             // 動画尺を自動取得した上で、万一終了通知が届かない場合のみ安全回収するフォールバック
-            fallbackTask = Task { @MainActor [weak self, weak player] in
+            fallbackTask = Task { @MainActor [weak self] in
                 var waitSeconds: Double = 15.0
-                if let asset = player?.currentItem?.asset,
+                if let asset = self?.player?.currentItem?.asset,
                    let dur = try? await asset.load(.duration),
                    dur.isNumeric && dur.seconds > 0.5 {
                     waitSeconds = dur.seconds + 3.0
@@ -281,6 +280,12 @@ private struct SeamlessVideoPlayerView: UIViewRepresentable {
                     self?.onEnded()
                 }
             }
+        }
+
+        @MainActor
+        private func playImmediatelyOnMainActor() {
+            SoundManager.shared.ensureAudioSessionActive()
+            player?.play()
         }
 
         func cleanup() {
