@@ -77,21 +77,21 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     var pointCost: Int {
         switch self {
         case .heart:
-            return 10
+            return 5
         case .battery:
-            return 10
+            return 5
         case .bulletproofVest:
-            return 20
+            return 15
         case .healingPotion:
-            return 30
+            return 20
         case .energyDrink:
-            return 30
+            return 20
         case .medkitSmall:
-            return 30
+            return 10
         case .medkitMedium:
-            return 40
+            return 25
         case .medkitLarge:
-            return 50
+            return 35
         }
     }
 

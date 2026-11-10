@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 14:40 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.45`（全テキストの日英バイリンガル対応＆初回起動時・設定画面での言語選択機能実装、および本番リリースに向けたランキングモックデータの完全削除）
+最終更新日時: 2026-11-10 14:48 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.46`（全8種アイテムの交換ポイント改定：ハート5・電池5・防弾チョッキ15・回復薬20・エナジードリンク20・救急キット小10/中25/大35、日本語・英語両方に反映）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.45`（初回起動時＆設定画面での日本語／英語切替・全画面テキストの英語表示・モック削除後の本番 Game Center ランキング動作）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.46`（初回起動時＆設定画面での日本語／英語切替・新ポイントレートでのITEM交換・モック削除後の本番 Game Center ランキング動作）の動作確認
 - [x] **【本番提出前必須】** ランキング画面のモックデータ（`useMockRankingForPreview` / `applyMockRankingData`）を完全削除し、本番 Apple Game Center 通信のみに統一済み
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,13 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 14:48 (`v1.0.46`)**
+  - **全8種アイテムの交換ポイント改定（日本語・英語ともに共通反映） ([`BattleItem.swift`](BangBangBeam/Models/BattleItem.swift)):**
+    - `BattleItem.pointCost` を以下の通り改定し、日本語表示（`交換 (X PT)` / `交換して即時適用 (X PT)`）および英語表示（`Exchange (X PT)` / `Exchange & Apply (X PT)`）の両方に動的反映：
+      - ハート（`Heart`）：`5 PT`、電池（`Battery`）：`5 PT`、防弾チョッキ（`Bulletproof Vest`）：`15 PT`
+      - 回復薬（`Healing Potion`）：`20 PT`、エナジードリンク（`Energy Drink`）：`20 PT`
+      - 救急キット(小)（`Medkit (S)`）：`10 PT`、救急キット(中)（`Medkit (M)`）：`25 PT`、救急キット(大)（`Medkit (L)`）：`35 PT`
 
 - **2026-11-10 14:40 (`v1.0.45`)**
   - **全テキストの日本語／英語対応（初回起動時＆設定画面での言語選択）およびランキングモックデータの完全削除 ([`LanguageManager.swift`](BangBangBeam/Services/LanguageManager.swift) / [`BangBangBeamApp.swift`](BangBangBeam/App/BangBangBeamApp.swift) / [`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) / [`GameCenterManager.swift`](BangBangBeam/Services/GameCenterManager.swift) / [`RankingInfoSheetView.swift`](BangBangBeam/Views/Title/RankingInfoSheetView.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`ItemShopSheetView.swift`](BangBangBeam/Views/Items/ItemShopSheetView.swift) / [`IconSettingView.swift`](BangBangBeam/Views/Settings/IconSettingView.swift) / [`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) ほか全画面):**
