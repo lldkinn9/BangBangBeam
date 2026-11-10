@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 14:48 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.46`（全8種アイテムの交換ポイント改定：ハート5・電池5・防弾チョッキ15・回復薬20・エナジードリンク20・救急キット小10/中25/大35、日本語・英語両方に反映）
+最終更新日時: 2026-11-10 15:28 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.47`（App Store Connect & Google AdMob 本番リリース対応：PrivacyInfo.xcprivacy・Game Center Entitlements・SKAdNetwork 49件入り Info.plist・ダミー広告枠撤去・RELEASE_GUIDE.md 整備）
 
 ---
 
@@ -51,14 +51,22 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.46`（初回起動時＆設定画面での日本語／英語切替・新ポイントレートでのITEM交換・モック削除後の本番 Game Center ランキング動作）の動作確認
-- [x] **【本番提出前必須】** ランキング画面のモックデータ（`useMockRankingForPreview` / `applyMockRankingData`）を完全削除し、本番 Apple Game Center 通信のみに統一済み
-- [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
-- [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
+- [x] **【本番提出前必須】** ランキング画面のモックデータ（`useMockRankingForPreview` / `applyMockRankingData`）および広告未リンク時のプレビュー用ダミー枠（`FallbackRewardedAdOverlayView` 等）を完全削除済み
+- [x] **【App Store Connect 必須構成】** `BangBangBeam/PrivacyInfo.xcprivacy`、`Config/BangBangBeam.entitlements`（Game Center）、`Config/Info.plist`（`GADApplicationIdentifier`・Google公式 `SKAdNetworkItems` 49件・`ITSAppUsesNonExemptEncryption = false`）、および手順書 `RELEASE_GUIDE.md` を整備済み
+- [ ] Mac側で `git pull origin main` を実行し、Xcode に `GoogleMobileAds` Swift Package を追加のうえ、Build Settings の `ADMOB_APP_ID` / `ADMOB_BANNER_UNIT_ID` / `ADMOB_REWARDED_UNIT_ID` に本番 AdMob ID を設定（手順は `RELEASE_GUIDE.md` 第1章参照）
+- [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）作成・バージョン紐付け、および `Product > Archive` からの審査提出（手順は `RELEASE_GUIDE.md` 第2〜5章参照）
 
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 15:28 (`v1.0.47`)**
+  - **App Store Connect ＆ Google AdMob 本番リリース構成の完備 ([`PrivacyInfo.xcprivacy`](BangBangBeam/PrivacyInfo.xcprivacy) / [`BangBangBeam.entitlements`](Config/BangBangBeam.entitlements) / [`Config/Info.plist`](Config/Info.plist) / [`AdManager.swift`](BangBangBeam/Services/AdManager.swift) / [`AdBannerFooterView.swift`](BangBangBeam/Views/Components/AdBannerFooterView.swift) / [`RELEASE_GUIDE.md`](RELEASE_GUIDE.md)):**
+    1. **Apple Privacy Manifest (`BangBangBeam/PrivacyInfo.xcprivacy`) 追加:** `UserDefaults` (`CA92.1`) の Required Reason API 宣言および AdMob / Game Center の収集データ・トラッキング宣言を追加し、App Store Connect アップロード時の `ITMS-91053` エラーを防止。
+    2. **Game Center Entitlements (`Config/BangBangBeam.entitlements`) 追加:** `com.apple.developer.game-center = true` を設定し、Release Archive 署名時に Game Center 機能が確実に有効化されるよう構成。
+    3. **本番用 `Config/Info.plist` ＆ Xcode `Build Settings` 変数連携:** `GADApplicationIdentifier`（Release ビルドでの未設定クラッシュ防止）、Google 公式 `SKAdNetworkItems`（全49ネットワーク）、`ITSAppUsesNonExemptEncryption = false`（暗号化輸出コンプライアンス自動クリア）、`UIRequiredDeviceCapabilities`（`arm64`, `gamekit`）を設定し、Xcode の Build Settings（User-Defined: `ADMOB_APP_ID`, `ADMOB_BANNER_UNIT_ID`, `ADMOB_REWARDED_UNIT_ID`）からソースコード変更なしで本番IDを注入可能に整備。
+    4. **SDK未リンク時の開発用ダミー広告表示の完全撤去:** Apple 審査ガイドライン 2.1 およびプロジェクト規約遵守のため、`FallbackRewardedAdOverlayView` とダミーバナー文言を廃止。
+    5. **リリース手順書 [`RELEASE_GUIDE.md`](RELEASE_GUIDE.md) の作成:** AdMob 設定・Game Center Leaderboard 作成・App のプライバシー回答・日英ストア掲載文テンプレート・Archive 提出手順を一冊にまとめ。
 
 - **2026-11-10 14:48 (`v1.0.46`)**
   - **全8種アイテムの交換ポイント改定（日本語・英語ともに共通反映） ([`BattleItem.swift`](BangBangBeam/Models/BattleItem.swift)):**

@@ -7,8 +7,8 @@ import GoogleMobileAds
 #endif
 
 /// Google AdMob 広告管理マネージャー（バナー広告 ＆ KUMITE敗北時の復活リワード動画広告）
-/// - 本番用広告IDはソースコードにハードコードせず Info.plist 設定値から動的に取得する。
-/// - DEBUGビルド時は AdMob 規約遵守のため Google 公式テスト広告ユニットIDを使用する。
+/// - 本番用広告IDはソースコードにハードコードせず Info.plist（Build Settings / xcconfig 経由）から動的に取得する。
+/// - DEBUGビルド時は AdMob 規約遵守（自己クリック・無効トラフィック防止）のため Google 公式テスト広告ユニットIDを使用する。
 @Observable
 @MainActor
 final class AdManager: NSObject {
@@ -17,36 +17,40 @@ final class AdManager: NSObject {
     var isLoadingRewardedAd: Bool = false
     var rewardedAdStatusMessage: String? = nil
 
-    /// GoogleMobileAds SDK 未リンク時のリワード広告タイミング＆報酬付与確認用オーバーレイ表示状態
-    var isPresentingFallbackRewardedAd: Bool = false
     private var pendingRewardHandler: (() -> Void)? = nil
     private var didEarnRewardInCurrentSession: Bool = false
 
-    /// バナー広告ユニットIDの安全な解決
+    /// Google公式 iOS テスト用広告ユニットID（DEBUG時・未設定時のフォールバック用）
+    private static let testBannerUnitID = "ca-app-pub-3940256099942544/2435281174"
+    private static let testRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
+
+    /// バナー広告ユニットIDの安全な動的解決（Info.plist -> ADMOB_BANNER_UNIT_ID）
     var bannerAdUnitID: String {
         #if DEBUG
-        // Google公式 iOS テスト用バナー広告ユニットID
-        return "ca-app-pub-3940256099942544/2435281174"
+        return Self.testBannerUnitID
         #else
-        if let prodID = Bundle.main.object(forInfoDictionaryKey: "ADMOB_BANNER_UNIT_ID") as? String,
-           !prodID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return prodID
+        if let prodID = Bundle.main.object(forInfoDictionaryKey: "ADMOB_BANNER_UNIT_ID") as? String {
+            let trimmed = prodID.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty, !trimmed.hasPrefix("$(") {
+                return trimmed
+            }
         }
-        return "ca-app-pub-3940256099942544/2435281174"
+        return Self.testBannerUnitID
         #endif
     }
 
-    /// リワード動画広告ユニットIDの安全な解決
+    /// リワード動画広告ユニットIDの安全な動的解決（Info.plist -> ADMOB_REWARDED_UNIT_ID）
     var rewardedAdUnitID: String {
         #if DEBUG
-        // Google公式 iOS テスト用リワード動画広告ユニットID
-        return "ca-app-pub-3940256099942544/1712485313"
+        return Self.testRewardedUnitID
         #else
-        if let prodID = Bundle.main.object(forInfoDictionaryKey: "ADMOB_REWARDED_UNIT_ID") as? String,
-           !prodID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return prodID
+        if let prodID = Bundle.main.object(forInfoDictionaryKey: "ADMOB_REWARDED_UNIT_ID") as? String {
+            let trimmed = prodID.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty, !trimmed.hasPrefix("$(") {
+                return trimmed
+            }
         }
-        return "ca-app-pub-3940256099942544/1712485313"
+        return Self.testRewardedUnitID
         #endif
     }
 
@@ -125,11 +129,10 @@ final class AdManager: NSObject {
             self.presentLoadedRewardedAd(ad, from: topVC, onRewardEarned: onRewardEarned)
         }
         #else
-        // GoogleMobileAds Swift Package 未リンク時の開発検証用オーバーレイ（未リンク状態を明示して報酬導線を確認可能）
-        pendingRewardHandler = onRewardEarned
-        didEarnRewardInCurrentSession = false
-        SoundManager.shared.setDucked(true)
-        isPresentingFallbackRewardedAd = true
+        rewardedAdStatusMessage = L10n(
+            "現在動画広告を利用できません。通信環境をご確認のうえ再度お試しください。",
+            "Video ad is currently unavailable. Please check your connection and try again."
+        )
         #endif
     }
 
@@ -149,24 +152,6 @@ final class AdManager: NSObject {
         }
     }
     #endif
-
-    /// SDK未リンク検証オーバーレイで最後まで視聴完了した際の処理
-    func completeFallbackRewardedAd() {
-        isPresentingFallbackRewardedAd = false
-        SoundManager.shared.setDucked(false)
-        let handler = pendingRewardHandler
-        pendingRewardHandler = nil
-        didEarnRewardInCurrentSession = false
-        handler?()
-    }
-
-    /// SDK未リンク検証オーバーレイを途中キャンセルした際の処理（報酬付与せず復活回数も消費しない）
-    func cancelFallbackRewardedAd() {
-        isPresentingFallbackRewardedAd = false
-        SoundManager.shared.setDucked(false)
-        pendingRewardHandler = nil
-        didEarnRewardInCurrentSession = false
-    }
 
     static func topViewController() -> UIViewController? {
         guard let scene = UIApplication.shared.connectedScenes

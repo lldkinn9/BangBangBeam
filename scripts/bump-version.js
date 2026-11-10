@@ -54,6 +54,11 @@ if (fs.existsSync(swiftVersionPath)) {
 
 if (fs.existsSync(xcprojPath)) {
   let xcContent = fs.readFileSync(xcprojPath, "utf8");
+  const patchNumber = newVersion.split(".")[2] || "1";
+  xcContent = xcContent.replace(
+    /"CURRENT_PROJECT_VERSION":\s*"[^"]+"/,
+    `"CURRENT_PROJECT_VERSION": "${patchNumber}"`
+  );
   xcContent = xcContent.replace(
     /"MARKETING_VERSION":\s*"[^"]+"/,
     `"MARKETING_VERSION": "${newVersion}"`

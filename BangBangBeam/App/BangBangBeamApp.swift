@@ -54,20 +54,6 @@ struct RootContainerView: View {
                     .zIndex(45)
             }
 
-            // GoogleMobileAds SDK 未リンク時の復活リワード動画広告タイミング確認オーバーレイ
-            if adManager.isPresentingFallbackRewardedAd {
-                FallbackRewardedAdOverlayView(
-                    onRewardComplete: {
-                        adManager.completeFallbackRewardedAd()
-                    },
-                    onCancel: {
-                        adManager.cancelFallbackRewardedAd()
-                    }
-                )
-                .transition(.opacity)
-                .zIndex(50)
-            }
-
             // 初回起動時の言語選択オーバーレイ（日本語 / English）
             if !languageManager.hasSelectedInitialLanguage {
                 InitialLanguageSelectionOverlayView(
