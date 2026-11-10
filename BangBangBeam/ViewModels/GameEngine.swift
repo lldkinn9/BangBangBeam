@@ -205,13 +205,16 @@ final class GameEngine {
     /// 4チャージ一撃必殺発動中のカットイン＆動画演出状態
     var activeUltimate: UltimatePresentation? = nil
 
+    /// 毎バトル前のVS画面で現在選択中の1戦限定ブーストアイテム（ハート・電池・防弾チョッキのうち最大1種類1個）
+    var selectedVsBattleItem: BattleItem? = nil
+
     /// アイテム使用・自動防御時のミニトースト表示テキスト
     var itemEffectFeedbackText: String? = nil
     private var itemFeedbackTask: Task<Void, Never>? = nil
 
-    /// プレイヤーの現在の最大体力（ハート持ち込み時は 4、通常時は 3）
+    /// プレイヤーの現在の最大体力（VS画面でハートを使用したバトルは 4、通常時は 3）
     var playerMaxHP: Int {
-        (gameMode == .kumite && ItemManager.shared.activeRunCarryInItem == .heart) ? (maxHP + 1) : maxHP
+        (gameMode == .kumite && ItemManager.shared.activeBattleBoostItem == .heart) ? (maxHP + 1) : maxHP
     }
 
     // MARK: - Timer
@@ -452,6 +455,8 @@ final class GameEngine {
             }
         }
         activeUltimate = nil
+        selectedVsBattleItem = nil
+        ItemManager.shared.clearPerBattleBoostItem()
         itemEffectFeedbackText = nil
         SoundManager.shared.setDucked(false)
         currentScreen = .title
@@ -482,10 +487,10 @@ final class GameEngine {
     }
 
     // MARK: - Item Shop & Battle Active Item Actions
-    /// ITEM画面から救急キットを購入・即時適用（中断中の連勝セッションがある場合はその残り復活回数にも即加算）
+    /// ITEM画面から救急キットを交換・即時適用（中断中の連勝セッションがある場合はその残り復活回数にも即加算）
     @discardableResult
-    func purchaseAndApplyMedkit(_ medkit: BattleItem) -> Bool {
-        guard ItemManager.shared.purchaseAndApplyMedkit(medkit, hasSavedKumiteSession: hasSavedKumiteSession) else {
+    func exchangeAndApplyMedkit(_ medkit: BattleItem) -> Bool {
+        guard ItemManager.shared.exchangeAndApplyMedkit(medkit, hasSavedKumiteSession: hasSavedKumiteSession) else {
             return false
         }
         if hasSavedKumiteSession {
@@ -596,10 +601,11 @@ final class GameEngine {
         beat = 0
         turnCount = 1
         turnWindowStartDate = nil
-        let activeCarryIn: BattleItem? = (gameMode == .kumite) ? ItemManager.shared.activeRunCarryInItem : nil
-        playerHP = (activeCarryIn == .heart) ? (maxHP + 1) : maxHP
+        ItemManager.shared.clearPerBattleBoostItem()
+        selectedVsBattleItem = nil
+        playerHP = maxHP
         cpuHP = maxHP
-        playerCharge = (activeCarryIn == .battery) ? 1 : 0
+        playerCharge = 0
         cpuCharge = 0
         playerExpression = .normal
         cpuExpression = .normal
@@ -619,16 +625,27 @@ final class GameEngine {
     /// KUMITE戦闘開始前の演出シーケンス：1. 事前VS画面で待機（「START」押下でバトル画面へ遷移）
     private func startPreBattleIntroThenRhythm(needsTransitionSettle: Bool) {
         stopTimer()
+        selectedVsBattleItem = nil
         preBattlePhase = .vsScreen
         HapticManager.playLight(enabled: isHapticsEnabled)
     }
 
-    /// 事前VS画面の「START」ボタン押下時：2. ゲーム画面に切替＋「Ready」 → 3.「Go!!」 → 4. 3拍開始
+    /// 事前VS画面の「START」ボタン押下時：選択されていた1戦限定アイテムをストックから1個消費・反映し、2. ゲーム画面に切替＋「Ready」 → 3.「Go!!」 → 4. 3拍開始
     func confirmVsScreenStart() {
         guard preBattlePhase == .vsScreen, !outcome.isFinished, activeUltimate == nil else { return }
         stopTimer()
         SoundManager.shared.playButtonSE()
         HapticManager.playHeavy(enabled: isHapticsEnabled)
+
+        if gameMode == .kumite {
+            let activatedBoost = ItemManager.shared.consumeAndActivateVsBattleBoost(selectedVsBattleItem)
+            selectedVsBattleItem = nil
+            if activatedBoost == .heart {
+                playerHP = maxHP + 1
+            } else if activatedBoost == .battery {
+                playerCharge = 1
+            }
+        }
 
         pendingTimerTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -832,9 +849,9 @@ final class GameEngine {
                 return
             }
         } else if cpuFiredBeam && pMove.isVulnerableToBeam {
-            if gameMode == .kumite && ItemManager.shared.activeRunCarryInItem == .bulletproofVest {
+            if gameMode == .kumite && ItemManager.shared.activeBattleBoostItem == .bulletproofVest {
                 // 防弾チョッキが発動し相手のビームを一度だけ完全防御！
-                ItemManager.shared.consumeActiveRunCarryInItem()
+                ItemManager.shared.consumeActiveBattleVestIfPresent()
                 playerClashCallout = .goodGuard
                 playerExpression = .fun
                 calloutText = "🛡️ チョッキで防御！！"
@@ -937,9 +954,9 @@ final class GameEngine {
             calloutText = "🌟 一撃必殺 K.O.!!"
             finishMatch(playerWon: true, reason: "4チャージ ULTIMATE 炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！")
         } else {
-            if gameMode == .kumite && ItemManager.shared.activeRunCarryInItem == .bulletproofVest {
+            if gameMode == .kumite && ItemManager.shared.activeBattleBoostItem == .bulletproofVest {
                 // 防弾チョッキが一撃必殺の必殺技も一度だけ防ぐ！
-                ItemManager.shared.consumeActiveRunCarryInItem()
+                ItemManager.shared.consumeActiveBattleVestIfPresent()
                 playerClashCallout = .goodGuard
                 playerExpression = .fun
                 cpuExpression = cpuHP == 1 ? .sad : .normal

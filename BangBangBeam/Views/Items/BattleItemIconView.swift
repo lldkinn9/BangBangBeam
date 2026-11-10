@@ -12,7 +12,6 @@ struct BattleItemIconView: View {
         let color = item.themeColor
 
         ZStack {
-            // ベース斜めカットまたは角丸ネオンパネル
             RoundedRectangle(cornerRadius: size * 0.24)
                 .fill(
                     LinearGradient(
@@ -37,10 +36,8 @@ struct BattleItemIconView: View {
                 )
                 .shadow(color: color.opacity(isInteractivePulse ? (pulse ? 0.95 : 0.55) : 0.55), radius: isInteractivePulse ? (pulse ? 10 : 5) : 6)
 
-            // メインのカスタムサイバーシンボル描画
             itemArtwork(size: size, color: color)
 
-            // 右下ミニバッジ（+1 / MAX / +2 / +3 など）
             if let tag = item.iconCornerTag {
                 VStack {
                     Spacer()
@@ -65,7 +62,6 @@ struct BattleItemIconView: View {
                 .padding(2)
             }
 
-            // バトル中にタップ使用するアイテム（回復薬・エナジードリンク）の上部「TAP」ピル
             if isInteractivePulse {
                 VStack {
                     Text("TAP")
@@ -207,9 +203,11 @@ struct BattleItemIconView: View {
     }
 }
 
-/// バトル画面の「REOのハートの上」に表示する持ち込みアイテム＆救急キットアイコンバー
+/// バトル画面の「REOのハートの上」に表示するアイコンバー
+/// - 1戦限定のVS選択アイテム（ハート・電池・防弾チョッキ）、KUMITE持ち込みアイテム（回復薬・エナジードリンク）、適用中の救急キットを表示
 /// - バトル中に使用するアイテム（回復薬・エナジードリンク）はタップした瞬間に即座に効果が適用される
 struct PlayerBattleItemHudBar: View {
+    let battleBoostItem: BattleItem?
     let carryInItem: BattleItem?
     let medkitItem: BattleItem?
     let feedbackText: String?
@@ -235,8 +233,8 @@ struct PlayerBattleItemHudBar: View {
                     .transition(.scale(scale: 0.8).combined(with: .opacity))
             }
 
-            if carryInItem != nil || medkitItem != nil {
-                HStack(spacing: 8) {
+            if battleBoostItem != nil || carryInItem != nil || medkitItem != nil {
+                HStack(spacing: 7) {
                     if let carryIn = carryInItem {
                         if carryIn.isTapUsableInBattle {
                             Button(action: onTapActiveItem) {
@@ -251,7 +249,7 @@ struct PlayerBattleItemHudBar: View {
                         } else {
                             BattleItemIconView(
                                 item: carryIn,
-                                size: 34,
+                                size: 33,
                                 isInteractivePulse: false
                             )
                             .allowsHitTesting(false)
@@ -259,10 +257,20 @@ struct PlayerBattleItemHudBar: View {
                         }
                     }
 
+                    if let boost = battleBoostItem {
+                        BattleItemIconView(
+                            item: boost,
+                            size: 33,
+                            isInteractivePulse: false
+                        )
+                        .allowsHitTesting(false)
+                        .transition(.scale(scale: 0.5).combined(with: .opacity))
+                    }
+
                     if let medkit = medkitItem {
                         BattleItemIconView(
                             item: medkit,
-                            size: 34,
+                            size: 33,
                             isInteractivePulse: false
                         )
                         .allowsHitTesting(false)
@@ -271,6 +279,7 @@ struct PlayerBattleItemHudBar: View {
                 }
             }
         }
+        .animation(.spring(response: 0.26, dampingFraction: 0.72), value: battleBoostItem)
         .animation(.spring(response: 0.26, dampingFraction: 0.72), value: carryInItem)
         .animation(.spring(response: 0.26, dampingFraction: 0.72), value: medkitItem)
         .animation(.easeInOut(duration: 0.20), value: feedbackText)

@@ -161,13 +161,14 @@ struct BattleView: View {
                     .frame(width: w * 0.97)
                     .position(x: w * 0.50, y: h * 0.648)
 
-                // MARK: 8. 戦闘開始前の「事前画面（VS画面）」オーバーレイ
+                // MARK: 8. 戦闘開始前の「事前画面（VS画面）」オーバーレイ（ハート・電池・防弾チョッキの1戦使用選択が可能）
                 if engine.preBattlePhase == .vsScreen {
                     PreBattleVsOverlayView(
                         enemy: engine.currentEnemy,
                         stageLabel: "STAGE \(engine.currentStageInLoop)/\(engine.totalStagesInCurrentLoop)",
                         winStreak: engine.winStreak,
                         isHapticsEnabled: engine.isHapticsEnabled,
+                        selectedBoostItem: $engine.selectedVsBattleItem,
                         onStartTapped: {
                             engine.confirmVsScreenStart()
                         }
@@ -358,9 +359,10 @@ struct BattleView: View {
             .frame(width: w * 0.34, alignment: .trailing)
             .position(x: w * 0.435, y: h * 0.896)
 
-            // REOのハートの上に持ち込みアイテム＆適用中の救急キットをアイコン表示（バトル中使用アイテムはタップした瞬間に即時適用）
+            // REOのハートの上に1戦ブーストアイテム・持ち込みアイテム・適用中の救急キットをアイコン表示（バトル中使用アイテムはタップした瞬間に即時適用）
             if engine.gameMode == .kumite {
                 PlayerBattleItemHudBar(
+                    battleBoostItem: itemManager.activeBattleBoostItem,
                     carryInItem: itemManager.activeRunCarryInItem,
                     medkitItem: itemManager.activeRunMedkit,
                     feedbackText: engine.itemEffectFeedbackText,
@@ -368,8 +370,8 @@ struct BattleView: View {
                         engine.useEquippedBattleItem()
                     }
                 )
-                .frame(width: w * 0.44, alignment: .trailing)
-                .position(x: w * 0.365, y: h * 0.816)
+                .frame(width: w * 0.46, alignment: .trailing)
+                .position(x: w * 0.355, y: h * 0.816)
             }
         }
     }

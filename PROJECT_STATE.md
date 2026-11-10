@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 12:45 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.43`（ポイント＆アイテム交換・KUMITE持ち込み制度の全8種実装：メニュー「ITEM」画面・バトル中REOハート上アイコン＆タップ即時使用・勝敗リザルトでのポイント表示）
+最終更新日時: 2026-11-10 14:00 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.44`（ハート・電池・防弾チョッキを「複数交換ストック＆毎バトル前VS画面での1戦使用選択」仕様へ変更、全8種の説明文更新、および「購入」表記をすべて「交換」へ統一）
 
 ---
 
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.43`（ポイント獲得・メニュー「ITEM」画面での交換＆持ち込み設定・REOハート上のアイテム表示＆タップ即時発動・リザルト画面のポイント表示）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.44`（ITEM画面の交換＆説明文・VS画面でのハート/電池/防弾チョッキ1戦使用選択・バトル中REOハート上の表示＆タップ使用）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 14:00 (`v1.0.44`)**
+  - **ハート・電池・防弾チョッキの「1バトル効果＆毎バトル前VS画面選択」仕様変更・全アイテム説明文更新・「購入」→「交換」表記統一 ([`BattleItem.swift`](BangBangBeam/Models/BattleItem.swift) / [`ItemManager.swift`](BangBangBeam/Services/ItemManager.swift) / [`ItemShopSheetView.swift`](BangBangBeam/Views/Items/ItemShopSheetView.swift) / [`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`BattleItemIconView.swift`](BangBangBeam/Views/Items/BattleItemIconView.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):**
+    1. **ハート・電池・防弾チョッキを1バトル限定＆毎バトル前VS画面での選択制に変更:** ITEM画面で複数個交換してストックでき、毎バトル開始前のVS画面（[`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) の `VsBattleItemSelectorPanel`）でストックから「使用する／しない（1種類のみ・1個のみ）」を選択可能にし、`START` 押下時にストックを1消費してその1バトルのみ効果を発揮するよう実装。
+    2. **全8アイテムの説明文をご指定文言へ更新:** ハート・電池・防弾チョッキ・回復薬・エナジードリンク・救急キット(小/中/大) の各説明文をご指定通りに更新。
+    3. **「購入」テキストを「交換」へ完全統一:** ITEM画面のボタン・バッジ・案内文から「購入」表記をすべて廃止し、「交換（交換して即時適用・交換時自動適用）」へ統一。
 
 - **2026-11-10 12:45 (`v1.0.43`)**
   - **ポイント＆アイテム制度（全8種）・メニュー「ITEM」画面・バトル中REOハート上アイコン＆即時使用・勝敗リザルトのポイント表示を実装 ([`BattleItem.swift`](BangBangBeam/Models/BattleItem.swift) / [`ItemManager.swift`](BangBangBeam/Services/ItemManager.swift) / [`BattleItemIconView.swift`](BangBangBeam/Views/Items/BattleItemIconView.swift) / [`ItemShopSheetView.swift`](BangBangBeam/Views/Items/ItemShopSheetView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`TitleView.swift`](BangBangBeam/Views/Title/TitleView.swift)):**

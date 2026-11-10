@@ -2,11 +2,11 @@ import SwiftUI
 
 /// アイテムの発動・適用区分
 enum BattleItemCategory: String, Sendable {
-    /// 持ち込むだけでKUMITE中に効果を発揮するパッシブ／自動発動アイテム（ハート・電池・防弾チョッキ）
-    case passiveCarryIn
-    /// 持ち込んでバトル中にREOのハート上のアイコンをタップした瞬間に発動するアイテム（回復薬・エナジードリンク）
+    /// 複数交換してストック可能・毎バトル前のVS画面で使用するかを選択する「1バトル限定」アイテム（ハート・電池・防弾チョッキ）
+    case vsBattleBoost
+    /// ITEM画面で次のKUMITEへ1つ持ち込み、バトル中にREOのハート上のアイコンをタップした瞬間に発動するアイテム（回復薬・エナジードリンク）
     case activeCarryIn
-    /// 購入と同時に自動適用され、持ち込みアイテムとも併用できる救急キット（小・中・大）
+    /// 交換と同時に自動適用され、他アイテムとも併用できる救急キット（小・中・大）
     case autoMedkit
 }
 
@@ -45,6 +45,34 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// VS画面のコンパクト選択ボタン用の短縮名
+    var compactVsLabel: String {
+        switch self {
+        case .heart:
+            return "ハート"
+        case .battery:
+            return "電池"
+        case .bulletproofVest:
+            return "チョッキ"
+        default:
+            return displayName
+        }
+    }
+
+    /// VS画面で選択した際に表示する1行効果ガイド
+    var vsSelectionSummary: String {
+        switch self {
+        case .heart:
+            return "このバトルの体力が 4 からスタート！"
+        case .battery:
+            return "チャージ 1 の状態からバトルスタート！"
+        case .bulletproofVest:
+            return "相手のビーム・必殺技を一度だけ防御！"
+        default:
+            return ""
+        }
+    }
+
     /// 必要ポイント数
     var pointCost: Int {
         switch self {
@@ -67,25 +95,25 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 効果説明文
+    /// 効果説明文（指定文言準拠）
     var effectDescription: String {
         switch self {
         case .heart:
             return "初期体力を1増やす（体力が4からスタート）"
         case .battery:
-            return "バトル開始時に最初からチャージが1溜まっている（1ターン目からビームも可能）"
+            return "チャージが1溜まった状態からバトルスタート\n（1ターン目からビームも可能）"
         case .bulletproofVest:
             return "相手のビームを一度だけ防ぐ（必殺技も一度防げる）"
         case .healingPotion:
-            return "（バトル中に使用）体力を全回復する"
+            return "体力を全回復する（バトル中に使用）"
         case .energyDrink:
-            return "（バトル中に使用）チャージが2溜まる"
+            return "チャージが2溜まる（バトル中に使用）"
         case .medkitSmall:
-            return "（購入と同時に自動適用）次のKUMITEでの広告動画を見て復活の回数が1回増える"
+            return "次のKUMITEでの広告動画を見てリセットの回数が1回増える"
         case .medkitMedium:
-            return "（購入と同時に自動適用）次のKUMITEでの広告動画を見て復活の回数が2回増える"
+            return "次のKUMITEでの広告動画を見てリセットの回数が2回増える"
         case .medkitLarge:
-            return "（購入と同時に自動適用）次のKUMITEでの広告動画を見て復活の回数が3回増える"
+            return "次のKUMITEでの広告動画を見てリセットの回数が3回増える"
         }
     }
 
@@ -93,7 +121,7 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     var category: BattleItemCategory {
         switch self {
         case .heart, .battery, .bulletproofVest:
-            return .passiveCarryIn
+            return .vsBattleBoost
         case .healingPotion, .energyDrink:
             return .activeCarryIn
         case .medkitSmall, .medkitMedium, .medkitLarge:
@@ -101,9 +129,14 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 持ち込み枠（1つ選択）の対象アイテムかどうか
-    var isCarryInSelectable: Bool {
+    /// 交換して複数ストック可能なアイテムかどうか（ハート・電池・防弾チョッキ・回復薬・エナジードリンク）
+    var isStockable: Bool {
         category != .autoMedkit
+    }
+
+    /// ITEM画面の「KUMITE持ち込み枠（1つ選択）」の対象アイテムかどうか（回復薬・エナジードリンク）
+    var isCarryInSelectable: Bool {
+        category == .activeCarryIn
     }
 
     /// バトル中にアイコンタップで即時発動するアイテムかどうか
@@ -128,12 +161,12 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     /// 種別バッジテキスト
     var usageBadgeText: String {
         switch category {
-        case .passiveCarryIn:
-            return "持ち込み自動"
+        case .vsBattleBoost:
+            return "VS画面で選択（1戦）"
         case .activeCarryIn:
             return "バトル中使用"
         case .autoMedkit:
-            return "購入時自動適用"
+            return "交換時自動適用"
         }
     }
 
@@ -159,24 +192,6 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// SF Symbols ベースシンボル名
-    var symbolName: String {
-        switch self {
-        case .heart:
-            return "heart.fill"
-        case .battery:
-            return "battery.100.bolt"
-        case .bulletproofVest:
-            return "shield.checkered"
-        case .healingPotion:
-            return "cross.vial.fill"
-        case .energyDrink:
-            return "bolt.ring.closed"
-        case .medkitSmall, .medkitMedium, .medkitLarge:
-            return "cross.case.fill"
-        }
-    }
-
     /// アイコン右下に添えるミニサブテキスト
     var iconCornerTag: String? {
         switch self {
@@ -199,12 +214,17 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 持ち込み可能な5種類一覧
-    static var carryInItems: [BattleItem] {
-        [.heart, .battery, .bulletproofVest, .healingPotion, .energyDrink]
+    /// 毎バトル前のVS画面で選択可能な3種類一覧（1バトル効果・複数ストック可能）
+    static var vsBattleBoostItems: [BattleItem] {
+        [.heart, .battery, .bulletproofVest]
     }
 
-    /// 購入即時適用の救急キット3種類一覧
+    /// ITEM画面でKUMITEへ持ち込み設定するバトル中使用アイテム2種類一覧
+    static var carryInItems: [BattleItem] {
+        [.healingPotion, .energyDrink]
+    }
+
+    /// 交換と同時に自動適用の救急キット3種類一覧
     static var medkitItems: [BattleItem] {
         [.medkitSmall, .medkitMedium, .medkitLarge]
     }

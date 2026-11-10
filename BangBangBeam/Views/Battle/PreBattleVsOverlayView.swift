@@ -8,7 +8,10 @@ struct PreBattleVsOverlayView: View {
     let stageLabel: String
     let winStreak: Int
     var isHapticsEnabled: Bool = true
+    @Binding var selectedBoostItem: BattleItem?
     var onStartTapped: () -> Void = {}
+
+    @Bindable private var itemManager = ItemManager.shared
 
     /// false = 添付1枚目の状態（ベース背景のみ）、true = 添付2枚目の状態（キャラ立ち絵＆名称が挿入された状態）
     @State private var isCharacterInserted: Bool = false
@@ -189,7 +192,7 @@ struct PreBattleVsOverlayView: View {
                     .frame(width: canvasW, height: canvasH)
                     .offset(x: shake.width, y: shake.height)
 
-                    // MARK: 9. キャラ表示から1秒後に「VS」の直下に出現するサイバー「START」ボタン
+                    // MARK: 9. キャラ表示から1秒後に「VS」の直下に出現するサイバー「START」ボタン ＆ 1戦アイテム選択パネル
                     if isStartButtonVisible {
                         VsStartCyberButton(
                             time: now,
@@ -199,7 +202,7 @@ struct PreBattleVsOverlayView: View {
                                 onStartTapped()
                             }
                         )
-                        .position(x: canvasW * 0.50, y: canvasH * 0.635)
+                        .position(x: canvasW * 0.50, y: canvasH * 0.602)
                         .transition(
                             .asymmetric(
                                 insertion: .scale(scale: 0.72).combined(with: .opacity),
@@ -207,6 +210,17 @@ struct PreBattleVsOverlayView: View {
                             )
                         )
                         .zIndex(5)
+
+                        VsBattleItemSelectorPanel(
+                            itemManager: itemManager,
+                            selectedBoostItem: $selectedBoostItem,
+                            isHapticsEnabled: isHapticsEnabled,
+                            isLocked: hasTriggeredStart
+                        )
+                        .frame(width: min(canvasW * 0.54, 232))
+                        .position(x: canvasW * 0.720, y: canvasH * 0.718)
+                        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                        .zIndex(6)
                     }
                 }
                 .frame(width: screenW, height: screenH)
@@ -279,6 +293,113 @@ struct PreBattleVsOverlayView: View {
         }
 
         return CGSize(width: dx, height: dy)
+    }
+}
+
+/// 毎バトル前のVS画面（REO名称枠のすぐ上）に表示する1戦限定ブーストアイテム選択パネル（ハート・電池・防弾チョッキ：1種類・1個のみ選択可）
+private struct VsBattleItemSelectorPanel: View {
+    var itemManager: ItemManager
+    @Binding var selectedBoostItem: BattleItem?
+    let isHapticsEnabled: Bool
+    let isLocked: Bool
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Text("ITEM 使用選択（1戦のみ有効）")
+                .font(.system(size: 9.5, weight: .black, design: .rounded))
+                .tracking(0.5)
+                .foregroundStyle(Color.cyberCyan)
+
+            HStack(spacing: 6) {
+                ForEach(BattleItem.vsBattleBoostItems) { item in
+                    let owned = itemManager.ownedCount(for: item)
+                    let isSelected = (selectedBoostItem == item)
+                    let isEnabled = (owned > 0 && !isLocked)
+
+                    Button {
+                        guard isEnabled else { return }
+                        SoundManager.shared.playButtonSE()
+                        HapticManager.playLight(enabled: isHapticsEnabled)
+                        if selectedBoostItem == item {
+                            selectedBoostItem = nil
+                        } else {
+                            selectedBoostItem = item
+                        }
+                    } label: {
+                        VStack(spacing: 2) {
+                            ZStack(alignment: .topTrailing) {
+                                BattleItemIconView(item: item, size: 32)
+                                    .opacity(owned > 0 ? 1.0 : 0.35)
+
+                                Text("×\(owned)")
+                                    .font(.system(size: 9, weight: .black, design: .monospaced))
+                                    .foregroundStyle(owned > 0 ? .black : Color.white.opacity(0.6))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(
+                                        Capsule()
+                                            .fill(owned > 0 ? Color.cyberCyan : Color.black.opacity(0.75))
+                                    )
+                                    .offset(x: 4, y: -4)
+                            }
+
+                            Text(isSelected ? "使用ON" : item.compactVsLabel)
+                                .font(.system(size: 9, weight: .black, design: .rounded))
+                                .foregroundStyle(
+                                    isSelected
+                                        ? item.themeColor
+                                        : (owned > 0 ? Color.white.opacity(0.90) : Color.white.opacity(0.38))
+                                )
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 9)
+                                .fill(
+                                    isSelected
+                                        ? item.themeColor.opacity(0.22)
+                                        : Color.black.opacity(0.55)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 9)
+                                        .strokeBorder(
+                                            isSelected
+                                                ? item.themeColor
+                                                : (owned > 0 ? Color.white.opacity(0.28) : Color.white.opacity(0.10)),
+                                            lineWidth: isSelected ? 2.0 : 1.0
+                                        )
+                                )
+                        )
+                        .shadow(color: isSelected ? item.themeColor.opacity(0.85) : .clear, radius: 6)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!isEnabled)
+                }
+            }
+
+            if let selected = selectedBoostItem {
+                Text(selected.vsSelectionSummary)
+                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(selected.themeColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(red: 0.03, green: 0.07, blue: 0.14).opacity(0.92))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.cyberCyan.opacity(0.65), lineWidth: 1.3)
+                )
+        )
+        .shadow(color: Color.black.opacity(0.85), radius: 10)
+        .animation(.easeInOut(duration: 0.18), value: selectedBoostItem)
     }
 }
 
