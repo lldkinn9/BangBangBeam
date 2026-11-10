@@ -94,7 +94,10 @@ final class AdManager: NSObject {
                     onLoaded?()
                 } else if let error {
                     self.rewardedAd = nil
-                    self.rewardedAdStatusMessage = "動画広告の読み込みに失敗しました（\(error.localizedDescription)）。通信状況を確認して再度お試しください。"
+                    self.rewardedAdStatusMessage = L10n(
+                        "動画広告の読み込みに失敗しました（\(error.localizedDescription)）。通信状況を確認して再度お試しください。",
+                        "Failed to load video ad (\(error.localizedDescription)). Check your connection and try again."
+                    )
                 }
             }
         }
@@ -205,7 +208,10 @@ extension AdManager: FullScreenContentDelegate {
             self.rewardedAd = nil
             self.pendingRewardHandler = nil
             self.didEarnRewardInCurrentSession = false
-            self.rewardedAdStatusMessage = "動画広告を表示できませんでした。通信環境をご確認のうえ再度お試しください。"
+            self.rewardedAdStatusMessage = L10n(
+                "動画広告を表示できませんでした。通信環境をご確認のうえ再度お試しください。",
+                "Unable to display video ad. Check your connection and try again."
+            )
             self.loadRewardedAd()
         }
     }

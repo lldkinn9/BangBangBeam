@@ -45,7 +45,7 @@ struct AdBannerFooterView: View {
                         .padding(.vertical, 2)
                         .background(Color.cyberCyan, in: RoundedRectangle(cornerRadius: 3))
 
-                    Text("バナー広告枠 (GoogleMobileAds SDK 追加で配信)")
+                    Text(L10n("バナー広告枠 (GoogleMobileAds SDK 追加で配信)", "Banner Ad Slot (GoogleMobileAds SDK)"))
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.65))
                 }
@@ -81,7 +81,7 @@ struct FallbackRewardedAdOverlayView: View {
                     Button {
                         onCancel()
                     } label: {
-                        Text("✕ 閉じる（復活しない）")
+                        Text(L10n("✕ 閉じる（復活しない）", "✕ Close (Do Not Revive)"))
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.white.opacity(0.75))
                             .padding(.horizontal, 10)
@@ -99,18 +99,23 @@ struct FallbackRewardedAdOverlayView: View {
                         .font(.system(size: 50))
                         .foregroundStyle(Color.cyberAmber)
 
-                    Text("復活リワード動画広告 確認枠")
+                    Text(L10n("復活リワード動画広告 確認枠", "Rewarded Video Ad Preview"))
                         .font(.system(size: 19, weight: .black))
                         .foregroundStyle(.white)
 
-                    Text("Xcode に GoogleMobileAds パッケージを追加すると\n実際の動画広告（RewardedAd）が再生されます。")
+                    Text(
+                        L10n(
+                            "Xcode に GoogleMobileAds パッケージを追加すると\n実際の動画広告（RewardedAd）が再生されます。",
+                            "Link the GoogleMobileAds Swift Package in Xcode\nto display live Rewarded Video Ads."
+                        )
+                    )
                         .font(.system(size: 13))
                         .foregroundStyle(Color.white.opacity(0.72))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
 
                     if remainingSeconds > 0 {
-                        Text("視聴完了まであと \(remainingSeconds) 秒...")
+                        Text(L10n("視聴完了まであと \(remainingSeconds) 秒...", "Reward ready in \(remainingSeconds)s..."))
                             .font(.system(size: 15, weight: .black, design: .monospaced))
                             .foregroundStyle(Color.cyberCyan)
                             .padding(.top, 6)
@@ -120,7 +125,7 @@ struct FallbackRewardedAdOverlayView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "bolt.heart.fill")
-                                Text("報酬を獲得してバトルに復活する")
+                                Text(L10n("報酬を獲得してバトルに復活する", "Claim Reward & Revive"))
                             }
                             .font(.system(size: 15, weight: .black, design: .rounded))
                             .foregroundStyle(.black)

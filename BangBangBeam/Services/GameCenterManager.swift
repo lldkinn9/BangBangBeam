@@ -21,14 +21,45 @@ struct LeaderboardRowEntry: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Apple公式 Game Center による「KUMITE 連勝数 世界ランキング（自分の順位 ＆ 1〜100位）」連携マネージャー
+/// ランキング未表示・空状態の理由種別（日英リアルタイム切替対応）
+enum RankingEmptyReason: Equatable, Sendable {
+    case notSignedIn
+    case leaderboardPreparing
+    case noEntriesYet
+    case fetchFailed
+
+    @MainActor
+    var localizedMessage: String {
+        switch self {
+        case .notSignedIn:
+            return L10n(
+                "端末の「設定 > Game Center」にサインインすると、自分の世界順位と 1〜100位 のランキングが表示されます。",
+                "Sign in to Game Center in iOS Settings to view your global rank and the Top 100 leaderboard."
+            )
+        case .leaderboardPreparing:
+            return L10n(
+                "現在ランキング集計サーバーを準備中です。",
+                "The leaderboard server is currently being prepared."
+            )
+        case .noEntriesYet:
+            return L10n(
+                "まだランキング登録された記録がありません。KUMITEで連勝して最初のランクインを目指しましょう！",
+                "No records have been submitted yet. Win in KUMITE to claim the first spot!"
+            )
+        case .fetchFailed:
+            return L10n(
+                "ランキングデータの取得に失敗しました。通信環境や Game Center 設定をご確認のうえ再読み込みしてください。",
+                "Failed to load leaderboard data. Check your network and Game Center settings, then try again."
+            )
+        }
+    }
+}
+
+/// Apple公式 Game Center による「KUMITE 連勝数 世界ランキング（自分の順位 ＆ 1〜100位）」本番連携マネージャー
 @Observable
 @MainActor
 final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
     static let shared = GameCenterManager()
-
-    /// 【表示確認用モックフラグ】オーナー依頼により仮モックデータを表示中（App Store 提出前に false へ切替可能）
-    static let useMockRankingForPreview: Bool = true
 
     private let bestStreakKey = "BangBangBeam.bestWinStreak"
 
@@ -52,7 +83,7 @@ final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
     var totalRankedPlayers: Int = 0
     var top100Entries: [LeaderboardRowEntry] = []
     var isLoadingRanking: Bool = false
-    var rankingStatusNote: String? = nil
+    var emptyReason: RankingEmptyReason? = nil
 
     private override init() {
         self.bestWinStreak = UserDefaults.standard.integer(forKey: bestStreakKey)
@@ -77,11 +108,13 @@ final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
                     await self.fetchTop100Ranking()
                 } else {
                     self.isAuthenticated = false
+                    self.myGlobalRank = nil
+                    self.myGlobalScore = nil
+                    self.totalRankedPlayers = 0
+                    self.top100Entries = []
+                    self.emptyReason = .notSignedIn
                     if let error {
                         self.statusMessage = error.localizedDescription
-                    }
-                    if Self.useMockRankingForPreview {
-                        self.applyMockRankingData()
                     }
                 }
             }
@@ -98,9 +131,6 @@ final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
         PlayerIconManager.shared.syncWithBestWinStreak(bestWinStreak)
         if isAuthenticated {
             submitWinStreak(bestWinStreak)
-        }
-        if Self.useMockRankingForPreview {
-            applyMockRankingData()
         }
     }
 
@@ -135,23 +165,19 @@ final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
         ) { _ in }
     }
 
-    /// Game Center（または表示確認用モック）から「自分の順位」および「世界 1位〜100位」を取得
+    /// Game Center から「自分の順位」および「世界 1位〜100位」の本番データを取得
     func fetchTop100Ranking() async {
-        if Self.useMockRankingForPreview {
-            applyMockRankingData()
-            return
-        }
-
         guard isAuthenticated else {
             myGlobalRank = nil
             myGlobalScore = nil
+            totalRankedPlayers = 0
             top100Entries = []
-            rankingStatusNote = "端末の「設定 > Game Center」にサインインすると、自分の世界順位と 1〜100位 のランキングが表示されます。"
+            emptyReason = .notSignedIn
             return
         }
 
         isLoadingRanking = true
-        rankingStatusNote = nil
+        emptyReason = nil
         defer { isLoadingRanking = false }
 
         do {
@@ -159,8 +185,9 @@ final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
             guard let leaderboard = leaderboards.first else {
                 myGlobalRank = nil
                 myGlobalScore = nil
+                totalRankedPlayers = 0
                 top100Entries = []
-                rankingStatusNote = "現在ランキング集計サーバーを準備中です（App Store Connect で Leaderboard 公開後に反映されます）。"
+                emptyReason = .leaderboardPreparing
                 return
             }
 
@@ -205,112 +232,11 @@ final class GameCenterManager: NSObject, GKGameCenterControllerDelegate {
             }
 
             if top100Entries.isEmpty {
-                rankingStatusNote = "まだランキング登録された記録がありません。KUMITEで連勝して最初のランクインを目指しましょう！"
+                emptyReason = .noEntriesYet
             }
         } catch {
-            rankingStatusNote = "ランキングデータの取得に失敗しました。通信環境や Game Center 設定をご確認のうえ再読み込みしてください。"
+            emptyReason = .fetchFailed
         }
-    }
-
-    // MARK: - Temporary Mock Ranking Generator (1位〜100位 表示＆アイコン反映確認用)
-    private func applyMockRankingData() {
-        let rivalNames: [String] = [
-            "AKIRA_NEO", "CYBER_ZERO", "KAGURA_X", "RAIDEN_JP", "VORTEX_99",
-            "SHINOBI_K", "LUNA_BEAM", "BLITZ_777", "PHANTOM_R", "NOCTIS_V",
-            "SPARK_01", "VALKYRIE_Z", "ZENITH_JP", "NOVA_PULSE", "CRIMSON_AI",
-            "ECHO_BEAT", "HAYATE_88", "MIRAGE_04", "ORION_CLAP", "STELLA_GG",
-            "KURO_BLADE", "HYPER_ION", "SILVER_FOX", "TACHYON_S", "AETHER_11"
-        ]
-
-        let allCatalogIcons = PlayerIconManager.shared.allIcons.map(\.unlockedAssetName)
-        let regularIcons = allCatalogIcons.filter { $0 != "icon_reo_100" }
-
-        struct RawCandidate {
-            let id: String
-            let name: String
-            let score: Int
-            let icon: String
-            let isLocal: Bool
-        }
-
-        var candidates: [RawCandidate] = []
-
-        // 99名のライバルモックデータ（1位: 138連勝 〜 99人目: 12連勝）
-        for idx in 0..<99 {
-            let baseName = rivalNames[idx % rivalNames.count]
-            let suffix = idx >= rivalNames.count ? "_\(idx + 1)" : ""
-            let mockScore = max(5, 138 - (idx * 1) - (idx / 4))
-            let iconName: String
-            if mockScore >= 100 && idx % 2 == 0 {
-                iconName = "icon_reo_100"
-            } else {
-                iconName = regularIcons[(idx * 7 + 3) % max(1, regularIcons.count)]
-            }
-            candidates.append(
-                RawCandidate(
-                    id: "mock_rival_\(idx)",
-                    name: "\(baseName)\(suffix)",
-                    score: mockScore,
-                    icon: iconName,
-                    isLocal: false
-                )
-            )
-        }
-
-        // 自分のエントリー（実スコアがあれば優先、未プレイでも上位で確認しやすいよう仮スコア 96 連勝を付与）
-        let myPreviewScore = bestWinStreak > 0 ? bestWinStreak : 96
-        let myName = isAuthenticated ? playerDisplayName : "YOU (PLAYER)"
-        let myIcon = PlayerIconManager.shared.selectedIcon.unlockedAssetName
-
-        candidates.append(
-            RawCandidate(
-                id: "mock_local_player",
-                name: myName,
-                score: myPreviewScore,
-                icon: myIcon,
-                isLocal: true
-            )
-        )
-
-        // スコア降順（同点なら自分を優先表示）でソートし、1〜100位を採番
-        candidates.sort { a, b in
-            if a.score != b.score {
-                return a.score > b.score
-            }
-            return a.isLocal && !b.isLocal
-        }
-
-        var builtRows: [LeaderboardRowEntry] = []
-        var detectedMyRank: Int? = nil
-
-        for (index, item) in candidates.prefix(100).enumerated() {
-            let rank = index + 1
-            if item.isLocal {
-                detectedMyRank = rank
-            }
-            builtRows.append(
-                LeaderboardRowEntry(
-                    id: "\(rank)_\(item.id)",
-                    rank: rank,
-                    displayName: item.name,
-                    score: item.score,
-                    iconAssetName: item.icon,
-                    isLocalPlayer: item.isLocal
-                )
-            )
-        }
-
-        // 万一実スコアが低く100位圏外だった場合も自分の順位を算出
-        if detectedMyRank == nil,
-           let fullIdx = candidates.firstIndex(where: { $0.isLocal }) {
-            detectedMyRank = fullIdx + 1
-        }
-
-        self.myGlobalRank = detectedMyRank
-        self.myGlobalScore = myPreviewScore
-        self.totalRankedPlayers = 1284
-        self.top100Entries = builtRows
-        self.rankingStatusNote = nil
     }
 
     private weak var activeGameCenterVC: GKGameCenterViewController? = nil

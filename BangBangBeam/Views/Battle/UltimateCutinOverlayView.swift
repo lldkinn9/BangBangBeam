@@ -132,7 +132,7 @@ struct UltimateCutinOverlayView: View {
                 .shadow(color: accent.opacity(0.95), radius: 24)
                 .offset(x: showCutinBanner ? 0 : (isPlayer ? -380 : 380))
 
-            Text("\(character.codeName) // 一撃必殺！！")
+            Text(L10n("\(character.codeName) // 一撃必殺！！", "\(character.codeName) // ULTIMATE STRIKE!!"))
                 .font(.system(size: 26, weight: .black, design: .rounded))
                 .italic()
                 .foregroundStyle(.white)

@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// 世界ランキング画面（自分の順位・選択アイコン ＆ 世界1位〜100位を表示）
+/// 世界ランキング画面（自分の順位・選択アイコン ＆ 世界1位〜100位の本番 Game Center データを表示）
 struct RankingInfoSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable private var gcManager = GameCenterManager.shared
     @Bindable private var iconManager = PlayerIconManager.shared
+    @Bindable private var lang = LanguageManager.shared
 
     var body: some View {
+        let _ = lang.language
+
         NavigationStack {
             VStack(spacing: 0) {
                 // MARK: 1. スクロール固定：自分の順位＆選択アイコン枠
@@ -49,7 +52,7 @@ struct RankingInfoSheetView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("閉じる") {
+                    Button(L10n("閉じる", "Close")) {
                         dismiss()
                     }
                     .fontWeight(.bold)
@@ -83,7 +86,7 @@ struct RankingInfoSheetView: View {
                     Text(
                         gcManager.isAuthenticated
                             ? gcManager.playerDisplayName
-                            : (GameCenterManager.useMockRankingForPreview ? "モックプレビュー表示中" : "Game Center 未接続")
+                            : L10n("Game Center 未接続", "Game Center Not Signed In")
                     )
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.8))
@@ -92,7 +95,6 @@ struct RankingInfoSheetView: View {
             }
 
             HStack(spacing: 12) {
-                // 設定画面で選択したプレイヤーアイコン
                 Image(myIconAsset)
                     .resizable()
                     .scaledToFit()
@@ -107,21 +109,27 @@ struct RankingInfoSheetView: View {
                 HStack(spacing: 0) {
                     // 左：自分の世界順位
                     VStack(spacing: 4) {
-                        Text("自分の順位")
+                        Text(L10n("自分の順位", "Your Rank"))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.white.opacity(0.65))
 
                         if let rank = gcManager.myGlobalRank {
-                            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                                Text("\(rank)")
+                            if lang.isEnglish {
+                                Text("#\(rank)")
                                     .font(.system(size: 30, weight: .black, design: .rounded))
                                     .foregroundStyle(Color.cyberAmber)
-                                Text("位")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(Color.cyberAmber)
+                            } else {
+                                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                    Text("\(rank)")
+                                        .font(.system(size: 30, weight: .black, design: .rounded))
+                                        .foregroundStyle(Color.cyberAmber)
+                                    Text("位")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(Color.cyberAmber)
+                                }
                             }
                         } else {
-                            Text(gcManager.isAuthenticated ? "未ランクイン" : "—")
+                            Text(gcManager.isAuthenticated ? L10n("未ランクイン", "Unranked") : "—")
                                 .font(.system(size: 18, weight: .black, design: .rounded))
                                 .foregroundStyle(Color.white.opacity(0.55))
                                 .frame(height: 34)
@@ -135,7 +143,7 @@ struct RankingInfoSheetView: View {
 
                     // 右：自己ベスト連勝数
                     VStack(spacing: 4) {
-                        Text("自己ベスト記録")
+                        Text(L10n("自己ベスト記録", "Personal Best"))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.white.opacity(0.65))
 
@@ -143,7 +151,7 @@ struct RankingInfoSheetView: View {
                             Text("\(displayedStreak)")
                                 .font(.system(size: 30, weight: .black, design: .rounded))
                                 .foregroundStyle(Color.cyberCyan)
-                            Text("連勝")
+                            Text(L10n("連勝", "Wins"))
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(Color.cyberCyan)
                         }
@@ -176,9 +184,14 @@ struct RankingInfoSheetView: View {
                 Spacer()
 
                 if gcManager.totalRankedPlayers > 0 {
-                    Text("全 \(gcManager.totalRankedPlayers) 人")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.6))
+                    Text(
+                        L10n(
+                            "全 \(gcManager.totalRankedPlayers) 人",
+                            "\(gcManager.totalRankedPlayers) Players"
+                        )
+                    )
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.6))
                 }
             }
 
@@ -186,7 +199,7 @@ struct RankingInfoSheetView: View {
                 VStack(spacing: 10) {
                     ProgressView()
                         .tint(Color.cyberCyan)
-                    Text("世界ランキングを取得中...")
+                    Text(L10n("世界ランキングを取得中...", "Loading World Ranking..."))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.7))
                 }
@@ -205,8 +218,8 @@ struct RankingInfoSheetView: View {
                         .foregroundStyle(Color.cyberCyan.opacity(0.7))
 
                     Text(
-                        gcManager.rankingStatusNote
-                            ?? "ランキングデータがありません。"
+                        gcManager.emptyReason?.localizedMessage
+                            ?? L10n("ランキングデータがありません。", "No ranking data available.")
                     )
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.white.opacity(0.75))
@@ -237,7 +250,6 @@ struct RankingInfoSheetView: View {
             : entry.iconAssetName
 
         return HStack(spacing: 10) {
-            // 順位バッジ (1〜100)
             ZStack {
                 RoundedRectangle(cornerRadius: 7)
                     .fill(entry.rank <= 3 ? rankAccent.opacity(0.22) : Color.white.opacity(0.06))
@@ -247,7 +259,6 @@ struct RankingInfoSheetView: View {
             }
             .frame(width: 38, height: 32)
 
-            // プレイヤーアイコン
             Image(displayedIcon)
                 .resizable()
                 .scaledToFit()
@@ -263,7 +274,6 @@ struct RankingInfoSheetView: View {
                         )
                 )
 
-            // プレイヤー名
             HStack(spacing: 6) {
                 Text(entry.displayName)
                     .font(.system(size: 13, weight: entry.isLocalPlayer ? .black : .semibold))
@@ -282,12 +292,11 @@ struct RankingInfoSheetView: View {
 
             Spacer(minLength: 4)
 
-            // 連勝スコア
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text("\(entry.score)")
                     .font(.system(size: 16, weight: .black, design: .rounded))
                     .foregroundStyle(entry.rank <= 3 ? rankAccent : Color.cyberCyan)
-                Text("連勝")
+                Text(L10n("連勝", "Wins"))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.white.opacity(0.7))
             }

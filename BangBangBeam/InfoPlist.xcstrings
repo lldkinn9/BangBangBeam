@@ -1,0 +1,23 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSUserTrackingUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used to deliver relevant ads and keep Bang Bang Beam free to play."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最適な広告表示と無料でのゲーム提供を維持するために使用します。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

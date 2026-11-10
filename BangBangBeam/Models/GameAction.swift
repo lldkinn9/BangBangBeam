@@ -12,12 +12,12 @@ enum GameAction: String, CaseIterable, Identifiable, Sendable {
     /// 通常時に横並びで表示する3つの基本コマンド
     static let standardCommands: [GameAction] = [.charge, .beam, .barrier]
 
-    /// 日本語コマンド名
+    /// コマンド名（日英対応）
     var label: String {
         switch self {
-        case .charge:   return "チャージ"
-        case .beam:     return "ビーム"
-        case .barrier:  return "バリア"
+        case .charge:   return L10n("チャージ", "CHARGE")
+        case .beam:     return L10n("ビーム", "BEAM")
+        case .barrier:  return L10n("バリア", "BARRIER")
         case .megaBeam: return "ULTIMATE"
         }
     }
@@ -65,20 +65,20 @@ enum GameAction: String, CaseIterable, Identifiable, Sendable {
     /// 横並び3ボタン用のコンパクト効果表記
     var shortBadge: String {
         switch self {
-        case .charge:   return "気力 +1"
-        case .beam:     return "消費 1"
-        case .barrier:  return "防御"
-        case .megaBeam: return "一撃必殺"
+        case .charge:   return L10n("気力 +1", "Charge +1")
+        case .beam:     return L10n("消費 1", "Cost 1")
+        case .barrier:  return L10n("防御", "Guard")
+        case .megaBeam: return L10n("一撃必殺", "One-Hit KO")
         }
     }
 
     /// コスト・効果バッジ文字列
     var costBadge: String {
         switch self {
-        case .charge:   return "気力 +1"
-        case .beam:     return "消費 1 / HP-1"
-        case .barrier:  return "消費 0 / 防御"
-        case .megaBeam: return "消費 4 / 一撃必殺"
+        case .charge:   return L10n("気力 +1", "Charge +1")
+        case .beam:     return L10n("消費 1 / HP-1", "Cost 1 / HP-1")
+        case .barrier:  return L10n("消費 0 / 防御", "Cost 0 / Guard")
+        case .megaBeam: return L10n("消費 4 / 一撃必殺", "Cost 4 / One-Hit KO")
         }
     }
 
@@ -124,7 +124,7 @@ enum ResolvedMove: Equatable, Sendable {
         case .valid(let act):
             return "\(act.emoji) \(act.label)"
         case .fumble(let attempted):
-            return "💦 お手つき(\(attempted.label)不発)"
+            return L10n("💦 お手つき(\(attempted.label)不発)", "💦 Fumble (\(attempted.label))")
         }
     }
 

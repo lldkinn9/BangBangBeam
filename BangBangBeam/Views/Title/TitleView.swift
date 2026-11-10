@@ -4,6 +4,7 @@ import SwiftUI
 struct TitleView: View {
     @Bindable var engine: GameEngine
     @Bindable private var itemManager = ItemManager.shared
+    @Bindable private var lang = LanguageManager.shared
 
     @State private var isMenuExpanded: Bool = false
     @State private var isShowingItemSheet: Bool = false
@@ -210,33 +211,34 @@ struct TitleView: View {
 
     // MARK: - Mode Selection Menu
     private var modeMenuPanel: some View {
+        let _ = lang.language
         let equippedItemName = (itemManager.activeRunCarryInItem ?? itemManager.selectedCarryInItem)?.displayName
         let itemBadgeText: String = {
             if let equippedItemName {
-                return "\(equippedItemName) 装備中"
+                return L10n("\(equippedItemName) 装備中", "\(equippedItemName) EQUIPPED")
             }
             return "\(itemManager.points) PT"
         }()
 
         return VStack(spacing: 10) {
-            // ① KUMITE (メイン勝ち抜きモード：中断記録があれば右上に「〇連勝中」バッジを表示し引き継ぎ再開)
+            // ① KUMITE
             modeButton(
                 title: "KUMITE",
-                subtitle: "勝ち抜きサバイバル（ランキング対象）",
+                subtitle: L10n("勝ち抜きサバイバル（ランキング対象）", "Survival Mode (World Ranked)"),
                 systemImage: "flame.fill",
                 primary: .cyberCyan,
                 secondary: .cyberEmerald,
                 topTrailingBadge: (engine.hasSavedKumiteSession && engine.winStreak > 0)
-                    ? "\(engine.winStreak)連勝中"
+                    ? L10n("\(engine.winStreak)連勝中", "\(engine.winStreak) WINS")
                     : nil
             ) {
                 engine.startOrResumeKumite()
             }
 
-            // ② ITEM (ポイント交換・次戦KUMITE持ち込み設定)
+            // ② ITEM
             modeButton(
                 title: "ITEM",
-                subtitle: "ポイント交換・持ち込みアイテム設定",
+                subtitle: L10n("ポイント交換・持ち込みアイテム設定", "Point Exchange & Item Loadout"),
                 systemImage: "shippingbox.fill",
                 primary: .cyberEmerald,
                 secondary: .cyberCyan,
@@ -245,10 +247,10 @@ struct TitleView: View {
                 isShowingItemSheet = true
             }
 
-            // ③ RANKING (世界ランキング：自分の順位 ＆ 1〜100位)
+            // ③ RANKING
             modeButton(
                 title: "RANKING",
-                subtitle: "世界ランキング",
+                subtitle: L10n("世界ランキング", "World Leaderboard"),
                 systemImage: "trophy.fill",
                 primary: .cyberAmber,
                 secondary: .cyberCyan
@@ -259,7 +261,7 @@ struct TitleView: View {
             // ④ SETTING
             modeButton(
                 title: "SETTING",
-                subtitle: "各種設定",
+                subtitle: L10n("各種設定", "Audio, Tempo, Language & Rules"),
                 systemImage: "slider.horizontal.3",
                 primary: Color.white.opacity(0.85),
                 secondary: .cyberCyan

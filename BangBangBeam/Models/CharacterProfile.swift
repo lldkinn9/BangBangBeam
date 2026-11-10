@@ -31,9 +31,14 @@ struct EnemyStageInfo: Sendable {
 struct CharacterProfile: Identifiable, Equatable, Sendable {
     let id: String
     let codeName: String
-    let titleLabel: String
+    let titleLabelJa: String
+    let titleLabelEn: String
     let stageOrder: Int // 0 = Reo, 1...11 = 1周目基本敵, 12...20 = 2周目追加敵
     let ai: AITraits
+
+    var titleLabel: String {
+        L10n(titleLabelJa, titleLabelEn)
+    }
 
     nonisolated static func == (lhs: CharacterProfile, rhs: CharacterProfile) -> Bool {
         lhs.id == rhs.id
@@ -56,7 +61,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
     static let reo = CharacterProfile(
         id: "reo",
         codeName: "REO",
-        titleLabel: "ネオ東京の閃光",
+        titleLabelJa: "ネオ東京の閃光",
+        titleLabelEn: "Flash of Neo-Tokyo",
         stageOrder: 0,
         ai: AITraits(aggression: 0.5, defenseAwareness: 0.5, ultimateGreed: 0.5, readPrecision: 0.5)
     )
@@ -72,7 +78,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "geek",
             codeName: "GEEK",
-            titleLabel: "見習いハッカー (弱)",
+            titleLabelJa: "見習いハッカー (弱)",
+            titleLabelEn: "Rookie Hacker (Easy)",
             stageOrder: 1,
             ai: AITraits(
                 aggression: 0.35,
@@ -84,7 +91,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "boarder",
             codeName: "BOARDER",
-            titleLabel: "ストリートボーダー (弱)",
+            titleLabelJa: "ストリートボーダー (弱)",
+            titleLabelEn: "Street Boarder (Easy)",
             stageOrder: 2,
             ai: AITraits(
                 aggression: 0.55,
@@ -96,7 +104,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "jk",
             codeName: "JK",
-            titleLabel: "電脳ハイスクール (慎重)",
+            titleLabelJa: "電脳ハイスクール (慎重)",
+            titleLabelEn: "Cyber High Schooler (Cautious)",
             stageOrder: 3,
             ai: AITraits(
                 aggression: 0.38,
@@ -108,7 +117,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "engineer",
             codeName: "ENGINEER",
-            titleLabel: "蓄電クラフトマン (必殺狙い)",
+            titleLabelJa: "蓄電クラフトマン (必殺狙い)",
+            titleLabelEn: "Power Engineer (Ult Seeker)",
             stageOrder: 4,
             ai: AITraits(
                 aggression: 0.30,
@@ -120,7 +130,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "alice",
             codeName: "ALICE",
-            titleLabel: "ネオンアイドル (バランス)",
+            titleLabelJa: "ネオンアイドル (バランス)",
+            titleLabelEn: "Neon Idol (Balanced)",
             stageOrder: 5,
             ai: AITraits(
                 aggression: 0.50,
@@ -132,7 +143,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "defective",
             codeName: "DEFECTIVE",
-            titleLabel: "サイバー捜査官 (速攻連射)",
+            titleLabelJa: "サイバー捜査官 (速攻連射)",
+            titleLabelEn: "Cyber Investigator (Rapid Fire)",
             stageOrder: 6,
             ai: AITraits(
                 aggression: 0.76,
@@ -144,7 +156,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "spy",
             codeName: "SPY",
-            titleLabel: "諜報エージェント (鉄壁カウンター)",
+            titleLabelJa: "諜報エージェント (鉄壁カウンター)",
+            titleLabelEn: "Secret Agent (Iron Counter)",
             stageOrder: 7,
             ai: AITraits(
                 aggression: 0.48,
@@ -156,7 +169,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "ninja",
             codeName: "NINJA",
-            titleLabel: "影のシノビ (高速撹乱)",
+            titleLabelJa: "影のシノビ (高速撹乱)",
+            titleLabelEn: "Shadow Shinobi (High-Speed)",
             stageOrder: 8,
             ai: AITraits(
                 aggression: 0.68,
@@ -168,7 +182,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "pirate",
             codeName: "PIRATE",
-            titleLabel: "電脳海賊キャプテン (重砲撃)",
+            titleLabelJa: "電脳海賊キャプテン (重砲撃)",
+            titleLabelEn: "Cyber Pirate Captain (Heavy)",
             stageOrder: 9,
             ai: AITraits(
                 aggression: 0.62,
@@ -180,7 +195,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "skin",
             codeName: "SKIN",
-            titleLabel: "アンダーボス (威圧制圧)",
+            titleLabelJa: "アンダーボス (威圧制圧)",
+            titleLabelEn: "Underboss (Dominator)",
             stageOrder: 10,
             ai: AITraits(
                 aggression: 0.70,
@@ -192,7 +208,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "oldman",
             codeName: "OLDMAN",
-            titleLabel: "ネオ東京の達人 (熟練)",
+            titleLabelJa: "ネオ東京の達人 (熟練)",
+            titleLabelEn: "Master of Neo-Tokyo (Veteran)",
             stageOrder: 11,
             ai: AITraits(
                 aggression: 0.72,
@@ -209,7 +226,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "tt",
             codeName: "TT",
-            titleLabel: "2周目刺客 // ツインテック",
+            titleLabelJa: "2周目刺客 // ツインテック",
+            titleLabelEn: "Loop 2 Assassin // Twin-Tech",
             stageOrder: 12,
             ai: AITraits(
                 aggression: 0.66,
@@ -221,7 +239,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "mei",
             codeName: "MEI",
-            titleLabel: "電脳武闘娘 (連撃ラッシュ)",
+            titleLabelJa: "電脳武闘娘 (連撃ラッシュ)",
+            titleLabelEn: "Cyber Martial Artist (Rush)",
             stageOrder: 13,
             ai: AITraits(
                 aggression: 0.78,
@@ -233,7 +252,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "clown",
             codeName: "CLOWN",
-            titleLabel: "幻惑ピエロ (変幻トリックスター)",
+            titleLabelJa: "幻惑ピエロ (変幻トリックスター)",
+            titleLabelEn: "Phantom Clown (Trickster)",
             stageOrder: 14,
             ai: AITraits(
                 aggression: 0.58,
@@ -245,7 +265,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "owl",
             codeName: "OWL",
-            titleLabel: "夜天の監視者 (精密スナイプ)",
+            titleLabelJa: "夜天の監視者 (精密スナイプ)",
+            titleLabelEn: "Night Watcher (Sniper)",
             stageOrder: 15,
             ai: AITraits(
                 aggression: 0.72,
@@ -257,7 +278,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "rondo",
             codeName: "RONDO",
-            titleLabel: "残響のマエストロ (拍子支配)",
+            titleLabelJa: "残響のマエストロ (拍子支配)",
+            titleLabelEn: "Echo Maestro (Rhythm Master)",
             stageOrder: 16,
             ai: AITraits(
                 aggression: 0.68,
@@ -269,7 +291,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "ive",
             codeName: "IVE",
-            titleLabel: "ネオンヴァルキリー (高速制圧)",
+            titleLabelJa: "ネオンヴァルキリー (高速制圧)",
+            titleLabelEn: "Neon Valkyrie (Blitz)",
             stageOrder: 17,
             ai: AITraits(
                 aggression: 0.80,
@@ -281,7 +304,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "joker",
             codeName: "JOKER",
-            titleLabel: "切り札の道化師 (必殺カウンター)",
+            titleLabelJa: "切り札の道化師 (必殺カウンター)",
+            titleLabelEn: "Trump Card Joker (Ult Counter)",
             stageOrder: 18,
             ai: AITraits(
                 aggression: 0.74,
@@ -293,7 +317,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "elf",
             codeName: "ELF",
-            titleLabel: "星霊サイバネティクス (超蓄電)",
+            titleLabelJa: "星霊サイバネティクス (超蓄電)",
+            titleLabelEn: "Astral Cyber-Elf (Overcharge)",
             stageOrder: 19,
             ai: AITraits(
                 aggression: 0.70,
@@ -305,7 +330,8 @@ struct CharacterProfile: Identifiable, Equatable, Sendable {
         CharacterProfile(
             id: "rui",
             codeName: "RUI",
-            titleLabel: "深淵の覇者 (真・最強)",
+            titleLabelJa: "深淵の覇者 (真・最強)",
+            titleLabelEn: "Sovereign of the Abyss (Apex)",
             stageOrder: 20,
             ai: AITraits(
                 aggression: 0.78,

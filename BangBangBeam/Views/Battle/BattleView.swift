@@ -7,6 +7,7 @@ struct BattleView: View {
     @Bindable private var adManager = AdManager.shared
     @Bindable private var soundManager = SoundManager.shared
     @Bindable private var itemManager = ItemManager.shared
+    @Bindable private var lang = LanguageManager.shared
     @State private var isShowingRankingFallback: Bool = false
 
     private let enemyNeonMagenta = Color(red: 0.96, green: 0.26, blue: 0.88)
@@ -623,6 +624,7 @@ struct BattleView: View {
 
     // MARK: - KUMITE Result Overlay (YOU WIN / YOU LOSE...)
     private var kumiteResultOverlay: some View {
+        let _ = lang.language
         let isStageClear: Bool = {
             if case .stageClear = engine.outcome { return true }
             return false
@@ -655,7 +657,7 @@ struct BattleView: View {
                             .font(.system(size: 15, weight: .black))
                             .foregroundStyle(Color.cyberAmber)
 
-                        Text("所持ポイント: \(itemManager.points) PT")
+                        Text(L10n("所持ポイント: \(itemManager.points) PT", "Points: \(itemManager.points) PT"))
                             .font(.system(size: 14, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
 
@@ -689,10 +691,10 @@ struct BattleView: View {
                                 .shadow(color: accent.opacity(0.45), radius: 8)
 
                             VStack(spacing: 12) {
-                                Text("\(engine.winStreak)連勝")
-                                    .font(.system(size: 28, weight: .black, design: .rounded))
+                                Text(L10n("\(engine.winStreak)連勝", "\(engine.winStreak) WIN STREAK"))
+                                    .font(.system(size: lang.language == .japanese ? 28 : 22, weight: .black, design: .rounded))
                                     .foregroundStyle(Color.cyberAmber)
-                                    .minimumScaleFactor(0.8)
+                                    .minimumScaleFactor(0.75)
                                     .lineLimit(1)
 
                                 Button {
@@ -743,7 +745,7 @@ struct BattleView: View {
                         // 次戦から反映されるテンポ切替（標準 / 速め）
                         VStack(spacing: 8) {
                             HStack {
-                                Label("次戦のテンポ", systemImage: "metronome.fill")
+                                Label(L10n("次戦のテンポ", "Next Match Tempo"), systemImage: "metronome.fill")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(Color.white.opacity(0.85))
                                 Spacer()
@@ -790,7 +792,12 @@ struct BattleView: View {
                                 )
                         )
 
-                        Text("※TITLEに戻っても現在の連勝状況と復活残り回数（あと\(engine.remainingRevives)回）は次回KUMITE開始時に引き継がれます")
+                        Text(
+                            L10n(
+                                "※TITLEに戻っても現在の連勝状況と復活残り回数（あと\(engine.remainingRevives)回）は次回KUMITE開始時に引き継がれます",
+                                "* Returning to TITLE saves your current win streak and remaining resets (\(engine.remainingRevives) left) for your next KUMITE."
+                            )
+                        )
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.75))
                             .multilineTextAlignment(.center)
@@ -806,13 +813,13 @@ struct BattleView: View {
                                 .shadow(color: accent.opacity(0.45), radius: 8)
 
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("今回の記録: \(finalStreak) 連勝")
+                                Text(L10n("今回の記録: \(finalStreak) 連勝", "This Run: \(finalStreak) Wins"))
                                     .font(.system(size: 18, weight: .black, design: .rounded))
                                     .foregroundStyle(Color.cyberCyan)
                                     .minimumScaleFactor(0.8)
                                     .lineLimit(1)
 
-                                Text("自己ベスト: \(GameCenterManager.shared.bestWinStreak) 連勝")
+                                Text(L10n("自己ベスト: \(GameCenterManager.shared.bestWinStreak) 連勝", "Personal Best: \(GameCenterManager.shared.bestWinStreak) Wins"))
                                     .font(.system(size: 12, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color.cyberAmber)
                                     .minimumScaleFactor(0.85)
@@ -822,7 +829,7 @@ struct BattleView: View {
                         }
                         .padding(.vertical, 2)
 
-                        // 動画広告を見て復活（1回のKUMITE挑戦につき最大2回まで）
+                        // 動画広告を見て復活（1回のKUMITE挑戦につき最大2回＋救急キットボーナス）
                         if engine.remainingRevives > 0 {
                             Button {
                                 HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
@@ -833,12 +840,21 @@ struct BattleView: View {
                                 VStack(spacing: 3) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "play.tv.fill")
-                                        Text(adManager.isLoadingRewardedAd ? "動画広告を読み込み中..." : "動画広告を見て復活")
+                                        Text(
+                                            adManager.isLoadingRewardedAd
+                                                ? L10n("動画広告を読み込み中...", "Loading Video Ad...")
+                                                : L10n("動画広告を見て復活", "Watch Video Ad to Revive")
+                                        )
                                     }
                                     .font(.system(size: 16, weight: .black, design: .rounded))
                                     .foregroundStyle(.white)
 
-                                    Text("連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.currentRunMaxRevives) 回）")
+                                    Text(
+                                        L10n(
+                                            "連勝記録を維持して再戦（残り \(engine.remainingRevives) / \(engine.currentRunMaxRevives) 回）",
+                                            "Keep streak & rematch (Resets left: \(engine.remainingRevives) / \(engine.currentRunMaxRevives))"
+                                        )
+                                    )
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(Color.cyberAmber)
                                 }
@@ -863,7 +879,12 @@ struct BattleView: View {
                                     .frame(maxWidth: .infinity)
                             }
                         } else {
-                            Text("※今回の挑戦での復活回数（最大\(engine.currentRunMaxRevives)回）を使い切りました")
+                            Text(
+                                L10n(
+                                    "※今回の挑戦での復活回数（最大\(engine.currentRunMaxRevives)回）を使い切りました",
+                                    "* All resets (max \(engine.currentRunMaxRevives)) have been used for this run."
+                                )
+                            )
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(Color.white.opacity(0.6))
                                 .multilineTextAlignment(.center)
@@ -873,7 +894,7 @@ struct BattleView: View {
                             HapticManager.playMedium(enabled: engine.isHapticsEnabled)
                             engine.startKumiteFromBeginning()
                         } label: {
-                            Text("RETRY (最初から挑戦)")
+                            Text(L10n("RETRY (最初から挑戦)", "RETRY (Start Over)"))
                                 .font(.system(size: 15, weight: .black, design: .rounded))
                                 .tracking(1.2)
                                 .foregroundStyle(.white)
@@ -932,7 +953,12 @@ struct BattleView: View {
                         )
 
                         if engine.remainingRevives > 0 && finalStreak > 0 {
-                            Text("※復活回数が残っている間は、TITLEに戻っても現在の連勝記録（\(finalStreak)連勝）が保持されます")
+                            Text(
+                                L10n(
+                                    "※復活回数が残っている間は、TITLEに戻っても現在の連勝記録（\(finalStreak)連勝）が保持されます",
+                                    "* While resets remain, your current win streak (\(finalStreak) wins) is saved even if you return to TITLE."
+                                )
+                            )
                                 .font(.system(size: 10.5, weight: .medium))
                                 .foregroundStyle(Color.white.opacity(0.72))
                                 .multilineTextAlignment(.center)
@@ -986,7 +1012,7 @@ struct BattleView: View {
                 .shadow(color: isOn ? Color.cyberCyan.opacity(0.4) : .clear, radius: 8)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isOn ? "BGMをオフにする" : "BGMをオンにする")
+        .accessibilityLabel(isOn ? L10n("BGMをオフにする", "Mute BGM") : L10n("BGMをオンにする", "Unmute BGM"))
     }
 }
 

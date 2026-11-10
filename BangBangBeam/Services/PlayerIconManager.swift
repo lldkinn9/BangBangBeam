@@ -8,7 +8,13 @@ struct PlayerIconItem: Identifiable, Equatable, Sendable {
     let characterID: String
     let characterCodeName: String
     let variantLabel: String
-    let unlockConditionText: String
+    let unlockConditionJa: String
+    let unlockConditionEn: String
+
+    @MainActor
+    var unlockConditionText: String {
+        L10n(unlockConditionJa, unlockConditionEn)
+    }
 
     var unlockedAssetName: String {
         id
@@ -27,8 +33,14 @@ struct PlayerIconItem: Identifiable, Equatable, Sendable {
 struct CharacterIconGroup: Identifiable, Sendable {
     let id: String
     let codeName: String
-    let subtitle: String
+    let subtitleJa: String
+    let subtitleEn: String
     let icons: [PlayerIconItem]
+
+    @MainActor
+    var subtitle: String {
+        L10n(subtitleJa, subtitleEn)
+    }
 }
 
 /// アイコン選択状態・KUMITE撃破／連勝による解放状態を永続管理するマネージャー
@@ -195,11 +207,11 @@ final class PlayerIconManager {
         var nextCode = 1
 
         // 1. 主人公 REO (icon1〜2: 初期解放 / icon3: 50連勝 / icon100: 100連勝)
-        let reoVariants: [(suffix: String, label: String, condition: String)] = [
-            ("1", "ICON 1", "初期解放"),
-            ("2", "ICON 2", "初期解放"),
-            ("3", "ICON 3", "KUMITE 50連勝達成で解放"),
-            ("100", "ICON 100", "KUMITE 100連勝達成で解放")
+        let reoVariants: [(suffix: String, label: String, condJa: String, condEn: String)] = [
+            ("1", "ICON 1", "初期解放", "Unlocked by default"),
+            ("2", "ICON 2", "初期解放", "Unlocked by default"),
+            ("3", "ICON 3", "KUMITE 50連勝達成で解放", "Unlock at 50 KUMITE wins"),
+            ("100", "ICON 100", "KUMITE 100連勝達成で解放", "Unlock at 100 KUMITE wins")
         ]
         var reoItems: [PlayerIconItem] = []
         for v in reoVariants {
@@ -210,7 +222,8 @@ final class PlayerIconManager {
                     characterID: "reo",
                     characterCodeName: "REO",
                     variantLabel: v.label,
-                    unlockConditionText: v.condition
+                    unlockConditionJa: v.condJa,
+                    unlockConditionEn: v.condEn
                 )
             )
             nextCode += 1
@@ -219,7 +232,8 @@ final class PlayerIconManager {
             CharacterIconGroup(
                 id: "reo",
                 codeName: "REO",
-                subtitle: "初期解放(1・2) / 50連勝(3) / 100連勝(100)",
+                subtitleJa: "初期解放(1・2) / 50連勝(3) / 100連勝(100)",
+                subtitleEn: "Default (1-2) / 50 Wins (3) / 100 Wins (100)",
                 icons: reoItems
             )
         )
@@ -235,7 +249,8 @@ final class PlayerIconManager {
                         characterID: enemy.id,
                         characterCodeName: enemy.codeName,
                         variantLabel: "ICON \(tier)",
-                        unlockConditionText: "KUMITE \(tier)周目で \(enemy.codeName) を撃破"
+                        unlockConditionJa: "KUMITE \(tier)周目で \(enemy.codeName) を撃破",
+                        unlockConditionEn: "Defeat \(enemy.codeName) in KUMITE Loop \(tier)"
                     )
                 )
                 nextCode += 1
@@ -244,7 +259,8 @@ final class PlayerIconManager {
                 CharacterIconGroup(
                     id: enemy.id,
                     codeName: enemy.codeName,
-                    subtitle: "1周目〜登場（1〜4周目撃破で解放）",
+                    subtitleJa: "1周目〜登場（1〜4周目撃破で解放）",
+                    subtitleEn: "Appears Loop 1+ (Defeat in Loops 1–4)",
                     icons: items
                 )
             )
@@ -262,7 +278,8 @@ final class PlayerIconManager {
                         characterID: enemy.id,
                         characterCodeName: enemy.codeName,
                         variantLabel: "ICON \(tier)",
-                        unlockConditionText: "KUMITE \(requiredLoop)周目で \(enemy.codeName) を撃破"
+                        unlockConditionJa: "KUMITE \(requiredLoop)周目で \(enemy.codeName) を撃破",
+                        unlockConditionEn: "Defeat \(enemy.codeName) in KUMITE Loop \(requiredLoop)"
                     )
                 )
                 nextCode += 1
@@ -271,7 +288,8 @@ final class PlayerIconManager {
                 CharacterIconGroup(
                     id: enemy.id,
                     codeName: enemy.codeName,
-                    subtitle: "2周目〜登場（2〜5周目撃破で解放）",
+                    subtitleJa: "2周目〜登場（2〜5周目撃破で解放）",
+                    subtitleEn: "Appears Loop 2+ (Defeat in Loops 2–5)",
                     icons: items
                 )
             )

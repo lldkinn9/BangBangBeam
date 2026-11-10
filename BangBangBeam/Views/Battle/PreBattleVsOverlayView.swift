@@ -305,7 +305,7 @@ private struct VsBattleItemSelectorPanel: View {
 
     var body: some View {
         VStack(spacing: 5) {
-            Text("ITEM 使用選択（1戦のみ有効）")
+            Text(L10n("ITEM 使用選択（1戦のみ有効）", "SELECT BOOST ITEM (1 BATTLE)"))
                 .font(.system(size: 9.5, weight: .black, design: .rounded))
                 .tracking(0.5)
                 .foregroundStyle(Color.cyberCyan)
@@ -343,7 +343,7 @@ private struct VsBattleItemSelectorPanel: View {
                                     .offset(x: 4, y: -4)
                             }
 
-                            Text(isSelected ? "使用ON" : item.compactVsLabel)
+                            Text(isSelected ? L10n("使用ON", "ACTIVE") : item.compactVsLabel)
                                 .font(.system(size: 9, weight: .black, design: .rounded))
                                 .foregroundStyle(
                                     isSelected

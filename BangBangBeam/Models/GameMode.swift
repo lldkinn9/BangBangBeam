@@ -19,9 +19,9 @@ enum GameMode: String, CaseIterable, Identifiable, Sendable {
     var subtitle: String {
         switch self {
         case .kumite:
-            return "1vs1 CPU対戦（勝負制）"
+            return L10n("1vs1 CPU対戦（勝負制）", "1v1 Survival Mode")
         case .practice:
-            return "実践画面で学ぶルールガイド"
+            return L10n("実践画面で学ぶルールガイド", "Interactive Battle Rule Guide")
         }
     }
 }

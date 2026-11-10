@@ -5,6 +5,7 @@ import SwiftUI
 /// - 実際の最新バトル画面UI上で吹き出し解説（全6ステップ）を学んだ後、「練習」ボタンで「標準」速度の1戦練習バトルを行い、終了後にKUMITE機能・ランキング制度・リズム高速化機能を紹介する
 struct PracticeTutorialView: View {
     @Bindable var engine: GameEngine
+    @Bindable private var lang = LanguageManager.shared
 
     private enum PracticePhase: Equatable {
         case ruleGuide
@@ -51,154 +52,193 @@ struct PracticeTutorialView: View {
         let callout: PlayerClashCallout?
     }
 
-    private let scenarios: [PracticeLessonScenario] = [
-        // STEP 1: 3拍のリズム＆時間バー＆コマンド選択
-        PracticeLessonScenario(
-            badge: "STEP 1 / 6",
-            speaker: "REO // RULE GUIDE",
-            title: "3拍のリズムで行動を選ぼう！",
-            message: "バン！バン！アクション！の3拍子のリズムで戦うサイバーバトル！\n中央の【時間バー】が右から左へ消えきる前に下の3つのボタンから1つを選択し、出す手を決めよう。",
-            subTip: "💡 1・2拍目の手拍子の間にボタンをタップ！3拍目で両者の手が同時に公開されます。",
-            accentColor: .cyberCyan,
-            bubbleCenterYRatio: 0.190,
-            tailDirection: .down(xRatio: 0.50),
-            cpuHP: 3,
-            cpuCharge: 0,
-            cpuExpression: .normal,
-            playerHP: 3,
-            playerCharge: 0,
-            playerExpression: .normal,
-            selectedAction: .charge,
-            showTimeBar: true,
-            timeBarFraction: 0.62,
-            showClappingHands: true,
-            revealedCpuMove: nil,
-            revealedPlayerMove: nil,
-            callout: nil
-        ),
-        // STEP 2: CHARGE（気力溜め）
-        PracticeLessonScenario(
-            badge: "STEP 2 / 6",
-            speaker: "REO // RULE GUIDE",
-            title: "まずは「CHARGE」で気力を溜めよう！",
-            message: "バトル開始時はバッテリー（気力）が 0 です。\n緑の【CHARGE】を選んで3拍目を迎えると、左下のバッテリーが 1つ溜まり「Charge」と表示されます！",
-            subTip: "💡 ビームを撃つにはバッテリーが必要です。まずは隙を見てチャージしましょう！",
-            accentColor: .cyberEmerald,
-            bubbleCenterYRatio: 0.205,
-            tailDirection: .down(xRatio: 0.24),
-            cpuHP: 3,
-            cpuCharge: 1,
-            cpuExpression: .normal,
-            playerHP: 3,
-            playerCharge: 1,
-            playerExpression: .fun,
-            selectedAction: .charge,
-            showTimeBar: false,
-            timeBarFraction: 0.0,
-            showClappingHands: false,
-            revealedCpuMove: .valid(.charge),
-            revealedPlayerMove: .valid(.charge),
-            callout: .chargeSuccess
-        ),
-        // STEP 3: BEAM（攻撃命中・Nice!!）
-        PracticeLessonScenario(
-            badge: "STEP 3 / 6",
-            speaker: "REO // RULE GUIDE",
-            title: "「BEAM」で相手を撃ち抜け！",
-            message: "バッテリーを 1 消費して紫の【BEAM】を発射！\n相手がチャージ中（またはお手つき無防備）なら直撃して「Nice!!」！【相手のハート -1】さらに【相手のバッテリーも -1】削れます！",
-            subTip: "💡 体力は3ハート制！ビーム同士がぶつかった場合は相殺となりダメージはありません。",
-            accentColor: Color(red: 1.0, green: 0.90, blue: 0.14),
-            bubbleCenterYRatio: 0.642,
-            tailDirection: .down(xRatio: 0.78),
-            cpuHP: 2,
-            cpuCharge: 0,
-            cpuExpression: .sad,
-            playerHP: 3,
-            playerCharge: 1,
-            playerExpression: .fun,
-            selectedAction: .beam,
-            showTimeBar: false,
-            timeBarFraction: 0.0,
-            showClappingHands: false,
-            revealedCpuMove: .valid(.charge),
-            revealedPlayerMove: .valid(.beam),
-            callout: .niceHit
-        ),
-        // STEP 4: BARRIER（防御・Good!!）
-        PracticeLessonScenario(
-            badge: "STEP 4 / 6",
-            speaker: "REO // RULE GUIDE",
-            title: "「BARRIER」で相手のビームを防げ！",
-            message: "相手のバッテリーが溜まっている時はビームの警戒時！\n水色の【BARRIER（消費0）】を出せば、相手の通常ビームをノーダメージで完全に防ぎ「Good!!」となります！",
-            subTip: "💡 バリアは何回でもバッテリー消費0で使えます。相手の攻撃タイミングを読もう！",
-            accentColor: .cyberCyan,
-            bubbleCenterYRatio: 0.205,
-            tailDirection: .down(xRatio: 0.76),
-            cpuHP: 2,
-            cpuCharge: 0,
-            cpuExpression: .normal,
-            playerHP: 3,
-            playerCharge: 1,
-            playerExpression: .fun,
-            selectedAction: .barrier,
-            showTimeBar: false,
-            timeBarFraction: 0.0,
-            showClappingHands: false,
-            revealedCpuMove: .valid(.beam),
-            revealedPlayerMove: .valid(.barrier),
-            callout: .goodGuard
-        ),
-        // STEP 5: お手つき不発（NO GUARD / Bad）＆ 残りHP1ピンチ状態
-        PracticeLessonScenario(
-            badge: "STEP 5 / 6",
-            speaker: "REO // RULE GUIDE",
-            title: "⚠️お手つき無防備とピンチ状態に注意！",
-            message: "バッテリーが 0 なのに BEAM を選ぶと【NO GUARD（お手つき不発）】となり完全無防備になります！\n被弾すると「Bad」でハートとバッテリーが -1！残りハートが 1 になるとエリアが赤いネオンに染まりピンチ状態になります！",
-            subTip: "⚠️ 下のボタンに「NO CHARGE」と出ている時は不発になります。バッテリー残量に注意！",
-            accentColor: .cyberDanger,
-            bubbleCenterYRatio: 0.205,
-            tailDirection: .down(xRatio: 0.50),
-            cpuHP: 2,
-            cpuCharge: 1,
-            cpuExpression: .fun,
-            playerHP: 1,
-            playerCharge: 0,
-            playerExpression: .sad,
-            selectedAction: .beam,
-            showTimeBar: false,
-            timeBarFraction: 0.0,
-            showClappingHands: false,
-            revealedCpuMove: .valid(.beam),
-            revealedPlayerMove: .fumble(attempted: .beam),
-            callout: .badHit
-        ),
-        // STEP 6: 4チャージ到達・金色 ULTIMATE 一撃必殺 ➔ 「練習」ボタンで1戦練習バトルへ！
-        PracticeLessonScenario(
-            badge: "STEP 6 / 6",
-            speaker: "REO // RULE GUIDE",
-            title: "🌟4チャージで一撃必殺「ULTIMATE」！！",
-            message: "バッテリーを【4つ満タン】まで溜めると、下の3ボタンが黄金に輝く【ULTIMATE】ボタンに合体変化します！\nタップした瞬間にド派手なカットイン＆必殺技が発動し、相手のバリアや残りハートを貫通して一撃で勝利となります！",
-            subTip: "👇「必殺技を見る」で演出を確認したら、「練習」ボタンでまずは1戦戦ってみよう！",
-            accentColor: .cyberAmber,
-            bubbleCenterYRatio: 0.425,
-            tailDirection: .down(xRatio: 0.50),
-            cpuHP: 1,
-            cpuCharge: 1,
-            cpuExpression: .sad,
-            playerHP: 3,
-            playerCharge: 4,
-            playerExpression: .fun,
-            selectedAction: .charge,
-            showTimeBar: false,
-            timeBarFraction: 0.0,
-            showClappingHands: false,
-            revealedCpuMove: nil,
-            revealedPlayerMove: nil,
-            callout: nil
-        )
-    ]
+    private var scenarios: [PracticeLessonScenario] {
+        [
+            // STEP 1: 3拍のリズム＆時間バー＆コマンド選択
+            PracticeLessonScenario(
+                badge: "STEP 1 / 6",
+                speaker: "REO // RULE GUIDE",
+                title: L10n("3拍のリズムで行動を選ぼう！", "Pick Your Move on the 3-Beat Rhythm!"),
+                message: L10n(
+                    "バン！バン！アクション！の3拍子のリズムで戦うサイバーバトル！\n中央の【時間バー】が右から左へ消えきる前に下の3つのボタンから1つを選択し、出す手を決めよう。",
+                    "A cyber battle fought on a 3-beat rhythm: Bang! Bang! Action!\nBefore the center [Time Bar] runs out from right to left, tap one of the 3 buttons below to choose your move."
+                ),
+                subTip: L10n(
+                    "💡 1・2拍目の手拍子の間にボタンをタップ！3拍目で両者の手が同時に公開されます。",
+                    "💡 Tap a button during the 1st & 2nd claps! Both moves are revealed together on Beat 3."
+                ),
+                accentColor: .cyberCyan,
+                bubbleCenterYRatio: 0.190,
+                tailDirection: .down(xRatio: 0.50),
+                cpuHP: 3,
+                cpuCharge: 0,
+                cpuExpression: .normal,
+                playerHP: 3,
+                playerCharge: 0,
+                playerExpression: .normal,
+                selectedAction: .charge,
+                showTimeBar: true,
+                timeBarFraction: 0.62,
+                showClappingHands: true,
+                revealedCpuMove: nil,
+                revealedPlayerMove: nil,
+                callout: nil
+            ),
+            // STEP 2: CHARGE（気力溜め）
+            PracticeLessonScenario(
+                badge: "STEP 2 / 6",
+                speaker: "REO // RULE GUIDE",
+                title: L10n("まずは「CHARGE」で気力を溜めよう！", "Start with \"CHARGE\" to Build Energy!"),
+                message: L10n(
+                    "バトル開始時はバッテリー（気力）が 0 です。\n緑の【CHARGE】を選んで3拍目を迎えると、左下のバッテリーが 1つ溜まり「Charge」と表示されます！",
+                    "You start every battle with 0 battery (charge).\nPick green [CHARGE] and reach Beat 3 to fill 1 battery cell at the bottom-left and trigger \"Charge\"!"
+                ),
+                subTip: L10n(
+                    "💡 ビームを撃つにはバッテリーが必要です。まずは隙を見てチャージしましょう！",
+                    "💡 Firing a Beam requires battery charge. Look for an opening to Charge first!"
+                ),
+                accentColor: .cyberEmerald,
+                bubbleCenterYRatio: 0.205,
+                tailDirection: .down(xRatio: 0.24),
+                cpuHP: 3,
+                cpuCharge: 1,
+                cpuExpression: .normal,
+                playerHP: 3,
+                playerCharge: 1,
+                playerExpression: .fun,
+                selectedAction: .charge,
+                showTimeBar: false,
+                timeBarFraction: 0.0,
+                showClappingHands: false,
+                revealedCpuMove: .valid(.charge),
+                revealedPlayerMove: .valid(.charge),
+                callout: .chargeSuccess
+            ),
+            // STEP 3: BEAM（攻撃命中・Nice!!）
+            PracticeLessonScenario(
+                badge: "STEP 3 / 6",
+                speaker: "REO // RULE GUIDE",
+                title: L10n("「BEAM」で相手を撃ち抜け！", "Strike Your Rival with \"BEAM\"!"),
+                message: L10n(
+                    "バッテリーを 1 消費して紫の【BEAM】を発射！\n相手がチャージ中（またはお手つき無防備）なら直撃して「Nice!!」！【相手のハート -1】さらに【相手のバッテリーも -1】削れます！",
+                    "Spend 1 battery to fire a purple [BEAM]!\nIf your rival is Charging (or wide open), it's a direct hit — \"Nice!!\" — dealing [-1 Heart] AND [-1 Battery] to the enemy!"
+                ),
+                subTip: L10n(
+                    "💡 体力は3ハート制！ビーム同士がぶつかった場合は相殺となりダメージはありません。",
+                    "💡 Each side has 3 Hearts! If both sides fire Beams, they clash and cancel out with no damage."
+                ),
+                accentColor: Color(red: 1.0, green: 0.90, blue: 0.14),
+                bubbleCenterYRatio: 0.642,
+                tailDirection: .down(xRatio: 0.78),
+                cpuHP: 2,
+                cpuCharge: 0,
+                cpuExpression: .sad,
+                playerHP: 3,
+                playerCharge: 1,
+                playerExpression: .fun,
+                selectedAction: .beam,
+                showTimeBar: false,
+                timeBarFraction: 0.0,
+                showClappingHands: false,
+                revealedCpuMove: .valid(.charge),
+                revealedPlayerMove: .valid(.beam),
+                callout: .niceHit
+            ),
+            // STEP 4: BARRIER（防御・Good!!）
+            PracticeLessonScenario(
+                badge: "STEP 4 / 6",
+                speaker: "REO // RULE GUIDE",
+                title: L10n("「BARRIER」で相手のビームを防げ！", "Block Enemy Beams with \"BARRIER\"!"),
+                message: L10n(
+                    "相手のバッテリーが溜まっている時はビームの警戒時！\n水色の【BARRIER（消費0）】を出せば、相手の通常ビームをノーダメージで完全に防ぎ「Good!!」となります！",
+                    "Watch out when your rival has battery charge!\nUse cyan [BARRIER (Cost 0)] to completely block normal enemy Beams with zero damage — \"Good!!\"!"
+                ),
+                subTip: L10n(
+                    "💡 バリアは何回でもバッテリー消費0で使えます。相手の攻撃タイミングを読もう！",
+                    "💡 Barrier costs 0 charge and can be used anytime. Read your opponent's attack timing!"
+                ),
+                accentColor: .cyberCyan,
+                bubbleCenterYRatio: 0.205,
+                tailDirection: .down(xRatio: 0.76),
+                cpuHP: 2,
+                cpuCharge: 0,
+                cpuExpression: .normal,
+                playerHP: 3,
+                playerCharge: 1,
+                playerExpression: .fun,
+                selectedAction: .barrier,
+                showTimeBar: false,
+                timeBarFraction: 0.0,
+                showClappingHands: false,
+                revealedCpuMove: .valid(.beam),
+                revealedPlayerMove: .valid(.barrier),
+                callout: .goodGuard
+            ),
+            // STEP 5: お手つき不発（NO GUARD / Bad）＆ 残りHP1ピンチ状態
+            PracticeLessonScenario(
+                badge: "STEP 5 / 6",
+                speaker: "REO // RULE GUIDE",
+                title: L10n("⚠️お手つき無防備とピンチ状態に注意！", "⚠️ Watch Out for Fumbles & Low HP!"),
+                message: L10n(
+                    "バッテリーが 0 なのに BEAM を選ぶと【NO GUARD（お手つき不発）】となり完全無防備になります！\n被弾すると「Bad」でハートとバッテリーが -1！残りハートが 1 になるとエリアが赤いネオンに染まりピンチ状態になります！",
+                    "Picking BEAM with 0 battery causes [NO GUARD (Fumble)], leaving you wide open!\nTaking a hit triggers \"Bad\" (-1 Heart & -1 Battery)! At 1 Heart left, your area glows red in Danger mode!"
+                ),
+                subTip: L10n(
+                    "⚠️ 下のボタンに「NO CHARGE」と出ている時は不発になります。バッテリー残量に注意！",
+                    "⚠️ If \"NO CHARGE\" appears on the button, it will misfire. Keep an eye on your battery!"
+                ),
+                accentColor: .cyberDanger,
+                bubbleCenterYRatio: 0.205,
+                tailDirection: .down(xRatio: 0.50),
+                cpuHP: 2,
+                cpuCharge: 1,
+                cpuExpression: .fun,
+                playerHP: 1,
+                playerCharge: 0,
+                playerExpression: .sad,
+                selectedAction: .beam,
+                showTimeBar: false,
+                timeBarFraction: 0.0,
+                showClappingHands: false,
+                revealedCpuMove: .valid(.beam),
+                revealedPlayerMove: .fumble(attempted: .beam),
+                callout: .badHit
+            ),
+            // STEP 6: 4チャージ到達・金色 ULTIMATE 一撃必殺 ➔ 「練習」ボタンで1戦練習バトルへ！
+            PracticeLessonScenario(
+                badge: "STEP 6 / 6",
+                speaker: "REO // RULE GUIDE",
+                title: L10n("🌟4チャージで一撃必殺「ULTIMATE」！！", "🌟 4 Charges: One-Hit KO \"ULTIMATE\"!!"),
+                message: L10n(
+                    "バッテリーを【4つ満タン】まで溜めると、下の3ボタンが黄金に輝く【ULTIMATE】ボタンに合体変化します！\nタップした瞬間にド派手なカットイン＆必殺技が発動し、相手のバリアや残りハートを貫通して一撃で勝利となります！",
+                    "Fill all [4 Battery Cells] and the 3 buttons merge into a golden [ULTIMATE] button!\nTap it to unleash an instant cut-in & Ultimate attack that pierces enemy Barriers and remaining Hearts for an instant win!"
+                ),
+                subTip: L10n(
+                    "👇「必殺技を見る」で演出を確認したら、「練習」ボタンでまずは1戦戦ってみよう！",
+                    "👇 Tap \"Preview Ult\" to see the animation, then tap \"Practice\" to fight 1 match!"
+                ),
+                accentColor: .cyberAmber,
+                bubbleCenterYRatio: 0.425,
+                tailDirection: .down(xRatio: 0.50),
+                cpuHP: 1,
+                cpuCharge: 1,
+                cpuExpression: .sad,
+                playerHP: 3,
+                playerCharge: 4,
+                playerExpression: .fun,
+                selectedAction: .charge,
+                showTimeBar: false,
+                timeBarFraction: 0.0,
+                showClappingHands: false,
+                revealedCpuMove: nil,
+                revealedPlayerMove: nil,
+                callout: nil
+            )
+        ]
+    }
 
     var body: some View {
+        let _ = lang.language
         ZStack {
             // ステータスバー背面領域を黒で保護
             Color.black
@@ -683,13 +723,17 @@ struct PracticeTutorialView: View {
                         .shadow(color: headerAccent.opacity(0.6), radius: 6)
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(isWin ? "YOU WIN! 練習クリア！" : "練習バトル完了！")
+                        Text(
+                            isWin
+                                ? L10n("YOU WIN! 練習クリア！", "YOU WIN! Practice Clear!")
+                                : L10n("練習バトル完了！", "Practice Complete!")
+                        )
                             .font(.system(size: 20, weight: .black, design: .rounded))
                             .italic()
                             .foregroundStyle(headerAccent)
                             .shadow(color: headerAccent.opacity(0.8), radius: 8)
 
-                        Text("いよいよ本番！ゲームの3つの特徴を紹介するよ！")
+                        Text(L10n("いよいよ本番！ゲームの3つの特徴を紹介するよ！", "Ready for real combat! Here are 3 key features!"))
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(Color.white.opacity(0.90))
                             .minimumScaleFactor(0.8)
@@ -706,24 +750,33 @@ struct PracticeTutorialView: View {
                 featureIntroRow(
                     icon: "flame.fill",
                     accent: .cyberEmerald,
-                    title: "KUMITE（勝ち抜きサバイバル）",
-                    description: "個性豊かなライバルたちと連戦するメインモード！1人撃破するごとにハートは3つに全回復します。何連勝できるか限界に挑もう！"
+                    title: L10n("KUMITE（勝ち抜きサバイバル）", "KUMITE (Survival Gauntlet)"),
+                    description: L10n(
+                        "個性豊かなライバルたちと連戦するメインモード！1人撃破するごとにハートは3つに全回復します。何連勝できるか限界に挑もう！",
+                        "Battle consecutive cyber rivals in the main survival mode! Your 3 Hearts fully restore after each victory. Push your win streak to the limit!"
+                    )
                 )
 
                 // 2. ランキング制度の紹介
                 featureIntroRow(
                     icon: "trophy.fill",
                     accent: .cyberAmber,
-                    title: "ワールドランキング制度",
-                    description: "KUMITEで達成した「最大連勝記録」で世界中のプレイヤーと順位を競えます！連勝を重ねると設定画面で新しいアイコンも解放！"
+                    title: L10n("ワールドランキング制度", "World Ranking"),
+                    description: L10n(
+                        "KUMITEで達成した「最大連勝記録」で世界中のプレイヤーと順位を競えます！連勝を重ねると設定画面で新しいアイコンも解放！",
+                        "Compete with players worldwide for the highest KUMITE win streak! Extending your streak also unlocks new player icons in SETTING!"
+                    )
                 )
 
                 // 3. リズム速度（標準 / 速め）の紹介
                 featureIntroRow(
                     icon: "metronome.fill",
                     accent: .cyberCyan,
-                    title: "リズム速度は「速め」にも変更可能！",
-                    description: "今の練習は「標準」速度でしたが、設定画面（SETTING）や勝利後の画面から、よりスリリングな「速め」に切り替えることもできます！"
+                    title: L10n("リズム速度は「速め」にも変更可能！", "Switch Rhythm Tempo to \"Fast\"!"),
+                    description: L10n(
+                        "今の練習は「標準」速度でしたが、設定画面（SETTING）や勝利後の画面から、よりスリリングな「速め」に切り替えることもできます！",
+                        "That match was at \"Standard\" speed, but you can switch to a thrilling \"Fast\" tempo anytime in SETTING or after winning a match!"
+                    )
                 )
 
                 // 下段：アクションボタン（KUMITEへ / もう1戦練習 / TITLEへ）
@@ -735,7 +788,7 @@ struct PracticeTutorialView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "flame.fill")
-                            Text("KUMITE に挑戦する！")
+                            Text(L10n("KUMITE に挑戦する！", "Start KUMITE!"))
                         }
                         .font(.system(size: 17, weight: .black, design: .rounded))
                         .tracking(1)
@@ -759,7 +812,7 @@ struct PracticeTutorialView: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "arrow.clockwise")
-                                Text("もう1戦練習")
+                                Text(L10n("もう1戦練習", "Practice Again"))
                             }
                             .font(.system(size: 13.5, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
@@ -916,7 +969,7 @@ struct PracticeTutorialView: View {
                         )
                 )
             } else {
-                Text("PRACTICE // 標準速度")
+                Text(L10n("PRACTICE // 標準速度", "PRACTICE // Standard"))
                     .font(.system(size: 10.5, weight: .black, design: .monospaced))
                     .foregroundStyle(Color.cyberEmerald)
                     .padding(.horizontal, 10)
@@ -1011,7 +1064,7 @@ struct PracticeTutorialView: View {
                             lessonStep = prev
                             playStepTransitionSE(for: prev)
                         } label: {
-                            Text("◀ 戻る")
+                            Text(L10n("◀ 戻る", "◀ Back"))
                                 .font(.system(size: 12.5, weight: .black, design: .rounded))
                                 .foregroundStyle(.white)
                                 .frame(width: 78, height: 36)
@@ -1035,7 +1088,7 @@ struct PracticeTutorialView: View {
                             playStepTransitionSE(for: next)
                         } label: {
                             HStack(spacing: 6) {
-                                Text("次へ（\(lessonStep + 2)/\(scenarios.count)）")
+                                Text(L10n("次へ（\(lessonStep + 2)/\(scenarios.count)）", "Next (\(lessonStep + 2)/\(scenarios.count))"))
                                 Image(systemName: "play.fill")
                                     .font(.system(size: 11, weight: .black))
                             }
@@ -1058,7 +1111,7 @@ struct PracticeTutorialView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "bolt.fill")
-                                Text("必殺技を見る")
+                                Text(L10n("必殺技を見る", "Preview Ult"))
                             }
                             .font(.system(size: 12.5, weight: .black, design: .rounded))
                             .foregroundStyle(.black)
@@ -1080,7 +1133,7 @@ struct PracticeTutorialView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "play.fill")
                                     .font(.system(size: 12, weight: .black))
-                                Text("練習")
+                                Text(L10n("練習", "Practice"))
                             }
                             .font(.system(size: 15, weight: .black, design: .rounded))
                             .tracking(1.5)

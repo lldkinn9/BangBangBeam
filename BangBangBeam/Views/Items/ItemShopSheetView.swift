@@ -1,15 +1,16 @@
 import SwiftUI
 
-/// メニュー画面「ITEM」から開くポイント交換＆KUMITE持ち込み設定シート（最下部にバナー広告常設）
-/// - 「購入」という表現は一切用いず、すべてポイントとの「交換」として表記
+/// メニュー画面「ITEM」から開くポイント交換＆KUMITE持ち込み設定シート（最下部にバナー広告常設・日英リアルタイム切替対応）
 struct ItemShopSheetView: View {
     @Bindable var engine: GameEngine
     @Bindable private var itemManager = ItemManager.shared
+    @Bindable private var lang = LanguageManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var statusBannerText: String? = nil
 
     var body: some View {
+        let _ = lang.language
         let isKumiteSessionLockedWithActiveItem = (
             engine.hasSavedKumiteSession &&
             !engine.isPendingKumiteRevive &&
@@ -36,8 +37,11 @@ struct ItemShopSheetView: View {
 
                     // MARK: 2. バトル開始前アイテム（複数交換＆ストック可能・毎バトル前のVS画面で使用を選択）
                     sectionCard(
-                        title: "VS BOOST ITEMS // バトル開始前アイテム",
-                        subtitle: "複数交換してストック可能！毎バトル前のVS画面で使用するかを選択できます（1バトルにつき1種類・1個のみ有効）"
+                        title: L10n("VS BOOST ITEMS // バトル開始前アイテム", "VS BOOST ITEMS // PER-BATTLE BOOSTS"),
+                        subtitle: L10n(
+                            "複数交換してストック可能！毎バトル前のVS画面で使用するかを選択できます（1バトルにつき1種類・1個のみ有効）",
+                            "Exchange & stock multiple! Choose 1 item to activate on the VS screen before each battle (1 battle per use)."
+                        )
                     ) {
                         VStack(spacing: 12) {
                             ForEach(BattleItem.vsBattleBoostItems) { item in
@@ -52,8 +56,11 @@ struct ItemShopSheetView: View {
 
                     // MARK: 3. バトル中使用アイテム（所持品から1つ選んで次のKUMITEへ持ち込み）
                     sectionCard(
-                        title: "CARRY-IN ITEMS // KUMITE持ち込みアイテム",
-                        subtitle: "所持しているものの中から1つだけ次のKUMITEに持ち込めます（バトル中にREOのハート上のアイコンをタップして使用）"
+                        title: L10n("CARRY-IN ITEMS // KUMITE持ち込みアイテム", "CARRY-IN ITEMS // IN-BATTLE CONSUMABLES"),
+                        subtitle: L10n(
+                            "所持しているものの中から1つだけ次のKUMITEに持ち込めます（バトル中にREOのハート上のアイコンをタップして使用）",
+                            "Equip 1 owned item for your next KUMITE run (Tap the icon above REO's hearts during battle to activate)."
+                        )
                     ) {
                         VStack(spacing: 12) {
                             ForEach(BattleItem.carryInItems) { item in
@@ -71,8 +78,11 @@ struct ItemShopSheetView: View {
 
                     // MARK: 4. 救急キット一覧（交換と同時に自動適用・他アイテムと併用可）
                     sectionCard(
-                        title: "EMERGENCY MEDKITS // 救急キット",
-                        subtitle: "交換と同時に自動適用！持ち込みアイテム等とも併用できます（1回のKUMITEにつき1つのみ適用可能）"
+                        title: L10n("EMERGENCY MEDKITS // 救急キット", "EMERGENCY MEDKITS // REVIVE BOOST"),
+                        subtitle: L10n(
+                            "交換と同時に自動適用！持ち込みアイテム等とも併用できます（1回のKUMITEにつき1つのみ適用可能）",
+                            "Applied automatically upon exchange! Stacks with other items (Limit 1 Medkit per KUMITE run)."
+                        )
                     ) {
                         VStack(spacing: 12) {
                             ForEach(BattleItem.medkitItems) { medkit in
@@ -95,7 +105,7 @@ struct ItemShopSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完了") {
+                    Button(L10n("完了", "Done")) {
                         dismiss()
                     }
                     .fontWeight(.bold)
@@ -121,10 +131,10 @@ struct ItemShopSheetView: View {
                         .shadow(color: Color.cyberAmber, radius: 6)
 
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("所持ポイント")
+                        Text(L10n("所持ポイント", "Available Points"))
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.white.opacity(0.70))
-                        Text("KUMITE 1勝ごとに +1 PT 獲得")
+                        Text(L10n("KUMITE 1勝ごとに +1 PT 獲得", "Earn +1 PT per KUMITE win"))
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Color.cyberCyan.opacity(0.85))
                     }
@@ -142,11 +152,15 @@ struct ItemShopSheetView: View {
                 .background(Color.cyberCyan.opacity(0.28))
 
             HStack(spacing: 10) {
-                // スロット1：KUMITE持ち込み枠（回復薬 / エナジードリンク）
+                // スロット1：KUMITE持ち込み枠
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(isLockedActiveItem ? "現在KUMITE適用中" : "次のKUMITE持ち込み")
-                        .font(.system(size: 10, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color.cyberEmerald)
+                    Text(
+                        isLockedActiveItem
+                            ? L10n("現在KUMITE適用中", "ACTIVE IN KUMITE")
+                            : L10n("次のKUMITE持ち込み", "NEXT KUMITE EQUIP")
+                    )
+                    .font(.system(size: 10, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.cyberEmerald)
 
                     HStack(spacing: 8) {
                         if let item = effectiveCarryIn {
@@ -164,13 +178,13 @@ struct ItemShopSheetView: View {
                                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
                                         itemManager.clearCarryInSelection()
                                     } label: {
-                                        Text("外す")
+                                        Text(L10n("外す", "Remove"))
                                             .font(.system(size: 10, weight: .bold))
                                             .foregroundStyle(Color.cyberDanger)
                                     }
                                     .buttonStyle(.plain)
                                 } else {
-                                    Text("連勝データに保持中")
+                                    Text(L10n("連勝データに保持中", "Active in saved run"))
                                         .font(.system(size: 9.5, weight: .bold))
                                         .foregroundStyle(Color.cyberCyan)
                                 }
@@ -185,7 +199,7 @@ struct ItemShopSheetView: View {
                                         .foregroundStyle(Color.white.opacity(0.35))
                                 )
 
-                            Text("未設定")
+                            Text(L10n("未設定", "None"))
                                 .font(.system(size: 12.5, weight: .bold))
                                 .foregroundStyle(Color.white.opacity(0.5))
                         }
@@ -204,9 +218,9 @@ struct ItemShopSheetView: View {
                         )
                 )
 
-                // スロット2：救急キット自動適用枠（併用可能）
+                // スロット2：救急キット自動適用枠
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("救急キット自動適用")
+                    Text(L10n("救急キット自動適用", "MEDKIT APPLIED"))
                         .font(.system(size: 10, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.cyberCyan)
 
@@ -221,7 +235,7 @@ struct ItemShopSheetView: View {
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.75)
 
-                                Text("リセット +\(medkit.bonusRevives)回")
+                                Text(L10n("リセット +\(medkit.bonusRevives)回", "Resets +\(medkit.bonusRevives)"))
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(medkit.themeColor)
                             }
@@ -235,7 +249,7 @@ struct ItemShopSheetView: View {
                                         .foregroundStyle(Color.white.opacity(0.35))
                                 )
 
-                            Text("未適用")
+                            Text(L10n("未適用", "None"))
                                 .font(.system(size: 12.5, weight: .bold))
                                 .foregroundStyle(Color.white.opacity(0.5))
                         }
@@ -266,7 +280,7 @@ struct ItemShopSheetView: View {
         )
     }
 
-    // MARK: - Section 2: VS Screen Per-Battle Boost Item Row (ハート / 電池 / 防弾チョッキ)
+    // MARK: - Section 2: VS Screen Per-Battle Boost Item Row
     private func vsBoostItemRow(item: BattleItem) -> some View {
         let owned = itemManager.ownedCount(for: item)
         let canAfford = itemManager.points >= item.pointCost
@@ -280,6 +294,8 @@ struct ItemShopSheetView: View {
                         Text(item.displayName)
                             .font(.system(size: 15, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
 
                         Text(item.usageBadgeText)
                             .font(.system(size: 9.5, weight: .black, design: .rounded))
@@ -290,7 +306,7 @@ struct ItemShopSheetView: View {
 
                         Spacer()
 
-                        Text("ストック: \(owned)個")
+                        Text(L10n("ストック: \(owned)個", "Stock: \(owned)"))
                             .font(.system(size: 11.5, weight: .black, design: .monospaced))
                             .foregroundStyle(owned > 0 ? Color.cyberEmerald : Color.white.opacity(0.45))
                     }
@@ -308,13 +324,19 @@ struct ItemShopSheetView: View {
                     if itemManager.exchangeStockableItem(item) {
                         SoundManager.shared.playButtonSE()
                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                        showBanner("「\(item.displayName)」を交換しました！（ストック: \(itemManager.ownedCount(for: item))個）")
+                        let newStock = itemManager.ownedCount(for: item)
+                        showBanner(
+                            L10n(
+                                "「\(item.displayName)」を交換しました！（ストック: \(newStock)個）",
+                                "Exchanged \(item.displayName)! (Stock: \(newStock))"
+                            )
+                        )
                     }
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 11, weight: .black))
-                        Text("交換 (\(item.pointCost) PT)")
+                        Text(L10n("交換 (\(item.pointCost) PT)", "Exchange (\(item.pointCost) PT)"))
                             .font(.system(size: 12.5, weight: .black, design: .rounded))
                     }
                     .foregroundStyle(canAfford ? .black : Color.white.opacity(0.40))
@@ -338,7 +360,7 @@ struct ItemShopSheetView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "bolt.shield.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text("VS画面で使用選択")
+                    Text(L10n("VS画面で使用選択", "Select on VS Screen"))
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                 }
                 .foregroundStyle(owned > 0 ? Color.cyberCyan : Color.white.opacity(0.38))
@@ -359,7 +381,7 @@ struct ItemShopSheetView: View {
         }
     }
 
-    // MARK: - Section 3: Carry-in Item Row (回復薬 / エナジードリンク)
+    // MARK: - Section 3: Carry-in Item Row
     private func carryInItemRow(item: BattleItem, isLockedActiveItem: Bool) -> some View {
         let owned = itemManager.ownedCount(for: item)
         let canAfford = itemManager.points >= item.pointCost
@@ -375,6 +397,8 @@ struct ItemShopSheetView: View {
                         Text(item.displayName)
                             .font(.system(size: 15, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
 
                         Text(item.usageBadgeText)
                             .font(.system(size: 9.5, weight: .black, design: .rounded))
@@ -385,7 +409,7 @@ struct ItemShopSheetView: View {
 
                         Spacer()
 
-                        Text("所持: \(owned)個")
+                        Text(L10n("所持: \(owned)個", "Owned: \(owned)"))
                             .font(.system(size: 11.5, weight: .black, design: .monospaced))
                             .foregroundStyle(owned > 0 ? Color.cyberEmerald : Color.white.opacity(0.45))
                     }
@@ -403,13 +427,18 @@ struct ItemShopSheetView: View {
                     if itemManager.exchangeStockableItem(item) {
                         SoundManager.shared.playButtonSE()
                         HapticManager.playMedium(enabled: engine.isHapticsEnabled)
-                        showBanner("「\(item.displayName)」を交換しました！（-\(item.pointCost) PT）")
+                        showBanner(
+                            L10n(
+                                "「\(item.displayName)」を交換しました！（-\(item.pointCost) PT）",
+                                "Exchanged \(item.displayName)! (-\(item.pointCost) PT)"
+                            )
+                        )
                     }
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 11, weight: .black))
-                        Text("交換 (\(item.pointCost) PT)")
+                        Text(L10n("交換 (\(item.pointCost) PT)", "Exchange (\(item.pointCost) PT)"))
                             .font(.system(size: 12.5, weight: .black, design: .rounded))
                     }
                     .foregroundStyle(canAfford ? .black : Color.white.opacity(0.40))
@@ -431,22 +460,26 @@ struct ItemShopSheetView: View {
                 .disabled(!canAfford)
 
                 if isLockedActiveItem {
-                    Text(isCurrentlyActiveInRun ? "✓ 現在適用中" : "別アイテム適用中")
-                        .font(.system(size: 11.5, weight: .black, design: .rounded))
-                        .foregroundStyle(isCurrentlyActiveInRun ? Color.cyberCyan : Color.white.opacity(0.38))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(
-                            RoundedRectangle(cornerRadius: 9)
-                                .fill(Color.white.opacity(0.06))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 9)
-                                        .strokeBorder(
-                                            isCurrentlyActiveInRun ? Color.cyberCyan.opacity(0.6) : Color.white.opacity(0.14),
-                                            lineWidth: 1
-                                        )
-                                )
-                        )
+                    Text(
+                        isCurrentlyActiveInRun
+                            ? L10n("✓ 現在適用中", "✓ Equipped")
+                            : L10n("別アイテム適用中", "Slot Locked")
+                    )
+                    .font(.system(size: 11.5, weight: .black, design: .rounded))
+                    .foregroundStyle(isCurrentlyActiveInRun ? Color.cyberCyan : Color.white.opacity(0.38))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9)
+                            .fill(Color.white.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 9)
+                                    .strokeBorder(
+                                        isCurrentlyActiveInRun ? Color.cyberCyan.opacity(0.6) : Color.white.opacity(0.14),
+                                        lineWidth: 1
+                                    )
+                            )
+                    )
                 } else {
                     Button {
                         HapticManager.playLight(enabled: engine.isHapticsEnabled)
@@ -456,7 +489,7 @@ struct ItemShopSheetView: View {
                         HStack(spacing: 4) {
                             Image(systemName: isSelectedForNext ? "checkmark.circle.fill" : "bag.badge.plus")
                                 .font(.system(size: 12, weight: .black))
-                            Text(isSelectedForNext ? "持ち込み中" : "持ち込む")
+                            Text(isSelectedForNext ? L10n("持ち込み中", "Equipped") : L10n("持ち込む", "Equip"))
                                 .font(.system(size: 12.5, weight: .black, design: .rounded))
                         }
                         .foregroundStyle(
@@ -529,7 +562,12 @@ struct ItemShopSheetView: View {
                 if engine.exchangeAndApplyMedkit(medkit) {
                     SoundManager.shared.playButtonSE()
                     HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
-                    showBanner("「\(medkit.displayName)」を交換・適用しました！リセット回数が +\(medkit.bonusRevives)回 増加！")
+                    showBanner(
+                        L10n(
+                            "「\(medkit.displayName)」を交換・適用しました！リセット回数が +\(medkit.bonusRevives)回 増加！",
+                            "Applied \(medkit.displayName)! Video-ad resets increased by +\(medkit.bonusRevives)!"
+                        )
+                    )
                 }
             } label: {
                 HStack(spacing: 6) {
@@ -537,8 +575,10 @@ struct ItemShopSheetView: View {
                         .font(.system(size: 12, weight: .black))
                     Text(
                         isThisApplied
-                            ? "適用中（リセット +\(medkit.bonusRevives)回）"
-                            : (alreadyHasMedkit ? "他の救急キットが適用中" : "交換して即時適用 (\(medkit.pointCost) PT)")
+                            ? L10n("適用中（リセット +\(medkit.bonusRevives)回）", "Applied (Resets +\(medkit.bonusRevives))")
+                            : (alreadyHasMedkit
+                                ? L10n("他の救急キットが適用中", "Another Medkit is Active")
+                                : L10n("交換して即時適用 (\(medkit.pointCost) PT)", "Exchange & Apply (\(medkit.pointCost) PT)"))
                     )
                     .font(.system(size: 13, weight: .black, design: .rounded))
                 }

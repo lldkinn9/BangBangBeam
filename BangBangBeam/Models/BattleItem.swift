@@ -10,7 +10,7 @@ enum BattleItemCategory: String, Sendable {
     case autoMedkit
 }
 
-/// ポイント交換アイテム全8種の定義
+/// ポイント交換アイテム全8種の定義（日英リアルタイム切替対応）
 enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     case heart
     case battery
@@ -27,21 +27,21 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     var displayName: String {
         switch self {
         case .heart:
-            return "ハート"
+            return L10n("ハート", "Heart")
         case .battery:
-            return "電池"
+            return L10n("電池", "Battery")
         case .bulletproofVest:
-            return "防弾チョッキ"
+            return L10n("防弾チョッキ", "Bulletproof Vest")
         case .healingPotion:
-            return "回復薬"
+            return L10n("回復薬", "Healing Potion")
         case .energyDrink:
-            return "エナジードリンク"
+            return L10n("エナジードリンク", "Energy Drink")
         case .medkitSmall:
-            return "救急キット(小)"
+            return L10n("救急キット(小)", "Medkit (S)")
         case .medkitMedium:
-            return "救急キット(中)"
+            return L10n("救急キット(中)", "Medkit (M)")
         case .medkitLarge:
-            return "救急キット(大)"
+            return L10n("救急キット(大)", "Medkit (L)")
         }
     }
 
@@ -49,11 +49,11 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     var compactVsLabel: String {
         switch self {
         case .heart:
-            return "ハート"
+            return L10n("ハート", "Heart")
         case .battery:
-            return "電池"
+            return L10n("電池", "Battery")
         case .bulletproofVest:
-            return "チョッキ"
+            return L10n("チョッキ", "Vest")
         default:
             return displayName
         }
@@ -63,11 +63,11 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     var vsSelectionSummary: String {
         switch self {
         case .heart:
-            return "このバトルの体力が 4 からスタート！"
+            return L10n("このバトルの体力が 4 からスタート！", "Start this battle with 4 HP!")
         case .battery:
-            return "チャージ 1 の状態からバトルスタート！"
+            return L10n("チャージ 1 の状態からバトルスタート！", "Start this battle with 1 Charge!")
         case .bulletproofVest:
-            return "相手のビーム・必殺技を一度だけ防御！"
+            return L10n("相手のビーム・必殺技を一度だけ防御！", "Blocks an enemy Beam or Ultimate once!")
         default:
             return ""
         }
@@ -95,25 +95,49 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 効果説明文（指定文言準拠）
+    /// 効果説明文
     var effectDescription: String {
         switch self {
         case .heart:
-            return "初期体力を1増やす（体力が4からスタート）"
+            return L10n(
+                "初期体力を1増やす（体力が4からスタート）",
+                "Increases starting HP by 1 (Start battle with 4 HP)"
+            )
         case .battery:
-            return "チャージが1溜まった状態からバトルスタート\n（1ターン目からビームも可能）"
+            return L10n(
+                "チャージが1溜まった状態からバトルスタート\n（1ターン目からビームも可能）",
+                "Start battle with 1 Charge already stored\n(Can fire BEAM on Turn 1)"
+            )
         case .bulletproofVest:
-            return "相手のビームを一度だけ防ぐ（必殺技も一度防げる）"
+            return L10n(
+                "相手のビームを一度だけ防ぐ（必殺技も一度防げる）",
+                "Blocks an enemy Beam once (Can also block Ultimate once)"
+            )
         case .healingPotion:
-            return "体力を全回復する（バトル中に使用）"
+            return L10n(
+                "体力を全回復する（バトル中に使用）",
+                "Fully restores HP (Tap icon during battle)"
+            )
         case .energyDrink:
-            return "チャージが2溜まる（バトル中に使用）"
+            return L10n(
+                "チャージが2溜まる（バトル中に使用）",
+                "Gains +2 Charge instantly (Tap icon during battle)"
+            )
         case .medkitSmall:
-            return "次のKUMITEでの広告動画を見てリセットの回数が1回増える"
+            return L10n(
+                "次のKUMITEでの広告動画を見てリセットの回数が1回増える",
+                "Adds +1 video-ad revive reset for your next KUMITE"
+            )
         case .medkitMedium:
-            return "次のKUMITEでの広告動画を見てリセットの回数が2回増える"
+            return L10n(
+                "次のKUMITEでの広告動画を見てリセットの回数が2回増える",
+                "Adds +2 video-ad revive resets for your next KUMITE"
+            )
         case .medkitLarge:
-            return "次のKUMITEでの広告動画を見てリセットの回数が3回増える"
+            return L10n(
+                "次のKUMITEでの広告動画を見てリセットの回数が3回増える",
+                "Adds +3 video-ad revive resets for your next KUMITE"
+            )
         }
     }
 
@@ -129,12 +153,12 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 交換して複数ストック可能なアイテムかどうか（ハート・電池・防弾チョッキ・回復薬・エナジードリンク）
+    /// 交換して複数ストック可能なアイテムかどうか
     var isStockable: Bool {
         category != .autoMedkit
     }
 
-    /// ITEM画面の「KUMITE持ち込み枠（1つ選択）」の対象アイテムかどうか（回復薬・エナジードリンク）
+    /// ITEM画面の「KUMITE持ち込み枠（1つ選択）」の対象アイテムかどうか
     var isCarryInSelectable: Bool {
         category == .activeCarryIn
     }
@@ -162,11 +186,11 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
     var usageBadgeText: String {
         switch category {
         case .vsBattleBoost:
-            return "VS画面で選択（1戦）"
+            return L10n("VS画面で選択（1戦）", "VS Select (1 Battle)")
         case .activeCarryIn:
-            return "バトル中使用"
+            return L10n("バトル中使用", "In-Battle Use")
         case .autoMedkit:
-            return "交換時自動適用"
+            return L10n("交換時自動適用", "Auto-Applied")
         }
     }
 
@@ -200,7 +224,7 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         case .battery:
             return "+1"
         case .bulletproofVest:
-            return "1回"
+            return L10n("1回", "1x")
         case .healingPotion:
             return "MAX"
         case .energyDrink:
@@ -214,17 +238,14 @@ enum BattleItem: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// 毎バトル前のVS画面で選択可能な3種類一覧（1バトル効果・複数ストック可能）
     static var vsBattleBoostItems: [BattleItem] {
         [.heart, .battery, .bulletproofVest]
     }
 
-    /// ITEM画面でKUMITEへ持ち込み設定するバトル中使用アイテム2種類一覧
     static var carryInItems: [BattleItem] {
         [.healingPotion, .energyDrink]
     }
 
-    /// 交換と同時に自動適用の救急キット3種類一覧
     static var medkitItems: [BattleItem] {
         [.medkitSmall, .medkitMedium, .medkitLarge]
     }

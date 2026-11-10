@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 14:00 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.44`（ハート・電池・防弾チョッキを「複数交換ストック＆毎バトル前VS画面での1戦使用選択」仕様へ変更、全8種の説明文更新、および「購入」表記をすべて「交換」へ統一）
+最終更新日時: 2026-11-10 14:40 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.45`（全テキストの日英バイリンガル対応＆初回起動時・設定画面での言語選択機能実装、および本番リリースに向けたランキングモックデータの完全削除）
 
 ---
 
@@ -51,14 +51,20 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.44`（ITEM画面の交換＆説明文・VS画面でのハート/電池/防弾チョッキ1戦使用選択・バトル中REOハート上の表示＆タップ使用）の動作確認
-- [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
+- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.45`（初回起動時＆設定画面での日本語／英語切替・全画面テキストの英語表示・モック削除後の本番 Game Center ランキング動作）の動作確認
+- [x] **【本番提出前必須】** ランキング画面のモックデータ（`useMockRankingForPreview` / `applyMockRankingData`）を完全削除し、本番 Apple Game Center 通信のみに統一済み
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
 
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 14:40 (`v1.0.45`)**
+  - **全テキストの日本語／英語対応（初回起動時＆設定画面での言語選択）およびランキングモックデータの完全削除 ([`LanguageManager.swift`](BangBangBeam/Services/LanguageManager.swift) / [`BangBangBeamApp.swift`](BangBangBeam/App/BangBangBeamApp.swift) / [`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift) / [`GameCenterManager.swift`](BangBangBeam/Services/GameCenterManager.swift) / [`RankingInfoSheetView.swift`](BangBangBeam/Views/Title/RankingInfoSheetView.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`ItemShopSheetView.swift`](BangBangBeam/Views/Items/ItemShopSheetView.swift) / [`IconSettingView.swift`](BangBangBeam/Views/Settings/IconSettingView.swift) / [`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) ほか全画面):**
+    1. **言語管理基盤 `LanguageManager` ＆ `L10n` 実装:** 日本語（`日本語`）と英語（`English`）を即時切り替え＆ `UserDefaults` に永続化する [`LanguageManager.swift`](BangBangBeam/Services/LanguageManager.swift) を新設し、アプリ内全画面（タイトル・VS画面・バトル＆リザルト画面・復活確認ポップアップ・ITEM交換所・全8種アイテム説明・SETTING画面＆バトルルール解説・全84種アイコン解放条件・PRACTICE全6ステップ吹き出し＆練習後ガイド・WORLD RANKING画面・広告エラー文言・ATT説明 `InfoPlist.xcstrings`）の全テキストを日英両対応化。
+    2. **初回起動時および設定画面での言語選択UI実装:** 初回起動時に言語選択モーダル（`InitialLanguageSelectionOverlayView`）を最前面に表示して「日本語」か「English」を選択でき、設定画面（[`SettingSheetView.swift`](BangBangBeam/Views/Settings/SettingSheetView.swift)）最上部の `LANGUAGE` カードからもいつでも即座に切り替え可能に実装。
+    3. **ランキングのモックデータ完全削除（リリース準備）:** [`GameCenterManager.swift`](BangBangBeam/Services/GameCenterManager.swift) からプレビュー用モックフラグ `useMockRankingForPreview` およびダミーデータ生成処理 `applyMockRankingData()` を完全削除し、本番 Apple Game Center (`GKLeaderboard`) の実データのみを取得・表示するようクリーンアップ。
 
 - **2026-11-10 14:00 (`v1.0.44`)**
   - **ハート・電池・防弾チョッキの「1バトル効果＆毎バトル前VS画面選択」仕様変更・全アイテム説明文更新・「購入」→「交換」表記統一 ([`BattleItem.swift`](BangBangBeam/Models/BattleItem.swift) / [`ItemManager.swift`](BangBangBeam/Services/ItemManager.swift) / [`ItemShopSheetView.swift`](BangBangBeam/Views/Items/ItemShopSheetView.swift) / [`PreBattleVsOverlayView.swift`](BangBangBeam/Views/Battle/PreBattleVsOverlayView.swift) / [`BattleItemIconView.swift`](BangBangBeam/Views/Items/BattleItemIconView.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift)):**

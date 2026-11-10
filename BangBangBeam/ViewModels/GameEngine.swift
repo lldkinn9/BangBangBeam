@@ -95,9 +95,9 @@ enum TempoPreset: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .standard:
-            return "標準"
+            return L10n("標準", "Standard")
         case .fast:
-            return "速め"
+            return L10n("速め", "Fast")
         }
     }
 
@@ -198,7 +198,10 @@ final class GameEngine {
     var playerClashCallout: PlayerClashCallout? = nil
 
     var calloutText: String = "Ready"
-    var statusDetailText: String = "赤いバーが消える前にコマンドを選択！"
+    var statusDetailText: String = L10n(
+        "赤いバーが消える前にコマンドを選択！",
+        "Select a command before the red bar runs out!"
+    )
 
     var outcome: BattleOutcome = .ongoing
 
@@ -416,7 +419,7 @@ final class GameEngine {
             // 1.「Ready」表示
             self.preBattlePhase = .ready
             self.calloutText = "Ready"
-            self.statusDetailText = "練習バトル（標準速度）— コマンドを準備しよう！"
+            self.statusDetailText = L10n("練習バトル（標準速度）— コマンドを準備しよう！", "Practice Match (Standard) — Prepare your command!")
             HapticManager.playLight(enabled: self.isHapticsEnabled)
             try? await Task.sleep(for: .milliseconds(850))
             guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
@@ -424,7 +427,7 @@ final class GameEngine {
             // 2.「Go!!」表示
             self.preBattlePhase = .go
             self.calloutText = "Go!!"
-            self.statusDetailText = "バトル開始！！"
+            self.statusDetailText = L10n("バトル開始！！", "Battle Start!!")
             HapticManager.playHeavy(enabled: self.isHapticsEnabled)
             try? await Task.sleep(for: .milliseconds(620))
             guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
@@ -516,7 +519,7 @@ final class GameEngine {
         case .healingPotion:
             guard playerHP < playerMaxHP else {
                 HapticManager.playLight(enabled: isHapticsEnabled)
-                showItemEffectFeedback("体力はすでに満タンです")
+                showItemEffectFeedback(L10n("体力はすでに満タンです", "HP is already full"))
                 return
             }
             ItemManager.shared.consumeActiveRunCarryInItem()
@@ -526,12 +529,12 @@ final class GameEngine {
             }
             SoundManager.shared.playButtonSE()
             HapticManager.playHeavy(enabled: isHapticsEnabled)
-            showItemEffectFeedback("💊 体力全回復！！")
+            showItemEffectFeedback(L10n("💊 体力全回復！！", "💊 Full HP Restored!!"))
 
         case .energyDrink:
             guard playerCharge < maxCharge else {
                 HapticManager.playLight(enabled: isHapticsEnabled)
-                showItemEffectFeedback("チャージはすでに満タンです")
+                showItemEffectFeedback(L10n("チャージはすでに満タンです", "Charge is already full"))
                 return
             }
             ItemManager.shared.consumeActiveRunCarryInItem()
@@ -541,7 +544,7 @@ final class GameEngine {
             }
             SoundManager.shared.playButtonSE()
             HapticManager.playHeavy(enabled: isHapticsEnabled)
-            showItemEffectFeedback("⚡ チャージ +2！！")
+            showItemEffectFeedback(L10n("⚡ チャージ +2！！", "⚡ Charge +2!!"))
 
         default:
             break
@@ -581,7 +584,7 @@ final class GameEngine {
         revealedPlayerMove = .valid(.megaBeam)
         playerClashCallout = nil
         calloutText = "🌟 ULTIMATE!!"
-        statusDetailText = "REO 一撃必殺発動！！"
+        statusDetailText = L10n("REO 一撃必殺発動！！", "REO Ultimate Unleashed!!")
         HapticManager.playHeavy(enabled: isHapticsEnabled)
         triggerUltimateSequence(character: .reo, isPlayer: true)
     }
@@ -618,8 +621,8 @@ final class GameEngine {
         outcome = .ongoing
         calloutText = "Ready"
         statusDetailText = gameMode == .practice
-            ? "赤いバーが消える前にコマンドを選び、アクション発動！"
-            : "VS \(enemy.codeName) — 赤いバーが消える前にコマンドを選べ！"
+            ? L10n("赤いバーが消える前にコマンドを選び、アクション発動！", "Pick a command before the red bar runs out!")
+            : L10n("VS \(enemy.codeName) — 赤いバーが消える前にコマンドを選べ！", "VS \(enemy.codeName) — Choose your move before the red bar runs out!")
     }
 
     /// KUMITE戦闘開始前の演出シーケンス：1. 事前VS画面で待機（「START」押下でバトル画面へ遷移）
@@ -653,7 +656,7 @@ final class GameEngine {
             // 2. ゲーム画面に切替 ＆「Ready」表示
             self.preBattlePhase = .ready
             self.calloutText = "Ready"
-            self.statusDetailText = "VS \(self.currentEnemy.codeName) — コマンドを準備せよ！"
+            self.statusDetailText = L10n("VS \(self.currentEnemy.codeName) — コマンドを準備せよ！", "VS \(self.currentEnemy.codeName) — Prepare your command!")
             HapticManager.playLight(enabled: self.isHapticsEnabled)
             try? await Task.sleep(for: .milliseconds(850))
             guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
@@ -661,7 +664,7 @@ final class GameEngine {
             // 3.「Go!!」表示
             self.preBattlePhase = .go
             self.calloutText = "Go!!"
-            self.statusDetailText = "バトル開始！！"
+            self.statusDetailText = L10n("バトル開始！！", "Battle Start!!")
             HapticManager.playHeavy(enabled: self.isHapticsEnabled)
             try? await Task.sleep(for: .milliseconds(620))
             guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
@@ -744,10 +747,10 @@ final class GameEngine {
             playerClashCallout = nil
             playerExpression = playerHP == 1 ? .sad : .normal
             cpuExpression = cpuHP == 1 ? .sad : .normal
-            calloutText = "💥 バン！"
+            calloutText = L10n("💥 バン！", "💥 Bang!")
             statusDetailText = playerCharge >= maxCharge
-                ? "🌟 ULTIMATE ボタンを押して一撃必殺を放て！"
-                : "赤いバーが消える前にコマンドを選択！"
+                ? L10n("🌟 ULTIMATE ボタンを押して一撃必殺を放て！", "🌟 Tap ULTIMATE to unleash a One-Hit KO!")
+                : L10n("赤いバーが消える前にコマンドを選択！", "Select a command before the red bar runs out!")
             SoundManager.shared.playSuperClapSE()
             HapticManager.playLight(enabled: isHapticsEnabled)
 
@@ -756,17 +759,17 @@ final class GameEngine {
             if isRhythmRunning && turnWindowStartDate == nil {
                 turnWindowStartDate = Date().addingTimeInterval(-beatInterval)
             }
-            calloutText = "💥 バン！"
+            calloutText = L10n("💥 バン！", "💥 Bang!")
             statusDetailText = playerCharge >= maxCharge
-                ? "🌟 今すぐ ULTIMATE ボタンをタップ！！"
-                : "まもなくアクション激突！"
+                ? L10n("🌟 今すぐ ULTIMATE ボタンをタップ！！", "🌟 Tap ULTIMATE right now!!")
+                : L10n("まもなくアクション激突！", "Action clash incoming!")
             SoundManager.shared.playSuperClapSE()
             HapticManager.playLight(enabled: isHapticsEnabled)
 
         case 2:
             beat = 3
             turnWindowStartDate = nil
-            calloutText = "⚡️ アクション！"
+            calloutText = L10n("⚡️ アクション！", "⚡️ Action!")
             SoundManager.shared.playHandRevealSE()
             resolveClash()
 
@@ -804,8 +807,8 @@ final class GameEngine {
 
         if playerUlt && cpuUlt {
             HapticManager.playHeavy(enabled: isHapticsEnabled)
-            calloutText = "🌟⚡️ 超激突相殺！！"
-            statusDetailText = "両者の4チャージ必殺技が空間ごと相殺した！！"
+            calloutText = L10n("🌟⚡️ 超激突相殺！！", "🌟⚡️ Ultimate Clash Cancel!!")
+            statusDetailText = L10n("両者の4チャージ必殺技が空間ごと相殺した！！", "Both 4-Charge Ultimates canceled each other out!!")
             resetSelectionIfNeeded()
             return
         } else if playerUlt {
@@ -827,8 +830,8 @@ final class GameEngine {
         let cpuFiredBeam = (cMove == .valid(.beam))
 
         if playerFiredBeam && cpuFiredBeam {
-            calloutText = "💥 ビーム相殺！"
-            statusDetailText = "両者のビームが激突して相殺！"
+            calloutText = L10n("💥 ビーム相殺！", "💥 Beam Clash!")
+            statusDetailText = L10n("両者のビームが激突して相殺！", "Both Beams collided and canceled out!")
         } else if playerFiredBeam && cMove.isVulnerableToBeam {
             // プレイヤーの通常ビームが命中！（敵HP -1 ＆ 敵の蓄積チャージも -1）→ Nice!!（黄色）
             playerClashCallout = .niceHit
@@ -836,16 +839,19 @@ final class GameEngine {
             cpuCharge = max(0, cpuCharge - 1)
             playerExpression = .fun
             cpuExpression = .sad
-            calloutText = "💥 ビーム直撃！！"
+            calloutText = L10n("💥 ビーム直撃！！", "💥 Direct Beam Hit!!")
 
             if case .fumble = cMove {
-                statusDetailText = "敵がお手つき無防備！敵HP -1 ＆ 敵チャージ -1！"
+                statusDetailText = L10n("敵がお手つき無防備！敵HP -1 ＆ 敵チャージ -1！", "Enemy fumbled! Enemy HP -1 & Charge -1!")
             } else {
-                statusDetailText = "チャージ中の敵を撃ち抜いた！敵HP -1 ＆ 敵チャージ -1！"
+                statusDetailText = L10n("チャージ中の敵を撃ち抜いた！敵HP -1 ＆ 敵チャージ -1！", "Hit the charging enemy! Enemy HP -1 & Charge -1!")
             }
 
             if cpuHP <= 0 {
-                finishMatch(playerWon: true, reason: "\(currentEnemy.codeName) の体力を削り切って撃破！")
+                finishMatch(
+                    playerWon: true,
+                    reason: L10n("\(currentEnemy.codeName) の体力を削り切って撃破！", "Depleted \(currentEnemy.codeName)'s HP and won!")
+                )
                 return
             }
         } else if cpuFiredBeam && pMove.isVulnerableToBeam {
@@ -854,10 +860,10 @@ final class GameEngine {
                 ItemManager.shared.consumeActiveBattleVestIfPresent()
                 playerClashCallout = .goodGuard
                 playerExpression = .fun
-                calloutText = "🛡️ チョッキで防御！！"
-                statusDetailText = "防弾チョッキが敵のビームを防いだ！（ダメージ0）"
+                calloutText = L10n("🛡️ チョッキで防御！！", "🛡️ Blocked by Vest!!")
+                statusDetailText = L10n("防弾チョッキが敵のビームを防いだ！（ダメージ0）", "Bulletproof Vest blocked the enemy Beam! (0 Damage)")
                 HapticManager.playHeavy(enabled: isHapticsEnabled)
-                showItemEffectFeedback("🛡️ 防弾チョッキでビーム防御！")
+                showItemEffectFeedback(L10n("🛡️ 防弾チョッキでビーム防御！", "🛡️ Vest Blocked Beam!"))
             } else {
                 // 敵の通常ビームを被弾！（ReoのHP -1 ＆ Reoの蓄積チャージも -1）→ Bad（赤）
                 playerClashCallout = .badHit
@@ -865,27 +871,30 @@ final class GameEngine {
                 playerCharge = max(0, playerCharge - 1)
                 playerExpression = .sad
                 cpuExpression = .fun
-                calloutText = "💥 被弾ダメージ！！"
+                calloutText = L10n("💥 被弾ダメージ！！", "💥 Took Beam Damage!!")
 
                 if case .fumble(let attempted) = pMove {
-                    statusDetailText = "⚠️ お手つき(\(attempted.label)不発)の無防備に被弾！HP -1 ＆ チャージ -1！"
+                    statusDetailText = L10n(
+                        "⚠️ お手つき(\(attempted.label)不発)の無防備に被弾！HP -1 ＆ チャージ -1！",
+                        "⚠️ Hit while open after fumbling \(attempted.label)! HP -1 & Charge -1!"
+                    )
                 } else {
-                    statusDetailText = "チャージ中に被弾！HP -1 ＆ チャージ -1！"
+                    statusDetailText = L10n("チャージ中に被弾！HP -1 ＆ チャージ -1！", "Hit while charging! HP -1 & Charge -1!")
                 }
 
                 if playerHP <= 0 {
-                    finishMatch(playerWon: false, reason: "ビームを被弾して力尽きた...")
+                    finishMatch(playerWon: false, reason: L10n("ビームを被弾して力尽きた...", "Defeated by an enemy Beam..."))
                     return
                 }
             }
         } else if playerFiredBeam && cMove == .valid(.barrier) {
-            calloutText = "🛡️ ガードされた！"
-            statusDetailText = "\(currentEnemy.codeName) のバリアに通常ビームを防がれた！"
+            calloutText = L10n("🛡️ ガードされた！", "🛡️ Guarded!")
+            statusDetailText = L10n("\(currentEnemy.codeName) のバリアに通常ビームを防がれた！", "\(currentEnemy.codeName)'s Barrier blocked your Beam!")
         } else if cpuFiredBeam && pMove == .valid(.barrier) {
             // ガードが成立 → Good!!（シアンカラー）
             playerClashCallout = .goodGuard
-            calloutText = "🛡️ ナイスガード！"
-            statusDetailText = "敵の通常ビームをバリアで完全防御！"
+            calloutText = L10n("🛡️ ナイスガード！", "🛡️ Nice Guard!")
+            statusDetailText = L10n("敵の通常ビームをバリアで完全防御！", "Blocked the enemy Beam with Barrier!")
             playerExpression = .fun
         } else {
             // 互いに攻撃命中なし -> チャージを選んでいた側のみチャージ +1
@@ -894,27 +903,27 @@ final class GameEngine {
                 // チャージ成功 → Charge（ネオングリーン）
                 playerClashCallout = .chargeSuccess
                 playerCharge = min(maxCharge, playerCharge + 1)
-                notes.append("Reo チャージ+1")
+                notes.append(L10n("Reo チャージ+1", "Reo Charge +1"))
             } else if case .fumble(let attempted) = pMove {
                 playerExpression = .sad
-                notes.append("⚠️Reo お手つき無防備(\(attempted.label)不発)")
+                notes.append(L10n("⚠️Reo お手つき無防備(\(attempted.label)不発)", "⚠️Reo Fumble (\(attempted.label))"))
             } else if pMove == .valid(.barrier) {
-                notes.append("Reo バリア")
+                notes.append(L10n("Reo バリア", "Reo Barrier"))
             }
 
             if cMove == .valid(.charge) {
                 cpuCharge = min(maxCharge, cpuCharge + 1)
-                notes.append("\(currentEnemy.codeName) チャージ+1")
+                notes.append(L10n("\(currentEnemy.codeName) チャージ+1", "\(currentEnemy.codeName) Charge +1"))
             } else if case .fumble = cMove {
                 cpuExpression = .sad
-                notes.append("\(currentEnemy.codeName) お手つき無防備！")
+                notes.append(L10n("\(currentEnemy.codeName) お手つき無防備！", "\(currentEnemy.codeName) Fumbled!"))
             } else if cMove == .valid(.barrier) {
-                notes.append("\(currentEnemy.codeName) バリア")
+                notes.append(L10n("\(currentEnemy.codeName) バリア", "\(currentEnemy.codeName) Barrier"))
             }
 
-            calloutText = playerCharge >= maxCharge ? "🌟 ULTIMATE READY!!" : "⚡️ 読み合い継続"
+            calloutText = playerCharge >= maxCharge ? "🌟 ULTIMATE READY!!" : L10n("⚡️ 読み合い継続", "⚡️ Clash Continues")
             statusDetailText = playerCharge >= maxCharge
-                ? "🌟 金色の ULTIMATE ボタンをタップして一撃必殺！！"
+                ? L10n("🌟 金色の ULTIMATE ボタンをタップして一撃必殺！！", "🌟 Tap the golden ULTIMATE button for a One-Hit KO!!")
                 : notes.joined(separator: " / ")
         }
 
@@ -951,8 +960,11 @@ final class GameEngine {
             cpuHP = 0
             playerExpression = .fun
             cpuExpression = .sad
-            calloutText = "🌟 一撃必殺 K.O.!!"
-            finishMatch(playerWon: true, reason: "4チャージ ULTIMATE 炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！")
+            calloutText = L10n("🌟 一撃必殺 K.O.!!", "🌟 ULTIMATE K.O.!!")
+            finishMatch(
+                playerWon: true,
+                reason: L10n("4チャージ ULTIMATE 炸裂！一撃必殺で \(currentEnemy.codeName) を撃破！", "4-Charge ULTIMATE! One-Hit KO against \(currentEnemy.codeName)!")
+            )
         } else {
             if gameMode == .kumite && ItemManager.shared.activeBattleBoostItem == .bulletproofVest {
                 // 防弾チョッキが一撃必殺の必殺技も一度だけ防ぐ！
@@ -960,10 +972,10 @@ final class GameEngine {
                 playerClashCallout = .goodGuard
                 playerExpression = .fun
                 cpuExpression = cpuHP == 1 ? .sad : .normal
-                calloutText = "🛡️ 必殺技を防御！！"
-                statusDetailText = "防弾チョッキが敵の必殺技を完全に防ぎ切った！！"
+                calloutText = L10n("🛡️ 必殺技を防御！！", "🛡️ Blocked Ultimate!!")
+                statusDetailText = L10n("防弾チョッキが敵の必殺技を完全に防ぎ切った！！", "Bulletproof Vest completely blocked the enemy Ultimate!!")
                 HapticManager.playHeavy(enabled: isHapticsEnabled)
-                showItemEffectFeedback("🛡️ 防弾チョッキで必殺技を防御！！")
+                showItemEffectFeedback(L10n("🛡️ 防弾チョッキで必殺技を防御！！", "🛡️ Vest Blocked Ultimate!!"))
                 resetSelectionIfNeeded()
                 if currentScreen == .kumiteBattle {
                     scheduleCommonRunLoopTimer()
@@ -974,8 +986,11 @@ final class GameEngine {
             playerHP = 0
             playerExpression = .sad
             cpuExpression = .fun
-            calloutText = "💥 一撃必殺 K.O..."
-            finishMatch(playerWon: false, reason: "\(currentEnemy.codeName) の一撃必殺に敗れた...")
+            calloutText = L10n("💥 一撃必殺 K.O...", "💥 ULTIMATE K.O...")
+            finishMatch(
+                playerWon: false,
+                reason: L10n("\(currentEnemy.codeName) の一撃必殺に敗れた...", "Defeated by \(currentEnemy.codeName)'s Ultimate...")
+            )
         }
     }
 
