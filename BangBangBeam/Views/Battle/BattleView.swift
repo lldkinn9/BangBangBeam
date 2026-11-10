@@ -82,6 +82,8 @@ struct BattleView: View {
                         )
                     }
 
+                    let enemyPortraitCenterX: CGFloat = (engine.currentEnemy.id == "ninja") ? (w * 0.168) : (w * 0.220)
+
                     Image(engine.currentEnemy.standingAsset(for: cpuDisplayExpression))
                         .resizable()
                         .interpolation(.high)
@@ -92,7 +94,7 @@ struct BattleView: View {
                             cpuDisplayExpression == .fun ? 1.05 : (cpuDisplayExpression == .sad ? 0.95 : 1.0)
                         )
                         .shadow(color: (isCpuLowHP ? dangerNeonRed : enemyNeonMagenta).opacity(0.80), radius: isCpuLowHP ? 16 : 12)
-                        .position(x: w * 0.220, y: h * 0.285)
+                        .position(x: enemyPortraitCenterX, y: h * 0.285)
                         .animation(.spring(response: 0.25, dampingFraction: 0.65), value: cpuDisplayExpression)
                 }
                 .frame(width: w, height: h)
@@ -940,15 +942,17 @@ struct BattleView: View {
     }
 }
 
-/// 左上（敵立ち絵枠）の下辺ラインに沿ったクリップ形状（571×1024正規化座標）
+/// 左上（敵立ち絵枠）の下辺ラインに沿ったクリップ形状（右方向の垂直カットを廃止し、Ninja等の横幅のある立ち絵も途切れない形状）
 private struct TopLeftBattleEnemyClipShape: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width
         let h = rect.height
         var path = Path()
         path.move(to: CGPoint(x: 0, y: 0))
-        path.addLine(to: CGPoint(x: w * 0.45, y: 0))
-        path.addLine(to: CGPoint(x: w * 0.45, y: h * 0.286))
+        path.addLine(to: CGPoint(x: w, y: 0))
+        path.addLine(to: CGPoint(x: w, y: h * 0.256))
+        path.addLine(to: CGPoint(x: w * 0.488, y: h * 0.256))
+        path.addLine(to: CGPoint(x: w * 0.432, y: h * 0.286))
         path.addLine(to: CGPoint(x: w * 0.048, y: h * 0.286))
         path.addLine(to: CGPoint(x: w * 0.025, y: h * 0.273))
         path.addLine(to: CGPoint(x: 0, y: h * 0.273))

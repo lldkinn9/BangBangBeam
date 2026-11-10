@@ -1,7 +1,7 @@
 # PROJECT_STATE.md - BangBangBeam 開発状況管理
 
-最終更新日時: 2026-11-10 11:16 (JST / Asia/Tokyo)
-現在バージョン: `v1.0.41`（Xcode ビルドエラー修正：`PracticeTutorialView` の `CharacterProfile.geek` 参照解決、および `UltimateCutinOverlayView` / `CyberShape` の Swift 6 並行処理警告の解消）
+最終更新日時: 2026-11-10 11:45 (JST / Asia/Tokyo)
+現在バージョン: `v1.0.42`（Practiceモード STEP 1 文言更新・STEP 6 から「標準」速度の1戦練習バトル＆終了後の KUMITE/ランキング/テンポ高速化紹介ガイド実装・バトル画面の Ninja 右端途切れ修正）
 
 ---
 
@@ -15,7 +15,7 @@
 ### 1.1 ゲームモード & 初回起動導線
 1. **初回起動時 ＆ 設定画面からの PRACTICEモード (`PracticeTutorialView`):**
    - 初回アプリ起動時（`UserDefaults` 管理）および設定画面（「実践画面でルールを学ぶ (PRACTICE)」ボタン）から起動。
-   - 「フリー実戦」タブを廃止し、**実際の最新バトル画面UI**（`battle_screen_bg`・左上GEEK・右上GEEKステータス・右下REO・左下REOステータス・中央タイムバー/手拍子/上下横帯・斜め3コマンドボタン/金色ULTIMATEボタン・ピンチ赤ネオン演出）の上で、しっぽ付きサイバー吹き出し＆注目箇所ハイライト枠によって全6ステップで直感的にルールを学べる仕様。
+   - **実際の最新バトル画面UI**の上でしっぽ付きサイバー吹き出し＆注目箇所ハイライト枠により全6ステップでルールを学んだ後、STEP 6 の**「練習」**ボタンから**「標準」速度での1戦練習バトル**をプレイ。練習バトル終了後に「KUMITE機能の紹介」「ワールドランキング制度の紹介」「リズム速度を『速め』に変更できること」をガイド表示して本番 KUMITE へ誘導する仕様。
 2. **KUMITEモード（メイン：全20敵キャラ対応 勝ち抜きサバイバル）:**
    - プレイヤーは主人公 **`Reo` 固定**。
    - **1周目（1〜11人目）:** 基本敵11名が登場（`geek` → `boarder` → `JK` → `engineer` → `alice` → `defective` → `spy` → `Ninja` → `pirate` → `skin` → `oldman`）。
@@ -51,7 +51,7 @@
 - [x] `v1.0.4` バージョンバンプおよび GitHub `main` ブランチへのプッシュ
 
 ### 残タスク（確認・ブラッシュアップ・リリース準備）
-- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.41`（ビルド成功確認・本番UIのPractice吹き出しルール学習・iPhone消音モード時の必殺技動画無音化）の動作確認
+- [ ] Mac側で `git pull origin main` を実行し、実機で `v1.0.42`（Practice STEP 1 文言・STEP 6「練習」ボタンからの標準速度1戦バトル＆終了後ガイド・Ninja立ち絵表示修正）の動作確認
 - [ ] **【本番提出前必須】** ランキング画面の表示確認完了後、`GameCenterManager.useMockRankingForPreview` を `false` に切り替えて本番 Game Center 通信のみに戻す
 - [ ] Xcode から `GoogleMobileAds` Swift Package（`https://github.com/googleads/swift-package-manager-google-mobile-ads.git`）を追加し、テスト用バナー広告＆リワード動画広告の描画確認（本番リリース前に AdMob 本番IDを設定）
 - [ ] App Store Connect での Game Center Leaderboard（ID: `com.lldkinn9.BangBangBeam.kumite_streak`）登録および Archive 提出準備
@@ -59,6 +59,12 @@
 ---
 
 ## 3. 更新履歴 (JST)
+
+- **2026-11-10 11:45 (`v1.0.42`)**
+  - **Practiceモード文言＆1戦練習バトル導線実装・Ninja立ち絵の右端途切れ修正 ([`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`GameEngine.swift`](BangBangBeam/ViewModels/GameEngine.swift) / [`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):**
+    1. **STEP 1 / 6 の説明文変更:** ヒント文は維持したまま、本文を「バン！バン！アクション！の3拍子のリズムで戦うサイバーバトル！中央の【時間バー】が右から左へ消えきる前に下の3つのボタンから1つを選択し、出す手を決めよう。」に変更し、吹き出し位置を微調整して時間バーが隠れないよう改善。
+    2. **STEP 6 / 6 の「練習」ボタン実装 ＆「標準」速度での1戦練習バトル ＆ 終了後ガイド実装:** STEP 6 のボタンを「練習」に変更し、押下すると本番バトル画面のまま必ず「標準」速度（88 BPM）で GEEK との1戦練習バトルが開始されるよう実装（`startPracticeBattleMatch()`）。練習バトル決着後には、「KUMITE（勝ち抜きサバイバル）の紹介」「ワールドランキング制度の紹介」「リズム速度は『速め』にも変更可能なこと」をまとめて案内するガイドオーバーレイを表示し、そこから KUMITE 開始・再練習・タイトル復帰を選べるよう実装。
+    3. **バトル画面における Ninja の立ち絵途切れ修正 ([`BattleView.swift`](BangBangBeam/Views/Battle/BattleView.swift)):** マフラーが左へ大きく伸びる横長アセットである `ninja` が左右反転時に `x = w * 0.45` の垂直クリップ境界で途切れていた問題を修正。`TopLeftBattleEnemyClipShape` の不要な右垂直カットを廃止し下辺フレーム沿いのみのクリップへ改めるとともに、`ninja` のX座標中心を `w * 0.168` に最適化して枠内中央へ美しく収まるよう修正。
 
 - **2026-11-10 11:16 (`v1.0.41`)**
   - **Xcode ビルドエラー＆Swift 6 警告の修正 ([`CharacterProfile.swift`](BangBangBeam/Models/CharacterProfile.swift) / [`PracticeTutorialView.swift`](BangBangBeam/Views/Practice/PracticeTutorialView.swift) / [`UltimateCutinOverlayView.swift`](BangBangBeam/Views/Battle/UltimateCutinOverlayView.swift) / [`CyberShape.swift`](BangBangBeam/Views/Components/CyberShape.swift)):**

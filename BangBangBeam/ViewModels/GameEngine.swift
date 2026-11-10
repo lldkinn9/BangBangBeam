@@ -208,7 +208,8 @@ final class GameEngine {
     private var pendingTimerTask: Task<Void, Never>? = nil
 
     var beatInterval: TimeInterval {
-        60.0 / max(50.0, min(bpm, 160.0))
+        let effectiveBPM = (gameMode == .practice) ? TempoPreset.standard.bpmValue : bpm
+        return 60.0 / max(50.0, min(effectiveBPM, 160.0))
     }
 
     /// 1ターンあたりのコマンド受付時間（1拍目開始から3拍目発動までの2拍分）
@@ -371,6 +372,42 @@ final class GameEngine {
         preBattlePhase = .none
         currentScreen = .practiceTutorial
         SoundManager.shared.playBattleBGM(forceNewRandom: true)
+    }
+
+    /// ルール学習完了後の「練習」ボタン押下時：「標準」速度で GEEK との1戦練習バトルを開始（Ready → Go!! → 3拍開始）
+    func startPracticeBattleMatch() {
+        stopTimer()
+        gameMode = .practice
+        HapticManager.warmUp(enabled: isHapticsEnabled)
+        setupMatchState(enemy: CharacterProfile.kumiteRoster[0])
+        SoundManager.shared.playButtonSE()
+        SoundManager.shared.playBattleBGM(forceNewRandom: false)
+
+        pendingTimerTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            // 1.「Ready」表示
+            self.preBattlePhase = .ready
+            self.calloutText = "Ready"
+            self.statusDetailText = "練習バトル（標準速度）— コマンドを準備しよう！"
+            HapticManager.playLight(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(850))
+            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
+
+            // 2.「Go!!」表示
+            self.preBattlePhase = .go
+            self.calloutText = "Go!!"
+            self.statusDetailText = "バトル開始！！"
+            HapticManager.playHeavy(enabled: self.isHapticsEnabled)
+            try? await Task.sleep(for: .milliseconds(620))
+            guard !Task.isCancelled, !self.outcome.isFinished, self.activeUltimate == nil else { return }
+
+            // 3.「標準」速度で3拍のリズムループ開始
+            self.pendingTimerTask = nil
+            self.preBattlePhase = .none
+            self.scheduleCommonRunLoopTimer()
+            self.advanceBeat()
+        }
     }
 
     /// タイトル画面へ戻る（勝利後、または敗退後でも復活回数が残っている場合に限り連勝数と復活回数を維持保存）
@@ -802,6 +839,7 @@ final class GameEngine {
         }
 
         if gameMode == .practice {
+            markTutorialCompleted()
             outcome = .practiceClear(isWin: playerWon, reason: reason)
             return
         }

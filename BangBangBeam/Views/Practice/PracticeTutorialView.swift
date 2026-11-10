@@ -1,11 +1,17 @@
 import SwiftUI
 
-/// PRACTICEモード（ルール学習専用UI）
-/// - 初回アプリ起動時および設定画面から起動されるルール学習モード
-/// - 「フリー実戦」を廃止し、実際の最新バトル画面UI（`battle_screen_bg`・左上GEEK・右上GEEKステータス・右下REO・左下REOステータス・中央タイムバー/手拍子/上下横帯・斜め3コマンドボタン/金色ULTIMATEボタン・ピンチ赤ネオン演出）をそのまま表示しながら、サイバー吹き出し（Tail付き）で1ステップずつ視覚的にルールを学べる仕様
+/// PRACTICEモード（ルール学習 ➔ 標準速度での1戦練習バトル ➔ KUMITE・ランキング・テンポ変更ガイド）
+/// - 初回アプリ起動時および設定画面から起動されるチュートリアル＆練習モード
+/// - 実際の最新バトル画面UI上で吹き出し解説（全6ステップ）を学んだ後、「練習」ボタンで「標準」速度の1戦練習バトルを行い、終了後にKUMITE機能・ランキング制度・リズム高速化機能を紹介する
 struct PracticeTutorialView: View {
     @Bindable var engine: GameEngine
 
+    private enum PracticePhase: Equatable {
+        case ruleGuide
+        case practiceBattle
+    }
+
+    @State private var phase: PracticePhase = .ruleGuide
     @State private var lessonStep: Int = 0
     @State private var showDemoUltimate: Bool = false
 
@@ -46,15 +52,15 @@ struct PracticeTutorialView: View {
     }
 
     private let scenarios: [PracticeLessonScenario] = [
-        // STEP 1: 3拍のリズム＆赤いタイムバー＆コマンド選択
+        // STEP 1: 3拍のリズム＆時間バー＆コマンド選択
         PracticeLessonScenario(
             badge: "STEP 1 / 6",
             speaker: "REO // RULE GUIDE",
             title: "3拍のリズムで行動を選ぼう！",
-            message: "「パン！ → パン！ → アクション！」の3拍子で進むサイバー読み合いバトル！\n中央の【赤い時間バー】が右から左へ消え切る前に、下の3つのボタン（CHARGE / BEAM / BARRIER）をタップして出す手を予約しよう！",
+            message: "バン！バン！アクション！の3拍子のリズムで戦うサイバーバトル！\n中央の【時間バー】が右から左へ消えきる前に下の3つのボタンから1つを選択し、出す手を決めよう。",
             subTip: "💡 1・2拍目の手拍子の間にボタンをタップ！3拍目で両者の手が同時に公開されます。",
             accentColor: .cyberCyan,
-            bubbleCenterYRatio: 0.215,
+            bubbleCenterYRatio: 0.190,
             tailDirection: .down(xRatio: 0.50),
             cpuHP: 3,
             cpuCharge: 0,
@@ -94,7 +100,7 @@ struct PracticeTutorialView: View {
             revealedPlayerMove: .valid(.charge),
             callout: .chargeSuccess
         ),
-        // STEP 3: BEAM（攻撃命中・Nice!!）— 上部の敵ダメージ（GEEK ハート2/3）と中央のBEAM横帯・左下Nice!!がすべてはっきり見えるようREOの頭上に吹き出しを配置
+        // STEP 3: BEAM（攻撃命中・Nice!!）
         PracticeLessonScenario(
             badge: "STEP 3 / 6",
             speaker: "REO // RULE GUIDE",
@@ -150,7 +156,7 @@ struct PracticeTutorialView: View {
             message: "バッテリーが 0 なのに BEAM を選ぶと【NO GUARD（お手つき不発）】となり完全無防備になります！\n被弾すると「Bad」でハートとバッテリーが -1！残りハートが 1 になるとエリアが赤いネオンに染まりピンチ状態になります！",
             subTip: "⚠️ 下のボタンに「NO CHARGE」と出ている時は不発になります。バッテリー残量に注意！",
             accentColor: .cyberDanger,
-            bubbleCenterYRatio: 0.210,
+            bubbleCenterYRatio: 0.205,
             tailDirection: .down(xRatio: 0.50),
             cpuHP: 2,
             cpuCharge: 1,
@@ -166,13 +172,13 @@ struct PracticeTutorialView: View {
             revealedPlayerMove: .fumble(attempted: .beam),
             callout: .badHit
         ),
-        // STEP 6: 4チャージ到達・金色 ULTIMATE 一撃必殺！— 上部の敵ピンチ状態も下部の金色ULTIMATEボタン＆4バッテリーもすべて見える中央に吹き出しを配置
+        // STEP 6: 4チャージ到達・金色 ULTIMATE 一撃必殺 ➔ 「練習」ボタンで1戦練習バトルへ！
         PracticeLessonScenario(
             badge: "STEP 6 / 6",
             speaker: "REO // RULE GUIDE",
             title: "🌟4チャージで一撃必殺「ULTIMATE」！！",
             message: "バッテリーを【4つ満タン】まで溜めると、下の3ボタンが黄金に輝く【ULTIMATE】ボタンに合体変化します！\nタップした瞬間にド派手なカットイン＆必殺技が発動し、相手のバリアや残りハートを貫通して一撃で勝利となります！",
-            subTip: "👇 下の金色「ULTIMATE」ボタン（またはプレビューボタン）をタップして必殺演出を体験しよう！",
+            subTip: "👇「必殺技を見る」で演出を確認したら、「練習」ボタンでまずは1戦戦ってみよう！",
             accentColor: .cyberAmber,
             bubbleCenterYRatio: 0.425,
             tailDirection: .down(xRatio: 0.50),
@@ -193,13 +199,6 @@ struct PracticeTutorialView: View {
     ]
 
     var body: some View {
-        let step = scenarios[lessonStep]
-        let isUltReady = step.playerCharge >= engine.maxCharge
-        let isCpuLowHP = (step.cpuHP == 1)
-        let isPlayerLowHP = (step.playerHP == 1)
-        let cpuDisplayExpression: CharacterExpression = isCpuLowHP ? .sad : step.cpuExpression
-        let playerDisplayExpression: CharacterExpression = isPlayerLowHP ? .sad : step.playerExpression
-
         ZStack {
             // ステータスバー背面領域を黒で保護
             Color.black
@@ -209,184 +208,643 @@ struct PracticeTutorialView: View {
                 let w = max(geo.size.width, 1)
                 let h = max(geo.size.height, 1)
 
-                ZStack {
-                    Color.black
-                        .ignoresSafeArea()
-
-                    // MARK: 1. 実際のバトル画面背景（`battle_screen_bg`）
-                    Image("battle_screen_bg")
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: w, height: h)
-
-                    // 敵HP=1 ピンチ赤ネオン背景
-                    if isCpuLowHP {
-                        practiceEnemyLowHpNeonRedBackdrop(w: w, h: h)
-                            .transition(.opacity)
-                            .allowsHitTesting(false)
-                    }
-
-                    // 自分HP=1 ピンチ赤ネオン背景
-                    if isPlayerLowHP {
-                        practicePlayerLowHpNeonRedBackdrop(w: w, h: h)
-                            .transition(.opacity)
-                            .allowsHitTesting(false)
-                    }
-
-                    // 4チャージ到達時の黄金アンビエント発光
-                    if isUltReady {
-                        RadialGradient(
-                            colors: [
-                                Color.cyberAmber.opacity(0.26),
-                                Color.cyberAmber.opacity(0.08),
-                                Color.clear
-                            ],
-                            center: .center,
-                            startRadius: 20,
-                            endRadius: w * 0.85
-                        )
-                        .frame(width: w, height: h)
-                        .allowsHitTesting(false)
-                    }
-
-                    // MARK: 2. 左上：敵キャラクター（GEEK）大型立ち絵
-                    ZStack {
-                        if isCpuLowHP {
-                            RadialGradient(
-                                colors: [
-                                    dangerNeonRed.opacity(0.72),
-                                    Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
-                                    Color.clear
-                                ],
-                                center: UnitPoint(x: 0.22, y: 0.18),
-                                startRadius: 8,
-                                endRadius: w * 0.36
-                            )
-                        }
-
-                        Image(CharacterProfile.baseKumiteRoster[0].standingAsset(for: cpuDisplayExpression))
-                            .resizable()
-                            .interpolation(.high)
-                            .scaledToFit()
-                            .frame(height: h * 0.565)
-                            .scaleEffect(x: -1.0, y: 1.0)
-                            .scaleEffect(
-                                cpuDisplayExpression == .fun ? 1.05 : (cpuDisplayExpression == .sad ? 0.95 : 1.0)
-                            )
-                            .shadow(color: (isCpuLowHP ? dangerNeonRed : enemyNeonMagenta).opacity(0.80), radius: isCpuLowHP ? 16 : 12)
-                            .position(x: w * 0.220, y: h * 0.285)
-                            .animation(.spring(response: 0.25, dampingFraction: 0.65), value: cpuDisplayExpression)
-                    }
-                    .frame(width: w, height: h)
-                    .clipShape(PracticeTopLeftEnemyClipShape())
-                    .allowsHitTesting(false)
-
-                    // 左上敵フレーム下辺の発光ボーダー前景レイヤー
-                    Image("battle_enemy_frame_fg")
-                        .resizable()
-                        .interpolation(.high)
-                        .colorMultiply(isCpuLowHP ? Color(red: 1.0, green: 0.28, blue: 0.28) : .white)
-                        .shadow(color: isCpuLowHP ? dangerNeonRed : .clear, radius: 8)
-                        .frame(width: w, height: h)
-                        .allowsHitTesting(false)
-
-                    // MARK: 3. 右上マゼンタ枠内：敵名称（GEEK）・3ハート・4バッテリー
-                    practiceEnemyHudContents(
-                        w: w,
-                        h: h,
-                        hp: step.cpuHP,
-                        charge: step.cpuCharge,
-                        isLowHP: isCpuLowHP
-                    )
-
-                    // MARK: 4. 右下：主人公 REO 大型立ち絵
-                    ZStack {
-                        if isPlayerLowHP {
-                            RadialGradient(
-                                colors: [
-                                    dangerNeonRed.opacity(0.75),
-                                    Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
-                                    Color.clear
-                                ],
-                                center: UnitPoint(x: 0.78, y: 0.86),
-                                startRadius: 10,
-                                endRadius: w * 0.40
-                            )
-                        }
-
-                        Image(CharacterProfile.reo.standingAsset(for: playerDisplayExpression))
-                            .resizable()
-                            .interpolation(.high)
-                            .scaledToFit()
-                            .frame(height: h * 0.625)
-                            .scaleEffect(
-                                playerDisplayExpression == .fun ? 1.05 : (playerDisplayExpression == .sad ? 0.95 : 1.0)
-                            )
-                            .shadow(color: (isPlayerLowHP ? dangerNeonRed : Color.cyberCyan).opacity(0.80), radius: isPlayerLowHP ? 16 : 12)
-                            .position(x: w * 0.785, y: h * 1.002)
-                            .animation(.spring(response: 0.25, dampingFraction: 0.65), value: playerDisplayExpression)
-                    }
-                    .frame(width: w, height: h)
-                    .clipped()
-                    .allowsHitTesting(false)
-
-                    // MARK: 5. 左下シアン枠内：`REO (YOU)`・3ハート・4バッテリー
-                    practicePlayerHudContents(
-                        w: w,
-                        h: h,
-                        hp: step.playerHP,
-                        charge: step.playerCharge,
-                        isLowHP: isPlayerLowHP
-                    )
-
-                    // MARK: 5.5 Reoの顔の左側の空きスペース：勝敗に応じた英字判定（Good!! / Nice!! / Charge / Bad）
-                    if let callout = step.callout {
-                        practiceReoLeftCalloutView(callout: callout, w: w, h: h)
-                    }
-
-                    // MARK: 6. 中央アリーナ：赤いタイムバー ＆ 手拍子演出 / 上下2段の横帯手イラスト表示
-                    practiceArenaStage(step: step, w: w, h: h)
-                        .frame(width: w)
-                        .position(x: w * 0.50, y: h * 0.432)
-                        .allowsHitTesting(false)
-
-                    // MARK: 7. 斜め3コマンドボタン（CHARGE / BEAM / BARRIER ⇄ 4チャージ金色 ULTIMATE）
-                    practiceCommandDeck(step: step, isUltReady: isUltReady)
-                        .frame(width: w * 0.97)
-                        .position(x: w * 0.50, y: h * 0.648)
-
-                    // MARK: 8. 注目エリアのハイライト枠（各ステップで説明中の要素を視覚的に強調）
-                    stepTargetHighlightOverlay(stepIndex: lessonStep, accent: step.accentColor, w: w, h: h)
-                        .allowsHitTesting(false)
-
-                    // MARK: 9. 最上部：PRACTICE // RULE GUIDE ヘッダーバー（SKIP / ◀ TITLE ＆ 進捗インジケータ）
-                    topFloatingBar(w: w)
-                        .position(x: w * 0.50, y: h * 0.032)
-
-                    // MARK: 10. 吹き出し（Speech Bubble）によるルール解説カード＋ステップ操作ボタン
-                    speechBubbleOverlay(step: step, w: w, h: h)
-                        .position(x: w * 0.50, y: h * step.bubbleCenterYRatio)
-                        .id("practice-bubble-\(lessonStep)")
-                        .transition(.scale(scale: 0.95).combined(with: .opacity))
+                if phase == .ruleGuide {
+                    ruleGuideCanvas(w: w, h: h)
+                } else {
+                    livePracticeBattleCanvas(w: w, h: h)
                 }
-                .frame(width: w, height: h)
-                .clipped()
             }
             .ignoresSafeArea(edges: .bottom)
 
-            // STEP 6 の金色 ULTIMATE タップ時に実際のカットイン＆必殺動画を再生
+            // ルール学習中の必殺技プレビュー
             if showDemoUltimate {
                 UltimateCutinOverlayView(character: .reo, isPlayer: true) {
                     showDemoUltimate = false
                 }
                 .zIndex(30)
             }
+
+            // 1戦練習バトル中の4チャージ必殺技カットイン＆動画演出
+            if let ult = engine.activeUltimate {
+                UltimateCutinOverlayView(
+                    character: ult.character,
+                    isPlayer: ult.isPlayer
+                ) {
+                    engine.completeUltimateSequence()
+                }
+                .zIndex(32)
+            }
         }
         .animation(.easeInOut(duration: 0.24), value: lessonStep)
+        .animation(.easeInOut(duration: 0.24), value: phase)
+        .animation(.easeInOut(duration: 0.24), value: engine.outcome)
         .onAppear {
             engine.stopTimer()
+            phase = .ruleGuide
             lessonStep = 0
             playStepTransitionSE(for: 0)
+        }
+    }
+
+    // MARK: - Phase 1: Rule Guide Canvas (STEP 1/6 〜 STEP 6/6)
+    private func ruleGuideCanvas(w: CGFloat, h: CGFloat) -> some View {
+        let step = scenarios[lessonStep]
+        let isUltReady = step.playerCharge >= engine.maxCharge
+        let isCpuLowHP = (step.cpuHP == 1)
+        let isPlayerLowHP = (step.playerHP == 1)
+        let cpuDisplayExpression: CharacterExpression = isCpuLowHP ? .sad : step.cpuExpression
+        let playerDisplayExpression: CharacterExpression = isPlayerLowHP ? .sad : step.playerExpression
+
+        return ZStack {
+            Color.black
+                .ignoresSafeArea()
+
+            Image("battle_screen_bg")
+                .resizable()
+                .interpolation(.high)
+                .frame(width: w, height: h)
+
+            if isCpuLowHP {
+                practiceEnemyLowHpNeonRedBackdrop(w: w, h: h)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            if isPlayerLowHP {
+                practicePlayerLowHpNeonRedBackdrop(w: w, h: h)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            if isUltReady {
+                RadialGradient(
+                    colors: [
+                        Color.cyberAmber.opacity(0.26),
+                        Color.cyberAmber.opacity(0.08),
+                        Color.clear
+                    ],
+                    center: .center,
+                    startRadius: 20,
+                    endRadius: w * 0.85
+                )
+                .frame(width: w, height: h)
+                .allowsHitTesting(false)
+            }
+
+            // 左上：敵キャラクター（GEEK）大型立ち絵
+            ZStack {
+                if isCpuLowHP {
+                    RadialGradient(
+                        colors: [
+                            dangerNeonRed.opacity(0.72),
+                            Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
+                            Color.clear
+                        ],
+                        center: UnitPoint(x: 0.22, y: 0.18),
+                        startRadius: 8,
+                        endRadius: w * 0.36
+                    )
+                }
+
+                Image(CharacterProfile.baseKumiteRoster[0].standingAsset(for: cpuDisplayExpression))
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(height: h * 0.565)
+                    .scaleEffect(x: -1.0, y: 1.0)
+                    .scaleEffect(
+                        cpuDisplayExpression == .fun ? 1.05 : (cpuDisplayExpression == .sad ? 0.95 : 1.0)
+                    )
+                    .shadow(color: (isCpuLowHP ? dangerNeonRed : enemyNeonMagenta).opacity(0.80), radius: isCpuLowHP ? 16 : 12)
+                    .position(x: w * 0.220, y: h * 0.285)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.65), value: cpuDisplayExpression)
+            }
+            .frame(width: w, height: h)
+            .clipShape(PracticeTopLeftEnemyClipShape())
+            .allowsHitTesting(false)
+
+            Image("battle_enemy_frame_fg")
+                .resizable()
+                .interpolation(.high)
+                .colorMultiply(isCpuLowHP ? Color(red: 1.0, green: 0.28, blue: 0.28) : .white)
+                .shadow(color: isCpuLowHP ? dangerNeonRed : .clear, radius: 8)
+                .frame(width: w, height: h)
+                .allowsHitTesting(false)
+
+            // 右上：敵ステータス
+            practiceEnemyHudContents(
+                w: w,
+                h: h,
+                hp: step.cpuHP,
+                charge: step.cpuCharge,
+                isLowHP: isCpuLowHP
+            )
+
+            // 右下：主人公 REO 大型立ち絵
+            ZStack {
+                if isPlayerLowHP {
+                    RadialGradient(
+                        colors: [
+                            dangerNeonRed.opacity(0.75),
+                            Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
+                            Color.clear
+                        ],
+                        center: UnitPoint(x: 0.78, y: 0.86),
+                        startRadius: 10,
+                        endRadius: w * 0.40
+                    )
+                }
+
+                Image(CharacterProfile.reo.standingAsset(for: playerDisplayExpression))
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(height: h * 0.625)
+                    .scaleEffect(
+                        playerDisplayExpression == .fun ? 1.05 : (playerDisplayExpression == .sad ? 0.95 : 1.0)
+                    )
+                    .shadow(color: (isPlayerLowHP ? dangerNeonRed : Color.cyberCyan).opacity(0.80), radius: isPlayerLowHP ? 16 : 12)
+                    .position(x: w * 0.785, y: h * 1.002)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.65), value: playerDisplayExpression)
+            }
+            .frame(width: w, height: h)
+            .clipped()
+            .allowsHitTesting(false)
+
+            // 左下：REO ステータス
+            practicePlayerHudContents(
+                w: w,
+                h: h,
+                hp: step.playerHP,
+                charge: step.playerCharge,
+                isLowHP: isPlayerLowHP
+            )
+
+            // Reo顔左の英字判定
+            if let callout = step.callout {
+                practiceReoLeftCalloutView(callout: callout, w: w, h: h)
+            }
+
+            // 中央アリーナ
+            practiceArenaStage(step: step, w: w, h: h)
+                .frame(width: w)
+                .position(x: w * 0.50, y: h * 0.432)
+                .allowsHitTesting(false)
+
+            // 斜め3コマンドボタン ⇄ 金色 ULTIMATE
+            practiceCommandDeck(step: step, isUltReady: isUltReady)
+                .frame(width: w * 0.97)
+                .position(x: w * 0.50, y: h * 0.648)
+
+            // ハイライト枠
+            stepTargetHighlightOverlay(stepIndex: lessonStep, accent: step.accentColor, w: w, h: h)
+                .allowsHitTesting(false)
+
+            // 最上部バー（SKIP / TITLE ＆ 進捗インジケータ）
+            topFloatingBar(w: w, showStepDots: true)
+                .position(x: w * 0.50, y: h * 0.032)
+
+            // 吹き出しオーバーレイ
+            speechBubbleOverlay(step: step, w: w, h: h)
+                .position(x: w * 0.50, y: h * step.bubbleCenterYRatio)
+                .id("practice-bubble-\(lessonStep)")
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+        .frame(width: w, height: h)
+        .clipped()
+    }
+
+    // MARK: - Phase 2: Live 1-Match Practice Battle at Standard Speed ➔ Post-Practice Guide Overlay
+    private func livePracticeBattleCanvas(w: CGFloat, h: CGFloat) -> some View {
+        let isUltReady = engine.playerCharge >= engine.maxCharge
+        let isCpuLowHP = (engine.cpuHP == 1)
+        let isPlayerLowHP = (engine.playerHP == 1)
+        let cpuDisplayExpression: CharacterExpression = isCpuLowHP ? .sad : engine.cpuExpression
+        let playerDisplayExpression: CharacterExpression = isPlayerLowHP ? .sad : engine.playerExpression
+
+        return ZStack {
+            Color.black
+                .ignoresSafeArea()
+
+            Image("battle_screen_bg")
+                .resizable()
+                .interpolation(.high)
+                .frame(width: w, height: h)
+
+            if isCpuLowHP {
+                practiceEnemyLowHpNeonRedBackdrop(w: w, h: h)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            if isPlayerLowHP {
+                practicePlayerLowHpNeonRedBackdrop(w: w, h: h)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            if isUltReady {
+                RadialGradient(
+                    colors: [
+                        Color.cyberAmber.opacity(0.24),
+                        Color.cyberAmber.opacity(0.06),
+                        Color.clear
+                    ],
+                    center: .center,
+                    startRadius: 20,
+                    endRadius: w * 0.85
+                )
+                .frame(width: w, height: h)
+                .allowsHitTesting(false)
+            }
+
+            // 左上：GEEK 大型立ち絵
+            ZStack {
+                if isCpuLowHP {
+                    RadialGradient(
+                        colors: [
+                            dangerNeonRed.opacity(0.72),
+                            Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
+                            Color.clear
+                        ],
+                        center: UnitPoint(x: 0.22, y: 0.18),
+                        startRadius: 8,
+                        endRadius: w * 0.36
+                    )
+                }
+
+                Image(engine.currentEnemy.standingAsset(for: cpuDisplayExpression))
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(height: h * 0.565)
+                    .scaleEffect(x: -1.0, y: 1.0)
+                    .scaleEffect(
+                        cpuDisplayExpression == .fun ? 1.05 : (cpuDisplayExpression == .sad ? 0.95 : 1.0)
+                    )
+                    .shadow(color: (isCpuLowHP ? dangerNeonRed : enemyNeonMagenta).opacity(0.80), radius: isCpuLowHP ? 16 : 12)
+                    .position(x: w * 0.220, y: h * 0.285)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.65), value: cpuDisplayExpression)
+            }
+            .frame(width: w, height: h)
+            .clipShape(PracticeTopLeftEnemyClipShape())
+            .allowsHitTesting(false)
+
+            Image("battle_enemy_frame_fg")
+                .resizable()
+                .interpolation(.high)
+                .colorMultiply(isCpuLowHP ? Color(red: 1.0, green: 0.28, blue: 0.28) : .white)
+                .shadow(color: isCpuLowHP ? dangerNeonRed : .clear, radius: 8)
+                .frame(width: w, height: h)
+                .allowsHitTesting(false)
+
+            // 右上：敵ステータス
+            practiceEnemyHudContents(
+                w: w,
+                h: h,
+                hp: engine.cpuHP,
+                charge: engine.cpuCharge,
+                isLowHP: isCpuLowHP
+            )
+
+            // 右下：主人公 REO 大型立ち絵
+            ZStack {
+                if isPlayerLowHP {
+                    RadialGradient(
+                        colors: [
+                            dangerNeonRed.opacity(0.75),
+                            Color(red: 0.55, green: 0.0, blue: 0.08).opacity(0.55),
+                            Color.clear
+                        ],
+                        center: UnitPoint(x: 0.78, y: 0.86),
+                        startRadius: 10,
+                        endRadius: w * 0.40
+                    )
+                }
+
+                Image(CharacterProfile.reo.standingAsset(for: playerDisplayExpression))
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(height: h * 0.625)
+                    .scaleEffect(
+                        playerDisplayExpression == .fun ? 1.05 : (playerDisplayExpression == .sad ? 0.95 : 1.0)
+                    )
+                    .shadow(color: (isPlayerLowHP ? dangerNeonRed : Color.cyberCyan).opacity(0.80), radius: isPlayerLowHP ? 16 : 12)
+                    .position(x: w * 0.785, y: h * 1.002)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.65), value: playerDisplayExpression)
+            }
+            .frame(width: w, height: h)
+            .clipped()
+            .allowsHitTesting(false)
+
+            // 左下：REO ステータス
+            practicePlayerHudContents(
+                w: w,
+                h: h,
+                hp: engine.playerHP,
+                charge: engine.playerCharge,
+                isLowHP: isPlayerLowHP
+            )
+
+            // Reo顔左の英字判定（ライブ連動）
+            if engine.preBattlePhase == .none,
+               engine.beat == 3,
+               let callout = engine.playerClashCallout {
+                practiceReoLeftCalloutView(callout: callout, w: w, h: h)
+                    .id("practice-live-callout-\(engine.turnCount)-\(callout.displayText)")
+                    .transition(.scale(scale: 0.65).combined(with: .opacity))
+            }
+
+            // 中央アリーナ（Ready / Go!! / 赤タイムバー＆手拍子 / 上下2段の横帯手表示）
+            livePracticeHandsArena(w: w, h: h)
+                .frame(width: w)
+                .position(x: w * 0.50, y: h * 0.432)
+
+            // コマンドデッキ（実際の本番操作）
+            BattleCommandDeckView(engine: engine)
+                .frame(width: w * 0.97)
+                .position(x: w * 0.50, y: h * 0.648)
+
+            // 最上部バー（TITLEボタン ＋ 練習バトルバッジ）
+            topFloatingBar(w: w, showStepDots: false)
+                .position(x: w * 0.50, y: h * 0.032)
+
+            // 練習バトル終了後：KUMITE機能の紹介・ランキング制度の紹介・リズム高速化の紹介オーバーレイ
+            if case .practiceClear(let isWin, _) = engine.outcome, engine.activeUltimate == nil {
+                postPracticeFeatureGuideOverlay(isWin: isWin, w: w)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .zIndex(25)
+            }
+        }
+        .frame(width: w, height: h)
+        .clipped()
+    }
+
+    // MARK: - Live Practice Hands Arena (Identical to BattleView)
+    private func livePracticeHandsArena(w: CGFloat, h: CGFloat) -> some View {
+        let isShowingRevealedHands = (
+            engine.preBattlePhase == .none &&
+            engine.beat == 3 &&
+            engine.revealedPlayerMove != nil &&
+            engine.revealedCpuMove != nil
+        )
+
+        return VStack(spacing: h * 0.012) {
+            if !isShowingRevealedHands {
+                RhythmTimeBarView(engine: engine)
+                    .padding(.horizontal, w * 0.06)
+            }
+
+            ZStack {
+                if engine.preBattlePhase == .ready {
+                    Text("Ready")
+                        .font(.system(size: min(w * 0.14, 54), weight: .black, design: .rounded))
+                        .italic()
+                        .tracking(3)
+                        .foregroundStyle(.white)
+                        .shadow(color: Color.cyberCyan, radius: 14)
+                        .shadow(color: Color.cyberCyan, radius: 28)
+                        .transition(.scale(scale: 0.75).combined(with: .opacity))
+                } else if engine.preBattlePhase == .go {
+                    Text("Go!!")
+                        .font(.system(size: min(w * 0.165, 64), weight: .black, design: .rounded))
+                        .italic()
+                        .tracking(4)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, Color(red: 1.0, green: 0.92, blue: 0.35), Color.cyberAmber],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: Color.cyberAmber, radius: 16)
+                        .shadow(color: Color.cyberDanger, radius: 28)
+                        .transition(.scale(scale: 1.25).combined(with: .opacity))
+                } else if engine.beat == 1 || engine.beat == 2 {
+                    ClappingHandBeatView(baseHeight: min(h * 0.125, 108))
+                        .id("practice-live-clap-\(engine.turnCount)-\(engine.beat)")
+                } else if engine.beat == 3,
+                          let pMove = engine.revealedPlayerMove,
+                          let cMove = engine.revealedCpuMove {
+                    VStack(spacing: h * 0.010) {
+                        practiceHandHorizontalBand(
+                            owner: engine.currentEnemy.codeName,
+                            move: cMove,
+                            isEnemy: true,
+                            w: w,
+                            h: h
+                        )
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+
+                        practiceHandHorizontalBand(
+                            owner: "REO",
+                            move: pMove,
+                            isEnemy: false,
+                            w: w,
+                            h: h
+                        )
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
+                } else {
+                    Image("hand_clap")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: min(h * 0.11, 92))
+                        .opacity(0.55)
+                }
+            }
+            .frame(height: isShowingRevealedHands ? min(h * 0.245, 206) : min(h * 0.16, 134))
+            .animation(.spring(response: 0.24, dampingFraction: 0.76), value: engine.preBattlePhase)
+            .animation(.spring(response: 0.22, dampingFraction: 0.78), value: engine.beat)
+        }
+    }
+
+    // MARK: - Post-Practice Feature Guide Overlay (KUMITE紹介・ランキング制度紹介・リズム速度変更紹介)
+    private func postPracticeFeatureGuideOverlay(isWin: Bool, w: CGFloat) -> some View {
+        let headerAccent: Color = isWin ? .cyberEmerald : .cyberCyan
+
+        return ZStack {
+            Color.black.opacity(0.84)
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 14) {
+                // 上段：練習バトル完了ヘッダー（REOアイコン付き）
+                HStack(spacing: 12) {
+                    Image("icon_reo_1")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 48, height: 48)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .strokeBorder(headerAccent, lineWidth: 2)
+                        )
+                        .shadow(color: headerAccent.opacity(0.6), radius: 6)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(isWin ? "YOU WIN! 練習クリア！" : "練習バトル完了！")
+                            .font(.system(size: 20, weight: .black, design: .rounded))
+                            .italic()
+                            .foregroundStyle(headerAccent)
+                            .shadow(color: headerAccent.opacity(0.8), radius: 8)
+
+                        Text("いよいよ本番！ゲームの3つの特徴を紹介するよ！")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.90))
+                            .minimumScaleFactor(0.8)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                Divider()
+                    .background(Color.cyberCyan.opacity(0.35))
+
+                // 1. KUMITE機能の紹介
+                featureIntroRow(
+                    icon: "flame.fill",
+                    accent: .cyberEmerald,
+                    title: "KUMITE（勝ち抜きサバイバル）",
+                    description: "個性豊かなライバルたちと連戦するメインモード！1人撃破するごとにハートは3つに全回復します。何連勝できるか限界に挑もう！"
+                )
+
+                // 2. ランキング制度の紹介
+                featureIntroRow(
+                    icon: "trophy.fill",
+                    accent: .cyberAmber,
+                    title: "ワールドランキング制度",
+                    description: "KUMITEで達成した「最大連勝記録」で世界中のプレイヤーと順位を競えます！連勝を重ねると設定画面で新しいアイコンも解放！"
+                )
+
+                // 3. リズム速度（標準 / 速め）の紹介
+                featureIntroRow(
+                    icon: "metronome.fill",
+                    accent: .cyberCyan,
+                    title: "リズム速度は「速め」にも変更可能！",
+                    description: "今の練習は「標準」速度でしたが、設定画面（SETTING）や勝利後の画面から、よりスリリングな「速め」に切り替えることもできます！"
+                )
+
+                // 下段：アクションボタン（KUMITEへ / もう1戦練習 / TITLEへ）
+                VStack(spacing: 10) {
+                    Button {
+                        HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
+                        SoundManager.shared.playButtonSE()
+                        engine.startOrResumeKumite()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "flame.fill")
+                            Text("KUMITE に挑戦する！")
+                        }
+                        .font(.system(size: 17, weight: .black, design: .rounded))
+                        .tracking(1)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                    }
+                    .buttonStyle(
+                        CyberButtonStyle(
+                            primaryColor: .cyberEmerald,
+                            secondaryColor: .cyberCyan,
+                            cutSize: 12,
+                            fillOpacity: 0.42
+                        )
+                    )
+
+                    HStack(spacing: 10) {
+                        Button {
+                            HapticManager.playMedium(enabled: engine.isHapticsEnabled)
+                            engine.startPracticeBattleMatch()
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("もう1戦練習")
+                            }
+                            .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                        }
+                        .buttonStyle(
+                            CyberButtonStyle(
+                                primaryColor: .cyberCyan,
+                                secondaryColor: .cyberEmerald,
+                                cutSize: 10,
+                                fillOpacity: 0.20
+                            )
+                        )
+
+                        Button {
+                            HapticManager.playLight(enabled: engine.isHapticsEnabled)
+                            SoundManager.shared.playButtonSE()
+                            engine.returnToTitle()
+                        } label: {
+                            Text("◀ TITLE")
+                                .font(.system(size: 13.5, weight: .bold, design: .monospaced))
+                                .tracking(1.2)
+                                .foregroundStyle(Color.cyberCyan)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 40)
+                        }
+                        .buttonStyle(
+                            CyberButtonStyle(
+                                primaryColor: .cyberCyan,
+                                secondaryColor: Color.white.opacity(0.6),
+                                cutSize: 10,
+                                fillOpacity: 0.14
+                            )
+                        )
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .padding(18)
+            .frame(width: min(w * 0.93, 420))
+            .background(
+                CyberShape(cutSize: 18)
+                    .fill(Color(red: 0.04, green: 0.08, blue: 0.16).opacity(0.96))
+                    .overlay(
+                        CyberShape(cutSize: 18)
+                            .strokeBorder(headerAccent, lineWidth: 2.2)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.85), radius: 20)
+            .shadow(color: headerAccent.opacity(0.45), radius: 16)
+        }
+    }
+
+    private func featureIntroRow(
+        icon: String,
+        accent: Color,
+        title: String,
+        description: String
+    ) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .black))
+                .foregroundStyle(accent)
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(accent.opacity(0.16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(accent.opacity(0.55), lineWidth: 1)
+                        )
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .foregroundStyle(accent)
+
+                Text(description)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineSpacing(2.5)
+                    .foregroundStyle(Color.white.opacity(0.90))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -404,8 +862,8 @@ struct PracticeTutorialView: View {
         }
     }
 
-    // MARK: - Top Floating Header (SKIP / TITLE & Step Dots)
-    private func topFloatingBar(w: CGFloat) -> some View {
+    // MARK: - Top Floating Header (SKIP / TITLE & Step Dots or Practice Match Badge)
+    private func topFloatingBar(w: CGFloat, showStepDots: Bool) -> some View {
         HStack(spacing: 10) {
             Button {
                 HapticManager.playLight(enabled: engine.isHapticsEnabled)
@@ -435,28 +893,43 @@ struct PracticeTutorialView: View {
 
             Spacer()
 
-            // ステップ進捗ドット
-            HStack(spacing: 5) {
-                ForEach(0..<scenarios.count, id: \.self) { idx in
-                    Capsule()
-                        .fill(
-                            idx == lessonStep
-                                ? scenarios[lessonStep].accentColor
-                                : (idx < lessonStep ? Color.cyberEmerald : Color.white.opacity(0.28))
-                        )
-                        .frame(width: idx == lessonStep ? 20 : 8, height: 6)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(Color.black.opacity(0.75))
-                    .overlay(
+            if showStepDots {
+                HStack(spacing: 5) {
+                    ForEach(0..<scenarios.count, id: \.self) { idx in
                         Capsule()
-                            .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                            .fill(
+                                idx == lessonStep
+                                    ? scenarios[lessonStep].accentColor
+                                    : (idx < lessonStep ? Color.cyberEmerald : Color.white.opacity(0.28))
+                            )
+                            .frame(width: idx == lessonStep ? 20 : 8, height: 6)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.black.opacity(0.75))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                        )
+                )
+            } else {
+                Text("PRACTICE // 標準速度")
+                    .font(.system(size: 10.5, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.cyberEmerald)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color.black.opacity(0.78))
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.cyberEmerald.opacity(0.65), lineWidth: 1)
+                            )
                     )
-            )
+            }
         }
         .padding(.horizontal, 12)
         .frame(width: w)
@@ -467,7 +940,6 @@ struct PracticeTutorialView: View {
         let bubbleWidth = min(w * 0.94, 420)
 
         return VStack(spacing: 0) {
-            // 上向きしっぽ（必要な場合）
             if case .up(let ratio) = step.tailDirection {
                 SpeechBubbleTailTriangle(pointsUp: true)
                     .fill(Color(red: 0.04, green: 0.08, blue: 0.16).opacity(0.95))
@@ -481,9 +953,7 @@ struct PracticeTutorialView: View {
                     .zIndex(2)
             }
 
-            // 吹き出し本体カード
             VStack(alignment: .leading, spacing: 8) {
-                // 上段：REO ミニアイコン ＋ バッジ ＋ タイトル
                 HStack(alignment: .center, spacing: 8) {
                     Image("icon_reo_1")
                         .resizable()
@@ -506,19 +976,17 @@ struct PracticeTutorialView: View {
                         .font(.system(size: min(w * 0.042, 16.5), weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                        .minimumScaleFactor(0.60)
 
                     Spacer(minLength: 0)
                 }
 
-                // 吹き出し本文
                 Text(step.message)
                     .font(.system(size: min(w * 0.033, 13.0), weight: .semibold))
                     .lineSpacing(2.5)
                     .foregroundStyle(Color.white.opacity(0.95))
                     .fixedSize(horizontal: false, vertical: true)
 
-                // ワンポイント補足
                 Text(step.subTip)
                     .font(.system(size: min(w * 0.029, 11.5), weight: .bold))
                     .foregroundStyle(step.accentColor)
@@ -534,7 +1002,7 @@ struct PracticeTutorialView: View {
                             )
                     )
 
-                // 吹き出し内の操作ボタン行（◀ 戻る / 次へ ▶ / 必殺プレビュー / KUMITE開始）
+                // 吹き出し内の操作ボタン行（◀ 戻る / 次へ ▶ / 最終STEP 6: 必殺技を見る ＆ 「練習」ボタン）
                 HStack(spacing: 8) {
                     if lessonStep > 0 {
                         Button {
@@ -583,7 +1051,7 @@ struct PracticeTutorialView: View {
                         }
                         .buttonStyle(.plain)
                     } else {
-                        // 最終ステップ：必殺技演出プレビュー ＆ KUMITE開始 ＆ TITLEへ
+                        // 最終ステップ：必殺技演出プレビュー ＆ 「練習」ボタン（標準速度で1戦練習バトルへ！）
                         Button {
                             HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
                             showDemoUltimate = true
@@ -606,14 +1074,16 @@ struct PracticeTutorialView: View {
 
                         Button {
                             HapticManager.playHeavy(enabled: engine.isHapticsEnabled)
-                            SoundManager.shared.playButtonSE()
-                            engine.startOrResumeKumite()
+                            phase = .practiceBattle
+                            engine.startPracticeBattleMatch()
                         } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "flame.fill")
-                                Text("KUMITE開始")
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 12, weight: .black))
+                                Text("練習")
                             }
-                            .font(.system(size: 13.5, weight: .black, design: .rounded))
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .tracking(1.5)
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
@@ -642,7 +1112,6 @@ struct PracticeTutorialView: View {
                     .shadow(color: step.accentColor.opacity(0.55), radius: 12)
             )
 
-            // 下向きしっぽ（注目エリアを指し示すポインター）
             if case .down(let ratio) = step.tailDirection {
                 SpeechBubbleTailTriangle(pointsUp: false)
                     .fill(Color(red: 0.04, green: 0.08, blue: 0.16).opacity(0.95))
@@ -663,7 +1132,6 @@ struct PracticeTutorialView: View {
     private func stepTargetHighlightOverlay(stepIndex: Int, accent: Color, w: CGFloat, h: CGFloat) -> some View {
         switch stepIndex {
         case 0:
-            // 赤いタイムバーと3コマンドデッキをハイライト
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(accent, style: StrokeStyle(lineWidth: 2.2, dash: [7, 4]))
@@ -678,7 +1146,6 @@ struct PracticeTutorialView: View {
                     .position(x: w * 0.50, y: h * 0.648)
             }
         case 1:
-            // CHARGE ボタンと左下バッテリーをハイライト
             ZStack {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(accent, lineWidth: 2.5)
@@ -693,28 +1160,24 @@ struct PracticeTutorialView: View {
                     .position(x: w * 0.440, y: h * 0.896)
             }
         case 2:
-            // ダメージ＆チャージ減少した敵ステータス枠をハイライト
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(accent, style: StrokeStyle(lineWidth: 2.4, dash: [7, 4]))
                 .shadow(color: accent, radius: 10)
                 .frame(width: w * 0.52, height: h * 0.145)
                 .position(x: w * 0.692, y: h * 0.112)
         case 3:
-            // BARRIER ボタンをハイライト
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(accent, lineWidth: 2.5)
                 .shadow(color: accent, radius: 10)
                 .frame(width: w * 0.32, height: 106)
                 .position(x: w * 0.82, y: h * 0.630)
         case 4:
-            // NO CHARGE 状態の BEAM ボタンを赤枠でハイライト
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(accent, lineWidth: 2.5)
                 .shadow(color: accent, radius: 10)
                 .frame(width: w * 0.32, height: 106)
                 .position(x: w * 0.50, y: h * 0.646)
         case 5:
-            // 金色 ULTIMATE ボタンをハイライト
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(accent, style: StrokeStyle(lineWidth: 2.6, dash: [8, 4]))
                 .shadow(color: accent, radius: 12)
@@ -1117,7 +1580,6 @@ struct PracticeTutorialView: View {
                             playerCharge: step.playerCharge
                         ) {
                             HapticManager.playLight(enabled: engine.isHapticsEnabled)
-                            // 対応するコマンドの説明ステップへジャンプ可能
                             switch action {
                             case .charge:
                                 lessonStep = 1
@@ -1166,8 +1628,10 @@ private struct PracticeTopLeftEnemyClipShape: Shape {
         let h = rect.height
         var path = Path()
         path.move(to: CGPoint(x: 0, y: 0))
-        path.addLine(to: CGPoint(x: w * 0.45, y: 0))
-        path.addLine(to: CGPoint(x: w * 0.45, y: h * 0.286))
+        path.addLine(to: CGPoint(x: w, y: 0))
+        path.addLine(to: CGPoint(x: w, y: h * 0.256))
+        path.addLine(to: CGPoint(x: w * 0.488, y: h * 0.256))
+        path.addLine(to: CGPoint(x: w * 0.432, y: h * 0.286))
         path.addLine(to: CGPoint(x: w * 0.048, y: h * 0.286))
         path.addLine(to: CGPoint(x: w * 0.025, y: h * 0.273))
         path.addLine(to: CGPoint(x: 0, y: h * 0.273))
